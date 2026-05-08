@@ -31,20 +31,16 @@ export default function DashboardPage() {
             <p className="text-gray-600 mt-1">
               {(() => {
                 const date = new Date();
-                // Use consistent formatting to avoid hydration mismatch
-                return typeof window === 'undefined' 
-                  ? date.toLocaleDateString('uz-UZ', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })
-                  : date.toLocaleDateString('uz-UZ', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    });
+                // Use deterministic formatting to avoid hydration mismatch
+                const days = ['yakshanba', 'dushanba', 'seshanba', 'chorshanba', 'payshanba', 'juma', 'shanba'];
+                const months = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
+                
+                const dayName = days[date.getDay()];
+                const day = date.getDate();
+                const monthName = months[date.getMonth()];
+                const year = date.getFullYear();
+                
+                return `${dayName}, ${day}-${monthName}, ${year}`;
               })()}
             </p>
           </motion.div>
