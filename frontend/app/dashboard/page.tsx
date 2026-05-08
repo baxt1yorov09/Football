@@ -29,12 +29,23 @@ export default function DashboardPage() {
               Xush kelibsiz, {user?.full_name || 'Murabbiy'}! 👋
             </h1>
             <p className="text-gray-600 mt-1">
-              {new Date().toLocaleDateString('uz-UZ', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
+              {(() => {
+                const date = new Date();
+                // Use consistent formatting to avoid hydration mismatch
+                return typeof window === 'undefined' 
+                  ? date.toLocaleDateString('uz-UZ', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })
+                  : date.toLocaleDateString('uz-UZ', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    });
+              })()}
             </p>
           </motion.div>
 

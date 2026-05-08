@@ -60,6 +60,7 @@ export default function VerificationPage() {
   }, [verificationCode]);
 
   const formatDate = (dateString: string) => {
+    // Use consistent formatting to avoid hydration mismatch
     return new Date(dateString).toLocaleDateString('uz-UZ', {
       year: 'numeric',
       month: 'long',

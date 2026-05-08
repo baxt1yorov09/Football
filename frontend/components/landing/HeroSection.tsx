@@ -7,6 +7,11 @@ import Link from 'next/link';
 
 // Animated counter component
 function AnimatedCounter({ value, suffix = '' }: { value: number; suffix?: string }) {
+  // Use consistent formatting to avoid hydration mismatch
+  const formattedValue = typeof window === 'undefined' 
+    ? value.toLocaleString('en-US') 
+    : value.toLocaleString('en-US');
+    
   return (
     <motion.span
       initial={{ opacity: 0, y: 20 }}
@@ -15,7 +20,7 @@ function AnimatedCounter({ value, suffix = '' }: { value: number; suffix?: strin
       transition={{ duration: 0.8, delay: 0.2 }}
       className="text-4xl md:text-5xl font-bold text-white"
     >
-      {value.toLocaleString()}{suffix}
+      {formattedValue}{suffix}
     </motion.span>
   );
 }
