@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Litsenziya - {{ license.license_number }}</title>
+</head>
+<body>
+    <div class="license-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">O'ZBEKISTON FUTBOL FEDERATSIYASI</div>
+            <div style="font-size: 14px; margin-top: 5px;">UZBEKISTAN FOOTBALL FEDERATION</div>
+        </div>
+
+        <!-- License Body -->
+        <div class="license-body">
+            <div class="license-title">
+                MURABBIY LITSENZIYASI
+            </div>
+            <div style="text-align: center; margin-bottom: 30px;">
+                <span style="font-size: 20px; font-weight: bold; color: #F39C12; padding: 10px 20px; border: 2px solid #F39C12; border-radius: 5px;">
+                    {{ license_type.name }}
+                </span>
+            </div>
+
+            <!-- License Information -->
+            <div class="license-info">
+                <div class="info-field">
+                    <div class="info-label">Litsenziya raqami</div>
+                    <div class="info-value">{{ license.license_number }}</div>
+                </div>
+                <div class="info-field">
+                    <div class="info-label">F.I.O</div>
+                    <div class="info-value">{{ coach.get_full_name }}</div>
+                </div>
+                <div class="info-field">
+                    <div class="info-label">Tug'ilgan sana</div>
+                    <div class="info-value">{{ coach.birth_date|date:"d.m.Y" }}</div>
+                </div>
+                <div class="info-field">
+                    <div class="info-label">Passport raqami</div>
+                    <div class="info-value">{{ coach.passport_number|default:"-" }}</div>
+                </div>
+                <div class="info-field">
+                    <div class="info-label">Telefon</div>
+                    <div class="info-value">{{ coach.phone }}</div>
+                </div>
+                <div class="info-field">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ coach.email }}</div>
+                </div>
+                <div class="info-field">
+                    <div class="info-label">Viloyat</div>
+                    <div class="info-value">{{ coach.region.name_uz|default:"-" }}</div>
+                </div>
+                <div class="info-field">
+                    <div class="info-label">Joriy klub</div>
+                    <div class="info-value">{{ license.current_club|default:"-" }}</div>
+                </div>
+            </div>
+
+            <!-- Validity Period -->
+            <div style="background: #F39C12; color: white; padding: 15px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
+                <div style="font-size: 14px; margin-bottom: 5px;">AMAL QILISH MUDDATI</div>
+                <div style="font-size: 18px; font-weight: bold;">
+                    {{ issued_date }} - {{ expiry_date }}
+                </div>
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="qr-section">
+                <div style="margin-bottom: 10px; font-size: 12px; color: #666;">
+                    Litsenziyani tekshirish uchun QR kodni skanerlang
+                </div>
+                <img src="data:image/png;base64,{{ qr_code|safe }}" class="qr-code" alt="Verification QR Code">
+                <div style="margin-top: 10px; font-size: 10px; color: #666;">
+                    {{ verification_url }}
+                </div>
+            </div>
+
+            <!-- Signature -->
+            <div class="signature">
+                <div class="signature-line"></div>
+                <div class="signature-title">UFF Boshlig'i</div>
+                <div style="margin-top: 20px; font-size: 12px; color: #666;">
+                    Sana: {{ today }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Bu litsenziya O'zbekiston Futbol Federatsiyasi tomonidan berilgan.
+            Litsenziya haqiqiyligini tekshirish uchun veb-sayt: uff.uz/verify
+            <br>
+            This license is issued by Uzbekistan Football Federation.
+            Verify license authenticity at: uff.uz/verify
+        </div>
+    </div>
+</body>
+</html>

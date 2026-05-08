@@ -1,0 +1,126 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
+
+interface User {
+  id: string;
+  phone: string;
+  full_name: string;
+  role: string;
+  region?: any;
+}
+
+interface AuthState {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+}
+
+export function useAuth() {
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    isLoading: true,
+    isAuthenticated: false,
+  });
+
+  // Check authentication on mount
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      fetchUser();
+    } else {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, []);
+
+  const fetchUser = async () => {
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.users.me);
+      setState({
+        user: response.data,
+        isLoading: false,
+        isAuthenticated: true,
+      });
+    } catch (error) {
+      // Token expired or invalid
+      logout();
+    }
+  };
+
+  const login = useCallback(async (phone: string, code: string) => {
+    try {
+      const response = await apiClient.post(API_ENDPOINTS.auth.verifyOTP, {
+        phone,
+        code,
+      });
+
+      const { access, refresh, user, is_new_user } = response.data;
+
+      // Store tokens
+      localStorage.setItem('accessToken', access);
+      localStorage.setItem('refreshToken', refresh);
+
+      if (!is_new_user) {
+        setState({
+          user,
+          isLoading: false,
+          isAuthenticated: true,
+        });
+      }
+
+      return { success: true, isNewUser: is_new_user, user };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Autentifikatsiya xatosi",
+      };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        await apiClient.post(API_ENDPOINTS.auth.logout, {
+          refresh: refreshToken,
+        });
+      }
+    } catch (error) {
+      // Ignore logout errors
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      setState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+      });
+    }
+  }, []);
+
+  const updateProfile = useCallback(async (data: any) => {
+    try {
+      const response = await apiClient.patch(API_ENDPOINTS.users.me, data);
+      setState(prev => ({
+        ...prev,
+        user: response.data,
+      }));
+      return { success: true };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Profil yangilashda xatolik",
+      };
+    }
+  }, []);
+
+  return {
+    ...state,
+    login,
+    logout,
+    updateProfile,
+  };
+}
+
+export default useAuth;

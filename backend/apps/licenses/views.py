@@ -1,0 +1,294 @@
+from rest_framework import status, permissions
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import datetime
+
+from .models import License, LicenseType
+from .services import generate_license_pdf, bulk_generate_licenses
+from applications.models import Application
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def license_detail(request, license_id):
+    """Get license details"""
+    try:
+        license_obj = get_object_or_404(License, id=license_id)
+        
+        # Check if user owns the license or is admin
+        if not (request.user.is_staff or license_obj.user == request.user):
+            return Response(
+                {'error': 'Ruxsat berilmagan'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        data = {
+            'id': license_obj.id,
+            'license_number': license_obj.license_number,
+            'license_type': {
+                'id': license_obj.license_type.id,
+                'name': license_obj.license_type.name,
+                'category': license_obj.license_type.category,
+            },
+            'user': {
+                'id': license_obj.user.id,
+                'full_name': license_obj.user.get_full_name(),
+                'phone': license_obj.user.phone,
+                'email': license_obj.user.email,
+            },
+            'issued_at': license_obj.issued_at,
+            'expires_at': license_obj.expires_at,
+            'is_active': license_obj.is_active,
+            'verification_code': license_obj.verification_code,
+            'current_club': license_obj.current_club,
+            'special_notes': license_obj.special_notes,
+            'created_at': license_obj.created_at,
+            'updated_at': license_obj.updated_at,
+        }
+        
+        return Response(data)
+        
+    except License.DoesNotExist:
+        return Response(
+            {'error': 'Litsenziya topilmadi'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def license_verification(request, verification_code):
+    """Verify license by verification code"""
+    try:
+        license_obj = get_object_or_404(License, verification_code=verification_code)
+        
+        # Check if license is active and not expired
+        if not license_obj.is_active:
+            return Response({
+                'valid': False,
+                'reason': 'Litsenziya nofaol'
+            })
+        
+        if license_obj.expires_at < timezone.now():
+            return Response({
+                'valid': False,
+                'reason': 'Litsenziya muddati tugagan'
+            })
+        
+        data = {
+            'valid': True,
+            'license': {
+                'license_number': license_obj.license_number,
+                'license_type': license_obj.license_type.name,
+                'holder_name': license_obj.user.get_full_name(),
+                'issued_at': license_obj.issued_at,
+                'expires_at': license_obj.expires_at,
+                'current_club': license_obj.current_club,
+            }
+        }
+        
+        return Response(data)
+        
+    except License.DoesNotExist:
+        return Response({
+            'valid': False,
+            'reason': 'Litsenziya topilmadi'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_license_pdf(request, license_id):
+    """Download license PDF"""
+    try:
+        license_obj = get_object_or_404(License, id=license_id)
+        
+        # Check if user owns the license or is admin
+        if not (request.user.is_staff or license_obj.user == request.user):
+            return Response(
+                {'error': 'Ruxsat berilmagan'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Generate PDF
+        certificate_style = request.GET.get('certificate', 'false').lower() == 'true'
+        pdf_file = generate_license_pdf(license_id, certificate_style)
+        
+        # Prepare response
+        response = Response(
+            pdf_file.read(),
+            content_type='application/pdf'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{pdf_file.name}"'
+        response['Content-Length'] = len(pdf_file)
+        
+        return response
+        
+    except License.DoesNotExist:
+        return Response(
+            {'error': 'Litsenziya topilmadi'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'PDF generatsiyada xatolik: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def bulk_generate_pdfs(request):
+    """Generate PDFs for multiple licenses (Admin only)"""
+    try:
+        license_ids = request.data.get('license_ids', [])
+        
+        if not license_ids:
+            return Response(
+                {'error': 'Litsenziya ID lari berilmagan'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate PDFs
+        pdf_files = bulk_generate_licenses(license_ids)
+        
+        if not pdf_files:
+            return Response(
+                {'error': 'Hech qanday PDF generatsiya qilinmadi'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Return success response with file count
+        return Response({
+            'success': True,
+            'message': f'{len(pdf_files)} ta PDF muvaffaqiyatli generatsiya qilindi',
+            'generated_files': len(pdf_files)
+        })
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Bulk PDF generatsiyada xatolik: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def issue_license(request, application_id):
+    """Issue license from approved application (Admin only)"""
+    try:
+        application = get_object_or_404(Application, id=application_id)
+        
+        # Check if application is approved
+        if application.status != 'approved':
+            return Response(
+                {'error': 'Ariza tasdiqlanmagan'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if license already issued
+        if License.objects.filter(application=application).exists():
+            return Response(
+                {'error': 'Bu ariza uchun litsenziya allaqachon berilgan'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate license number
+        license_type = application.license_type
+        year = datetime.now().year
+        license_count = License.objects.filter(
+            license_type=license_type,
+            issued_at__year=year
+        ).count() + 1
+        
+        license_number = f"UFF-{year}-{license_type.code}-{license_count:06d}"
+        
+        # Create license
+        license_obj = License.objects.create(
+            license_number=license_number,
+            license_type=license_type,
+            user=application.user,
+            application=application,
+            issued_at=timezone.now(),
+            expires_at=timezone.now() + timezone.timedelta(days=license_type.validity_days),
+            current_club=application.data.get('current_club', ''),
+            is_active=True,
+            verification_code=f"VER{datetime.now().strftime('%Y%m%d%H%M%S')}{license_count:06d}",
+        )
+        
+        # Update application status
+        application.status = 'license_issued'
+        application.save()
+        
+        return Response({
+            'success': True,
+            'license_id': license_obj.id,
+            'license_number': license_number,
+            'message': 'Litsenziya muvaffaqiyatli berildi'
+        })
+        
+    except Application.DoesNotExist:
+        return Response(
+            {'error': 'Ariza topilmadi'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'error': f'Litsenziya berishda xatolik: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def license_statistics(request):
+    """Get license statistics (Admin only)"""
+    try:
+        # Basic statistics
+        total_licenses = License.objects.count()
+        active_licenses = License.objects.filter(is_active=True).count()
+        expired_licenses = License.objects.filter(expires_at__lt=timezone.now()).count()
+        
+        # By license type
+        license_types = LicenseType.objects.all()
+        type_stats = []
+        for lt in license_types:
+            count = License.objects.filter(license_type=lt).count()
+            type_stats.append({
+                'license_type': lt.name,
+                'count': count,
+                'category': lt.category,
+            })
+        
+        # By month (last 12 months)
+        monthly_stats = []
+        for i in range(12):
+            month_start = timezone.now().replace(day=1) - timezone.timedelta(days=i*30)
+            month_end = month_start + timezone.timedelta(days=30)
+            count = License.objects.filter(
+                issued_at__gte=month_start,
+                issued_at__lt=month_end
+            ).count()
+            monthly_stats.append({
+                'month': month_start.strftime('%Y-%m'),
+                'count': count,
+            })
+        
+        data = {
+            'total_licenses': total_licenses,
+            'active_licenses': active_licenses,
+            'expired_licenses': expired_licenses,
+            'by_type': type_stats,
+            'by_month': monthly_stats,
+        }
+        
+        return Response(data)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Statistikani olishda xatolik: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
