@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Star, MapPin } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export function LicenseTypes() {
   const [activeCategory, setActiveCategory] = useState('main');
+  const { isAuthenticated } = useAuth();
 
   const licenseEntries = Object.entries(LICENSE_REQUIREMENTS);
   const filteredLicenses = licenseEntries.filter(([code, license]) => {
@@ -75,7 +77,7 @@ export function LicenseTypes() {
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
             >
-              <Link href={`/apply/${code}`}>
+              <Link href={isAuthenticated ? `/apply/${code}` : `/auth?redirect=/apply/${code}`}>
                 <Card 
                   className={`relative overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-xl ${
                     isPro ? 'border-2 border-[#F39C12]' : ''

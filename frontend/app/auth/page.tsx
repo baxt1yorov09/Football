@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { PhoneInput } from '@/components/auth/PhoneInput';
 import { OTPInput } from '@/components/auth/OTPInput';
 import { ProfileForm } from '@/components/auth/ProfileForm';
@@ -10,7 +11,17 @@ import { useAuth } from '@/hooks/useAuth';
 export default function AuthPage() {
   const [step, setStep] = useState<'phone' | 'otp' | 'profile'>('phone');
   const [phone, setPhone] = useState('');
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
+
+  // If already authenticated, redirect to target or dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push(redirectUrl || '/dashboard');
+    }
+  }, [isAuthenticated, redirectUrl, router]);
 
   const handlePhoneSubmit = (phoneNumber: string) => {
     setPhone(phoneNumber);
@@ -22,13 +33,17 @@ export default function AuthPage() {
     const result = await login(phone, code);
     if (result.isNewUser) {
       setStep('profile');
+    } else {
+      // Existing user - redirect to target or dashboard
+      router.push(redirectUrl || '/dashboard');
     }
-    // If not new user, redirect to dashboard
   };
 
   const handleProfileSubmit = async (data: any) => {
     // Update profile and redirect
     console.log('Profile data:', data);
+    // After profile completion, redirect to target
+    router.push(redirectUrl || '/dashboard');
   };
 
   const handleResendOTP = () => {

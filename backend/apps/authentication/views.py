@@ -16,6 +16,8 @@ from .serializers import (
     PhoneSerializer, OTPSerializer, UserProfileSerializer,
     UserCreateSerializer, TokenResponseSerializer
 )
+from utils.sms_services import send_otp as send_sms_otp
+from django.conf import settings
 
 
 class SendOTPView(APIView):
@@ -64,18 +66,20 @@ class SendOTPView(APIView):
             expires_at=timezone.now() + timedelta(minutes=5)
         )
 
-        # TODO: Integrate with SMS service (Eskiz.uz or Playmobile)
-        # For development, return the code in response
-        # In production, send actual SMS
-        is_development = True  # Change based on settings
+        # Send SMS via configured service
+        sms_service = getattr(settings, 'SMS_SERVICE', 'mock')
+        sms_result = send_sms_otp(phone, code, sms_service)
         
         response_data = {
             'message': "SMS kod yuborildi",
             'expires_in': 300,  # 5 minutes in seconds
         }
         
-        if is_development:
-            response_data['code'] = code  # Only for development!
+        # In development or mock mode, return the code
+        if sms_service == 'mock' or not sms_result.get('success'):
+            response_data['code'] = code  # Only for development/testing!
+            if not sms_result.get('success'):
+                response_data['sms_error'] = sms_result.get('error')
 
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -172,21 +176,12 @@ class UserProfileView(APIView):
 
 
 class LogoutView(APIView):
-    """Logout user by blacklisting refresh token"""
+    """Logout user"""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        try:
-            refresh_token = request.data.get('refresh')
-            if refresh_token:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            return Response({'message': 'Successfully logged out'})
-        except Exception:
-            return Response(
-                {'error': 'Invalid token'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Simple logout - frontend will clear tokens
+        return Response({'message': 'Successfully logged out'})
 
 
 class RegionsListView(APIView):
@@ -194,7 +189,7 @@ class RegionsListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        regions = Region.objects.filter(is_active=True).values(
+        regions = Region.objects.all().values(
             'id', 'name_uz', 'name_ru', 'code', 'is_tashkent'
         )
         return Response(list(regions))

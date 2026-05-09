@@ -122,6 +122,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
 
+# Disable automatic trailing slash append (let's handle it explicitly)
+APPEND_SLASH = False
+
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -135,22 +138,44 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
+    # Rate Limiting / Throttling
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',  # Anonymous users: 20 requests per minute
+        'user': '100/minute',  # Authenticated users: 100 requests per minute
+        'otp': '5/minute',     # OTP requests: 5 per minute
+    },
 }
 
-# JWT Settings
+# JWT Settings - Production Ready
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Shorter for security
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'JTI_CLAIM': 'jti',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
 # CORS Settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8080",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -174,10 +199,19 @@ ALLOWED_FILE_TYPES = [
     'image/png',
 ]
 
-# SMS Service
-SMS_SERVICE = os.getenv('SMS_SERVICE', 'eskiz')
-ESKIZ_EMAIL = os.getenv('ESKIZ_EMAIL')
-ESKIZ_PASSWORD = os.getenv('ESKIZ_PASSWORD')
+# SMS Service Configuration
+# Options: 'mock' (development), 'eskiz', 'playmobile'
+SMS_SERVICE = os.getenv('SMS_SERVICE', 'mock')
+
+# Eskiz.uz settings
+ESKIZ_EMAIL = os.getenv('ESKIZ_EMAIL', '')
+ESKIZ_PASSWORD = os.getenv('ESKIZ_PASSWORD', '')
+ESKIZ_FROM = os.getenv('ESKIZ_FROM', 'UFF')
+
+# Playmobile settings
+PLAYMOBILE_USERNAME = os.getenv('PLAYMOBILE_USERNAME', '')
+PLAYMOBILE_PASSWORD = os.getenv('PLAYMOBILE_PASSWORD', '')
+PLAYMOBILE_ORIGINATOR = os.getenv('PLAYMOBILE_ORIGINATOR', 'UFF')
 
 # File Storage (S3/R2)
 USE_S3 = os.getenv('USE_S3', 'False') == 'True'

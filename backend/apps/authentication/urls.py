@@ -4,18 +4,18 @@ from .views import SendOTPView, VerifyOTPView, UserProfileView, LogoutView, Regi
 
 urlpatterns = [
     # OTP Authentication
-    path('send-otp/', SendOTPView.as_view(), name='send-otp'),
-    path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
-    
+    path('send-otp', SendOTPView.as_view(), name='send-otp'),
+    path('verify-otp', VerifyOTPView.as_view(), name='verify-otp'),
+
     # JWT Token
-    path('refresh/', TokenRefreshView.as_view(), name='token-refresh'),
-    
+    path('refresh', TokenRefreshView.as_view(), name='token-refresh'),
+
     # User Profile
-    path('me/', UserProfileView.as_view(), name='user-profile'),
-    
+    path('me', UserProfileView.as_view(), name='user-profile'),
+
     # Logout
-    path('logout/', LogoutView.as_view(), name='logout'),
-    
+    path('logout', LogoutView.as_view(), name='logout'),
+
     # Regions
-    path('regions/', RegionsListView.as_view(), name='regions-list'),
+    path('regions', RegionsListView.as_view(), name='regions-list'),
 ]

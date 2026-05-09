@@ -10,12 +10,24 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 export default function ApplyPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
-  // Redirect authenticated users to dashboard
-  if (isAuthenticated) {
-    router.push('/dashboard');
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect unauthenticated users to auth page with redirect back to apply
+  if (!isAuthenticated) {
+    router.push('/auth?redirect=/apply');
     return null;
   }
 

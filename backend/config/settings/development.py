@@ -2,15 +2,11 @@ from .base import *
 
 DEBUG = True
 
-# Database for development
+# Database for development - use SQLite for simplicity
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'uff_license'),
-        'USER': os.getenv('DB_USER', 'uff_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'uff_password'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -27,3 +23,9 @@ SECURE_HSTS_SECONDS = 0
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
+
+# Allow all hosts for development
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
+
+# Disable trailing slash to avoid 301 redirects
+APPEND_SLASH = False

@@ -1,7 +1,8 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // API client configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+// Force HTTP to avoid HTTPS-HTTP mismatch
+const API_BASE_URL = '/api';
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
@@ -42,7 +43,7 @@ apiClient.interceptors.response.use(
         }
 
         // Refresh token request
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh/`, {
+        const response = await axios.post('/api/auth/refresh/', {
           refresh: refreshToken,
         });
 
@@ -65,21 +66,21 @@ apiClient.interceptors.response.use(
   }
 );
 
-// API endpoints
+// API endpoints - no trailing slashes (APPEND_SLASH = False)
 export const API_ENDPOINTS = {
   // Auth
   auth: {
-    sendOTP: '/auth/send-otp/',
-    verifyOTP: '/auth/verify-otp/',
-    refresh: '/auth/refresh/',
-    logout: '/auth/logout/',
-    regions: '/auth/regions/',
+    sendOTP: '/auth/send-otp',
+    verifyOTP: '/auth/verify-otp',
+    refresh: '/auth/refresh',
+    logout: '/auth/logout',
+    regions: '/auth/regions',
   },
   // Users
   users: {
-    me: '/users/me/',
-    profile: '/users/me/',
-    avatar: '/users/me/avatar/',
+    me: '/users/me',
+    profile: '/users/me',
+    avatar: '/users/me/avatar',
   },
   // License Types
   licenseTypes: '/license-types/',

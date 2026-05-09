@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ChevronRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
 
 import { PersonalInfoStep } from '@/components/application/PersonalInfoStep';
 import { ProfessionalStep } from '@/components/application/ProfessionalStep';
@@ -22,8 +24,10 @@ const steps = [
 
 export default function ApplicationWizardPage() {
   const params = useParams();
+  const router = useRouter();
   const licenseType = params.licenseType as string;
   const licenseConfig = LICENSE_REQUIREMENTS[licenseType as keyof typeof LICENSE_REQUIREMENTS];
+  const { isAuthenticated, isLoading } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<any>({});
@@ -42,6 +46,24 @@ export default function ApplicationWizardPage() {
     localStorage.setItem(`application_${licenseType}`, JSON.stringify(formData));
   }, [formData, licenseType]);
 
+  // Check authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect unauthenticated users to auth page with redirect back
+  if (!isAuthenticated) {
+    router.push(`/auth?redirect=/apply/${licenseType}`);
+    return null;
+  }
+
   const handleNext = (stepData: any) => {
     setFormData((prev: any) => ({ ...prev, ...stepData }));
     if (currentStep < steps.length - 1) {
@@ -58,11 +80,19 @@ export default function ApplicationWizardPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // TODO: Submit application to API
-      console.log('Submitting:', formData);
+      // Submit application to API
+      const response = await apiClient.post(API_ENDPOINTS.applications.list, {
+        license_type: licenseType,
+        ...formData
+      });
+      
       // Clear saved data on success
       localStorage.removeItem(`application_${licenseType}`);
-      // Redirect to success page
+      
+      // Redirect to success page or dashboard
+      router.push('/dashboard?application_submitted=true');
+    } catch (error) {
+      console.error('Application submission error:', error);
     } finally {
       setIsSubmitting(false);
     }
