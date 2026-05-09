@@ -6,8 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, Shield, Award, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 export default function ApplyPage() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // Redirect authenticated users to dashboard
+  if (isAuthenticated) {
+    router.push('/dashboard');
+    return null;
+  }
+
   const licenseTypes = [
     {
       type: 'PRO',
