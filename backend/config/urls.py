@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
+from apps.authentication.views import AdminLoginView
 
 def api_info(request):
     return JsonResponse({
@@ -24,6 +25,7 @@ urlpatterns = [
     path('', api_info, name='api-info'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('apps.authentication.urls')),
+    path('api/admin/login', AdminLoginView.as_view(), name='admin-login-direct'),
     path('api/users/', include('apps.users.urls')),
     path('api/licenses/', include('apps.licenses.urls')),
     path('api/applications/', include('apps.applications.urls')),

@@ -9,6 +9,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.contrib.auth import authenticate
 
 from apps.users.models import User, OTPCode, Region
 from apps.notifications.models import Notification
@@ -193,3 +194,80 @@ class RegionsListView(APIView):
             'id', 'name_uz', 'name_ru', 'code', 'is_tashkent'
         )
         return Response(list(regions))
+
+
+class AdminLoginView(APIView):
+    """Admin login with email and password"""
+    permission_classes = []  # No token required
+
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={
+            200: openapi.Response('Login successful'),
+            400: 'Bad Request',
+            401: 'Invalid credentials',
+            403: 'Admin access required'
+        }
+    )
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        password = request.data.get('password', '')
+
+        if not email or not password:
+            return Response(
+                {'detail': 'Email va parol kiritish shart'},
+                status=400
+            )
+
+        # Email orqali userni topamiz
+        try:
+            from apps.users.models import User
+            user_obj = User.objects.filter(email=email).first()
+            if not user_obj:
+                raise User.DoesNotExist
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'Email yoki parol noto\'g\'ri'},
+                status=401
+            )
+
+        # Parolni tekshiramiz
+        if not user_obj.check_password(password):
+            return Response(
+                {'detail': 'Email yoki parol noto\'g\'ri'},
+                status=401
+            )
+
+        # Role tekshiruvi
+        if user_obj.role not in ['super_admin', 'region_admin', 'viewer']:
+            return Response(
+                {'detail': 'Sizda admin huquqi yo\'q'},
+                status=403
+            )
+
+        if not user_obj.is_active:
+            return Response(
+                {'detail': 'Hisob bloklangan'},
+                status=403
+            )
+
+        # JWT token yaratish
+        refresh = RefreshToken.for_user(user_obj)
+
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {
+                'id': str(user_obj.id),
+                'full_name': user_obj.full_name,
+                'email': user_obj.email,
+                'role': user_obj.role,
+                'region': user_obj.region.name_uz if user_obj.region else None,
+            }
+        })

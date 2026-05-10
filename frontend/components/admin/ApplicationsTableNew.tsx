@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Application {
   id: string;
@@ -45,33 +46,68 @@ const statusConfig = {
 };
 
 export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedApplication, setSelectedApplication] = useState<string | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchApplications();
-  }, []);
+  }, [isAdmin]);
 
   const fetchApplications = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(API_ENDPOINTS.applications.list);
-      setApplications(response.data);
-    } catch (error) {
-      console.error('Error fetching applications:', error);
+      setError(null);
+      
+      // Use admin endpoint for admins, user endpoint for regular users
+      const endpoint = isAdmin 
+        ? API_ENDPOINTS.applications.adminList 
+        : API_ENDPOINTS.applications.list;
+        
+      const response = await apiClient.get(endpoint);
+      
+      // Handle different response formats
+      // Admin: { applications, statistics }
+      // User: [] or { applications }
+      let apps = [];
+      if (Array.isArray(response.data)) {
+        apps = response.data;
+      } else if (response.data?.applications) {
+        apps = response.data.applications;
+      }
+        
+      setApplications(apps);
+    } catch (err: any) {
+      console.error('Error fetching applications:', err);
+      if (err.response?.status === 403) {
+        setError('Ruxsat yo\'q: Admin huquqlari talab qilinadi');
+      } else {
+        setError('Arizalarni yuklashda xatolik yuz berdi');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredApplications = applications.filter((app: Application) => {
-    const matchesSearch = app.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+  // Ensure applications is always an array
+  const safeApplications = Array.isArray(applications) ? applications : [];
+  
+  const filteredApplications = safeApplications.filter((app: Application) => {
+    // Handle undefined/null values safely
+    const userName = app?.user_name || '';
+    const appId = app?.id || '';
+    const appStatus = app?.status || '';
+    
+    const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         appId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || appStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -91,16 +127,6 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
       console.error('Error updating application status:', error);
     }
   };
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-8">
-          <div className="text-center text-gray-500">Yuklanmoqda...</div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
@@ -173,7 +199,31 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedApplications.map((app: Application, index: number) => (
+              {error ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center">
+                    <div className="text-red-500 mb-2">{error}</div>
+                    <button 
+                      onClick={fetchApplications}
+                      className="text-blue-500 hover:text-blue-700 underline"
+                    >
+                      Qayta urinish
+                    </button>
+                  </td>
+                </tr>
+              ) : loading ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-gray-500">
+                    Yuklanmoqda...
+                  </td>
+                </tr>
+              ) : paginatedApplications.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-gray-500">
+                    Arizalar topilmadi
+                  </td>
+                </tr>
+              ) : paginatedApplications.map((app: Application, index: number) => (
                 <tr key={app.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {app.id}
