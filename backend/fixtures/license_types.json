@@ -1,0 +1,453 @@
+[
+  {
+    "model": "licenses.licensetype",
+    "pk": 1,
+    "fields": {
+      "code": "A",
+      "name_uz": "A toifasi murabbiylik litsenziyasi",
+      "name_ru": "Лицензия тренера категории А",
+      "category": "main",
+      "level": 1,
+      "color_hex": "#FF6B6B",
+      "waiting_days": 0,
+      "min_age": 18,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 1
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 2,
+    "fields": {
+      "code": "B",
+      "name_uz": "B toifasi murabbiylik litsenziyasi",
+      "name_ru": "Лицензия тренера категории Б",
+      "category": "main",
+      "level": 2,
+      "color_hex": "#4ECDC4",
+      "waiting_days": 0,
+      "min_age": 20,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 2
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 3,
+    "fields": {
+      "code": "C",
+      "name_uz": "C toifasi murabbiylik litsenziyasi",
+      "name_ru": "Лицензия тренера категории С",
+      "category": "main",
+      "level": 3,
+      "color_hex": "#45B7D1",
+      "prerequisite_type": 1,
+      "waiting_days": 183,
+      "min_age": 0,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 3
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 4,
+    "fields": {
+      "code": "D",
+      "name_uz": "D toifasi murabbiylik litsenziyasi",
+      "name_ru": "Лицензия тренера категории Д",
+      "category": "main",
+      "level": 4,
+      "color_hex": "#96CEB4",
+      "waiting_days": 0,
+      "min_age": 16,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 4
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 5,
+    "fields": {
+      "code": "E",
+      "name_uz": "E toifasi murabbiylik litsenziyasi",
+      "name_ru": "Лицензия тренера категории Е",
+      "category": "main",
+      "level": 5,
+      "color_hex": "#FFEAA7",
+      "waiting_days": 0,
+      "min_age": 14,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 5
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 6,
+    "fields": {
+      "code": "F",
+      "name_uz": "F toifasi murabbiylik litsenziyasi",
+      "name_ru": "Лицензия тренера категории Ф",
+      "category": "main",
+      "level": 6,
+      "color_hex": "#DDA0DD",
+      "waiting_days": 0,
+      "min_age": 12,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 6
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 7,
+    "fields": {
+      "code": "GK",
+      "name_uz": "Darvozabonlar murabbiyi litsenziyasi",
+      "name_ru": "Лицензия тренера вратарей",
+      "category": "gk",
+      "level": 1,
+      "color_hex": "#FFA500",
+      "waiting_days": 0,
+      "min_age": 16,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 7
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 8,
+    "fields": {
+      "code": "PRO",
+      "name_uz": "Professional murabbiylik litsenziyasi",
+      "name_ru": "Профессиональная лицензия тренера",
+      "category": "specialist",
+      "level": 1,
+      "color_hex": "#FFD700",
+      "prerequisite_type": 3,
+      "waiting_days": 365,
+      "min_age": 0,
+      "tashkent_only": true,
+      "is_active": true,
+      "sort_order": 8
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 9,
+    "fields": {
+      "code": "FITNESS",
+      "name_uz": "Fitness instruktor litsenziyasi",
+      "name_ru": "Лицензия фитнес-инструктора",
+      "category": "fitness",
+      "level": 1,
+      "color_hex": "#FF69B4",
+      "waiting_days": 0,
+      "min_age": 18,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 9
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 10,
+    "fields": {
+      "code": "SPECIALIST",
+      "name_uz": "Mutaxassis litsenziyasi",
+      "name_ru": "Специалист лицензия",
+      "category": "specialist",
+      "level": 1,
+      "color_hex": "#9370DB",
+      "waiting_days": 0,
+      "min_age": 20,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 10
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 11,
+    "fields": {
+      "code": "RENEWAL_A",
+      "name_uz": "A toifasi yangilash litsenziyasi",
+      "name_ru": "Обновление лицензии категории А",
+      "category": "renewal",
+      "level": 1,
+      "color_hex": "#FF6B6B",
+      "prerequisite_type": 1,
+      "waiting_days": 30,
+      "min_age": 0,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 11
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 12,
+    "fields": {
+      "code": "RENEWAL_B",
+      "name_uz": "B toifasi yangilash litsenziyasi",
+      "name_ru": "Обновление лицензии категории Б",
+      "category": "renewal",
+      "level": 2,
+      "color_hex": "#4ECDC4",
+      "prerequisite_type": 2,
+      "waiting_days": 30,
+      "min_age": 0,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 12
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 13,
+    "fields": {
+      "code": "RENEWAL_C",
+      "name_uz": "C toifasi yangilash litsenziyasi",
+      "name_ru": "Обновление лицензии категории С",
+      "category": "renewal",
+      "level": 3,
+      "color_hex": "#45B7D1",
+      "prerequisite_type": 3,
+      "waiting_days": 30,
+      "min_age": 0,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 13
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 14,
+    "fields": {
+      "code": "RENEWAL_D",
+      "name_uz": "D toifasi yangilash litsenziyasi",
+      "name_ru": "Обновление лицензии категории Д",
+      "category": "renewal",
+      "level": 4,
+      "color_hex": "#96CEB4",
+      "prerequisite_type": 4,
+      "waiting_days": 30,
+      "min_age": 0,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 14
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 15,
+    "fields": {
+      "code": "RENEWAL_E",
+      "name_uz": "E toifasi yangilash litsenziyasi",
+      "name_ru": "Обновление лицензии категории Е",
+      "category": "renewal",
+      "level": 5,
+      "color_hex": "#FFEAA7",
+      "prerequisite_type": 5,
+      "waiting_days": 30,
+      "min_age": 0,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 15
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 16,
+    "fields": {
+      "code": "RENEWAL_F",
+      "name_uz": "F toifasi yangilash litsenziyasi",
+      "name_ru": "Обновление лицензии категории Ф",
+      "category": "renewal",
+      "level": 6,
+      "color_hex": "#DDA0DD",
+      "prerequisite_type": 6,
+      "waiting_days": 30,
+      "min_age": 0,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 16
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 17,
+    "fields": {
+      "code": "SPECIAL",
+      "name_uz": "Maxsus litsenziya",
+      "name_ru": "Специальная лицензия",
+      "category": "special",
+      "level": 1,
+      "color_hex": "#FF1493",
+      "waiting_days": 0,
+      "min_age": 25,
+      "tashkent_only": true,
+      "is_active": true,
+      "sort_order": 17
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 18,
+    "fields": {
+      "code": "TEMPORARY",
+      "name_uz": "Vaqtinchalik litsenziya",
+      "name_ru": "Временная лицензия",
+      "category": "special",
+      "level": 1,
+      "color_hex": "#87CEEB",
+      "waiting_days": 0,
+      "min_age": 18,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 18
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 19,
+    "fields": {
+      "code": "ASSISTANT",
+      "name_uz": "Yordamchi murabbiy litsenziyasi",
+      "name_ru": "Лицензия помощника тренера",
+      "category": "special",
+      "level": 1,
+      "color_hex": "#98FB98",
+      "waiting_days": 0,
+      "min_age": 16,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 19
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 20,
+    "fields": {
+      "code": "INTERNATIONAL",
+      "name_uz": "Xalqaro litsenziya",
+      "name_ru": "Международная лицензия",
+      "category": "special",
+      "level": 1,
+      "color_hex": "#4169E1",
+      "prerequisite_type": 3,
+      "waiting_days": 730,
+      "min_age": 0,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 20
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 21,
+    "fields": {
+      "code": "HONORARY",
+      "name_uz": "Fahriy litsenziya",
+      "name_ru": "Почетная лицензия",
+      "category": "special",
+      "level": 1,
+      "color_hex": "#FFD700",
+      "waiting_days": 0,
+      "min_age": 40,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 21
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 22,
+    "fields": {
+      "code": "BEACH",
+      "name_uz": "Plaj futbol murabbiyi litsenziyasi",
+      "name_ru": "Лицензия тренера пляжного футбола",
+      "category": "special",
+      "level": 1,
+      "color_hex": "#F4A460",
+      "waiting_days": 0,
+      "min_age": 18,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 22
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 23,
+    "fields": {
+      "code": "FUTSAL",
+      "name_uz": "Futzal murabbiyi litsenziyasi",
+      "name_ru": "Лицензия тренера футзала",
+      "category": "special",
+      "level": 1,
+      "color_hex": "#FF8C00",
+      "waiting_days": 0,
+      "min_age": 16,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 23
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 24,
+    "fields": {
+      "code": "PSYCH",
+      "name_uz": "Psixolog litsenziyasi",
+      "name_ru": "Лицензия психолога",
+      "category": "specialist",
+      "level": 1,
+      "color_hex": "#BA55D3",
+      "waiting_days": 0,
+      "min_age": 22,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 24
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 25,
+    "fields": {
+      "code": "ANALYTICS",
+      "name_uz": "Tahlilchi litsenziyasi",
+      "name_ru": "Лицензия аналитика",
+      "category": "specialist",
+      "level": 1,
+      "color_hex": "#20B2AA",
+      "waiting_days": 0,
+      "min_age": 20,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 25
+    }
+  },
+  {
+    "model": "licenses.licensetype",
+    "pk": 26,
+    "fields": {
+      "code": "SELEK",
+      "name_uz": "Selektsioner litsenziyasi",
+      "name_ru": "Лицензия селекционера",
+      "category": "specialist",
+      "level": 1,
+      "color_hex": "#2E8B57",
+      "waiting_days": 0,
+      "min_age": 25,
+      "tashkent_only": false,
+      "is_active": true,
+      "sort_order": 26
+    }
+  }
+]

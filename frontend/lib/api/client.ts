@@ -33,7 +33,15 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle 401 or 403 with TOKEN_INVALID
+    const isTokenInvalid = error.response?.status === 403 && 
+                          (error.response?.data as any)?.code === 'TOKEN_INVALID';
+    
+    // Don't refresh for pending application errors (business logic, not auth)
+    const isPendingError = error.response?.status === 403 && 
+                          (error.response?.data as any)?.code === 'PENDING_APPLICATION';
+
+    if ((error.response?.status === 401 || isTokenInvalid) && !originalRequest._retry && !isPendingError) {
       originalRequest._retry = true;
       
       try {
@@ -70,24 +78,19 @@ apiClient.interceptors.response.use(
 export const API_ENDPOINTS = {
   // Auth
   auth: {
-    sendOTP: '/auth/send-otp',
-    verifyOTP: '/auth/verify-otp',
+    sendOtp: '/auth/send-otp',
+    verifyOtp: '/auth/verify-otp',
     refresh: '/auth/refresh',
+    me: '/auth/me',
     logout: '/auth/logout',
     regions: '/auth/regions',
   },
-  // Users
-  users: {
-    me: '/users/me',
-    profile: '/users/me',
-    avatar: '/users/me/avatar',
-  },
-  // License Types
-  licenseTypes: '/license-types/',
   // Applications
   applications: {
     list: '/applications/',
     detail: (id: string) => `/applications/${id}/`,
+    adminList: '/applications/admin/all',
+    adminAction: (id: string) => `/applications/admin/${id}/action`,
     resubmit: (id: string) => `/applications/${id}/resubmit/`,
     timeline: (id: string) => `/applications/${id}/timeline/`,
   },
@@ -103,6 +106,11 @@ export const API_ENDPOINTS = {
     list: '/notifications/',
     read: (id: string) => `/notifications/${id}/read/`,
     readAll: '/notifications/read-all/',
+  },
+  // Users
+  users: {
+    me: '/users/me/',
+    profile: '/users/profile/',
   },
   // Admin
   admin: {

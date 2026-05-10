@@ -44,14 +44,15 @@ export function PhoneInput({ onSubmit }: PhoneInputProps) {
     // Validate phone
     const result = phoneSchema.safeParse({ phone });
     if (!result.success) {
-      setError(result.error.errors[0]?.message || "Noto'g'ri telefon raqam");
+      const firstError = result.error.issues[0];
+      setError(firstError?.message || "Noto'g'ri telefon raqam");
       return;
     }
 
     setLoading(true);
     try {
       // Send OTP request
-      await apiClient.post(API_ENDPOINTS.auth.sendOTP, { phone });
+      await apiClient.post(API_ENDPOINTS.auth.sendOtp, { phone });
       onSubmit(phone);
     } catch (err: any) {
       setError(err.response?.data?.error || "SMS yuborishda xatolik");

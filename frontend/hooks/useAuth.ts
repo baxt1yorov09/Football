@@ -36,7 +36,7 @@ export function useAuth() {
 
   const fetchUser = async () => {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.users.me);
+      const response = await apiClient.get(API_ENDPOINTS.auth.me);
       setState({
         user: response.data,
         isLoading: false,
@@ -50,10 +50,12 @@ export function useAuth() {
 
   const login = useCallback(async (phone: string, code: string) => {
     try {
-      const response = await apiClient.post(API_ENDPOINTS.auth.verifyOTP, {
+      console.log('Sending OTP verification:', { phone, code });
+      const response = await apiClient.post(API_ENDPOINTS.auth.verifyOtp, {
         phone,
         code,
       });
+      console.log('OTP verification response:', response.data);
 
       const { access, refresh, user, is_new_user } = response.data;
 
@@ -71,9 +73,10 @@ export function useAuth() {
 
       return { success: true, isNewUser: is_new_user, user };
     } catch (error: any) {
+      console.error('OTP verification error:', error.response?.data || error.message);
       return {
         success: false,
-        error: error.response?.data?.error || "Autentifikatsiya xatosi",
+        error: error.response?.data?.error || error.response?.data?.phone?.[0] || error.response?.data?.code?.[0] || "Autentifikatsiya xatosi",
       };
     }
   }, []);

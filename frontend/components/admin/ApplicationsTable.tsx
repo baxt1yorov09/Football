@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Search, 
@@ -18,63 +18,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
+import { useAuth } from '@/hooks/useAuth';
+
+interface Application {
+  id: string;
+  user_name: string;
+  user_phone: string;
+  license_type_name: string;
+  status: string;
+  status_display: string;
+  submitted_at: string;
+  reviewed_at?: string;
+  reviewed_by_name?: string;
+  rejection_reason?: string;
+  region?: string;
+}
 
 interface ApplicationsTableProps {
   showAll?: boolean;
 }
-
-const applications = [
-  {
-    id: 'APP-2026-001234',
-    applicant: 'Jasur Karimov',
-    licenseType: 'PRO Litsenziya',
-    submittedAt: '08.05.2026 14:30',
-    status: 'under_review',
-    phone: '+998 90 123-45-67',
-    region: 'Toshkent',
-    reviewer: 'Admin User',
-  },
-  {
-    id: 'APP-2026-001233',
-    applicant: 'Azizbek Toshmatov',
-    licenseType: 'A Litsenziya',
-    submittedAt: '08.05.2026 12:15',
-    status: 'pending',
-    phone: '+998 91 234-56-78',
-    region: 'Samarqand',
-    reviewer: null,
-  },
-  {
-    id: 'APP-2026-001232',
-    applicant: 'Dilfuza Rahimova',
-    licenseType: 'C Litsenziya',
-    submittedAt: '08.05.2026 10:45',
-    status: 'approved',
-    phone: '+998 99 345-67-89',
-    region: 'Farg\'ona',
-    reviewer: 'Admin User',
-  },
-  {
-    id: 'APP-2026-001231',
-    applicant: 'Bobur Alimov',
-    licenseType: 'D Litsenziya',
-    submittedAt: '07.05.2026 16:20',
-    status: 'rejected',
-    phone: '+998 93 456-78-90',
-    region: 'Buxoro',
-    reviewer: 'Admin User',
-  },
-  {
-    id: 'APP-2026-001230',
-    applicant: 'Gulnora Karimova',
-    licenseType: 'B Litsenziya',
-    submittedAt: '07.05.2026 14:10',
-    status: 'additional_docs',
-    phone: '+998 94 567-89-01',
-    region: 'Xorazm',
-    reviewer: 'Admin User',
-  },
-];
 
 const statusConfig = {
   pending: { label: 'Kutilmoqda', color: '#F39C12', bgColor: '#F39C12/10', icon: Clock },
@@ -85,15 +48,61 @@ const statusConfig = {
 };
 
 export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedApplication, setSelectedApplication] = useState<string | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [isAdmin]);
+
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Use admin endpoint for admins, user endpoint for regular users
+      const endpoint = isAdmin 
+        ? API_ENDPOINTS.applications.adminList 
+        : API_ENDPOINTS.applications.list;
+        
+      const response = await apiClient.get(endpoint);
+      
+      // Admin endpoint returns { applications, statistics }
+      // User endpoint returns array directly or { applications }
+      const apps = isAdmin 
+        ? response.data.applications 
+        : (response.data.applications || response.data);
+        
+      setApplications(apps || []);
+    } catch (err: any) {
+      console.error('Error fetching applications:', err);
+      if (err.response?.status === 403) {
+        setError('Ruxsat yo\'q: Admin huquqlari talab qilinadi');
+      } else {
+        setError('Arizalarni yuklashda xatolik yuz berdi');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredApplications = applications.filter(app => {
-    const matchesSearch = app.applicant.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+    // Handle undefined/null values safely
+    const userName = app?.user_name || '';
+    const appId = app?.id || '';
+    const appStatus = app?.status || '';
+    
+    const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         appId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || appStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -163,7 +172,31 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
               </tr>
             </thead>
             <tbody>
-              {paginatedApplications.map((application, index) => {
+              {error ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center">
+                    <div className="text-red-500 mb-2">{error}</div>
+                    <button 
+                      onClick={fetchApplications}
+                      className="text-blue-500 hover:text-blue-700 underline"
+                    >
+                      Qayta urinish
+                    </button>
+                  </td>
+                </tr>
+              ) : loading ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-gray-500">
+                    Yuklanmoqda...
+                  </td>
+                </tr>
+              ) : paginatedApplications.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-gray-500">
+                    Arizalar topilmadi
+                  </td>
+                </tr>
+              ) : paginatedApplications.map((application, index) => {
                 const status = statusConfig[application.status as keyof typeof statusConfig];
                 const StatusIcon = status.icon;
 
@@ -178,14 +211,14 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                     <td className="p-4 font-mono text-sm">{application.id}</td>
                     <td className="p-4">
                       <div>
-                        <p className="font-medium text-gray-900">{application.applicant}</p>
-                        <p className="text-sm text-gray-500">{application.phone}</p>
+                        <p className="font-medium text-gray-900">{application.user_name}</p>
+                        <p className="text-sm text-gray-500">{application.user_phone}</p>
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="text-sm font-medium">{application.licenseType}</span>
+                      <span className="text-sm font-medium">{application.license_type_name}</span>
                     </td>
-                    <td className="p-4 text-sm text-gray-600">{application.submittedAt}</td>
+                    <td className="p-4 text-sm text-gray-600">{new Date(application.submitted_at).toLocaleDateString('uz-UZ')}</td>
                     <td className="p-4">
                       <Badge 
                         variant="secondary"
@@ -200,10 +233,10 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                         {status.label}
                       </Badge>
                     </td>
-                    <td className="p-4 text-sm text-gray-600">{application.region}</td>
+                    <td className="p-4 text-sm text-gray-600">{application.region || '-'}</td>
                     <td className="p-4">
-                      {application.reviewer ? (
-                        <span className="text-sm text-gray-600">{application.reviewer}</span>
+                      {application.reviewed_by_name ? (
+                        <span className="text-sm text-gray-600">{application.reviewed_by_name}</span>
                       ) : (
                         <span className="text-sm text-gray-400">-</span>
                       )}

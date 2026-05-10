@@ -2,8 +2,26 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+
+def api_info(request):
+    return JsonResponse({
+        'message': 'UFF License System API',
+        'version': '1.0.0',
+        'endpoints': {
+            'auth': '/api/auth/',
+            'users': '/api/users/',
+            'licenses': '/api/licenses/',
+            'applications': '/api/applications/',
+            'documents': '/api/documents/',
+            'notifications': '/api/notifications/',
+            'reports': '/api/reports/',
+            'admin': '/admin/'
+        }
+    })
 
 urlpatterns = [
+    path('', api_info, name='api-info'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('apps.authentication.urls')),
     path('api/users/', include('apps.users.urls')),

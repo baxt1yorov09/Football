@@ -54,7 +54,7 @@ Arizangizning holati o'zgardi.
 
 Ariza ma'lumotlari:
 - Ariza ID: {application.id}
-- Litsenziya turi: {application.license_type.name}
+- Litsenziya turi: {application.license_type.name_uz}
 - Yangi holat: {status_display}
 - Yangilangan sana: {application.updated_at.strftime('%d.%m.%Y %H:%M')}
 """
@@ -132,7 +132,7 @@ def send_timeline_notification(timeline):
 
 Ariza ma'lumotlari:
 - Ariza ID: {application.id}
-- Litsenziya turi: {application.license_type.name}
+- Litsenziya turi: {application.license_type.name_uz}
 - Sana: {timeline.created_at.strftime('%d.%m.%Y %H:%M')}
 
 Hurmat bilan,

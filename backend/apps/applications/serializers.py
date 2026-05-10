@@ -3,6 +3,7 @@ Application Serializers
 """
 from rest_framework import serializers
 from .models import Application, ApplicationTimeline
+from apps.licenses.models import LicenseType
 
 
 class ApplicationTimelineSerializer(serializers.ModelSerializer):
@@ -37,11 +38,15 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
 class ApplicationCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new application"""
+    license_type = serializers.SlugRelatedField(
+        slug_field='code',
+        queryset=LicenseType.objects.filter(is_active=True)
+    )
     
     class Meta:
         model = Application
         fields = [
-            'license_type', 'region', 'workplace', 'job_title',
+            'license_type', 'workplace', 'job_title',
             'coaching_years', 'prev_license_date'
         ]
 

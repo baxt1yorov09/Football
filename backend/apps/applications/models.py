@@ -14,8 +14,8 @@ class Application(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
-    license_type = models.ForeignKey('licenses.LicenseType', on_delete=models.CASCADE, verbose_name="Litsenziya turi")
-    region = models.ForeignKey('users.Region', on_delete=models.CASCADE, verbose_name="Viloyat")
+    license_type = models.ForeignKey('licenses.LicenseType', on_delete=models.CASCADE, verbose_name="Litsenziya turi", null=True, blank=True)
+    region = models.ForeignKey('users.Region', on_delete=models.CASCADE, verbose_name="Viloyat", null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Holati")
     workplace = models.CharField(max_length=300, blank=True, null=True, verbose_name="Ish joyi")
     job_title = models.CharField(max_length=200, blank=True, null=True, verbose_name="Lavozim")

@@ -10,15 +10,21 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.db.models import Q
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 from apps.users.models import User
 from apps.licenses.models import LicenseType
 from apps.documents.models import Document
 from .models import Application, ApplicationTimeline
 from .serializers import (
-    ApplicationSerializer, ApplicationCreateSerializer,
-    ApplicationTimelineSerializer, ApplicationAdminSerializer
+    ApplicationSerializer, 
+    ApplicationCreateSerializer,
+    ApplicationTimelineSerializer, 
+    ApplicationAdminSerializer
 )
+from utils.email_service import EmailService
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -84,9 +90,14 @@ class ApplicationListCreateView(APIView):
             )
 
         # Create application
+        validated_data = serializer.validated_data
+        
+        # License_type endi code bilan keladi, validation serializer da bo'ladi
+        
         application = Application.objects.create(
             user=request.user,
-            **serializer.validated_data
+            region=getattr(request.user, 'region', None),  # Get region from user profile, None if doesn't exist
+            **validated_data
         )
 
         # Create timeline entry

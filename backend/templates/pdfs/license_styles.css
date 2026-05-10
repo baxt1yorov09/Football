@@ -1,0 +1,309 @@
+/* License Certificate PDF Styles */
+@page {
+    size: A4;
+    margin: 20mm;
+}
+
+* {
+    font-family: 'Arial', 'DejaVu Sans', sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: white;
+}
+
+.certificate {
+    max-width: 100%;
+    margin: 0 auto;
+    border: 3px solid #0D3B6E;
+    padding: 30px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    position: relative;
+}
+
+.certificate::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    border: 1px solid #0D3B6E;
+    pointer-events: none;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #0D3B6E;
+    padding-bottom: 20px;
+}
+
+.logo-section img.logo {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 10px;
+}
+
+.header h1 {
+    font-size: 24px;
+    color: #0D3B6E;
+    margin: 10px 0;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.header p {
+    font-size: 14px;
+    color: #666;
+    margin: 5px 0;
+}
+
+.title-section {
+    text-align: center;
+    margin: 40px 0;
+    padding: 20px;
+    background: #0D3B6E;
+    color: white;
+    border-radius: 10px;
+}
+
+.title-section h2 {
+    font-size: 32px;
+    margin: 0;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.title-section h3 {
+    font-size: 18px;
+    margin: 5px 0 0 0;
+    font-style: italic;
+}
+
+.certificate-info {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 5px solid #0D3B6E;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-row .label {
+    font-weight: bold;
+    color: #333;
+    flex: 1;
+}
+
+.info-row .value {
+    color: #0D3B6E;
+    font-weight: 500;
+    flex: 2;
+    text-align: right;
+}
+
+.licensee-info {
+    margin: 30px 0;
+}
+
+.licensee-info h4 {
+    color: #0D3B6E;
+    border-bottom: 2px solid #0D3B6E;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    border-left: 3px solid #0D3B6E;
+}
+
+.info-item .label {
+    font-weight: bold;
+    color: #333;
+}
+
+.info-item .value {
+    color: #0D3B6E;
+    font-weight: 500;
+}
+
+.license-details {
+    margin: 30px 0;
+}
+
+.license-details h4 {
+    color: #0D3B6E;
+    border-bottom: 2px solid #0D3B6E;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
+.license-type {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.type-badge {
+    display: inline-block;
+    background: #0D3B6E;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.type-description {
+    font-style: italic;
+    color: #666;
+    margin-top: 10px;
+}
+
+.conditions {
+    margin: 30px 0;
+    padding: 20px;
+    background: #fff3cd;
+    border-radius: 8px;
+    border-left: 5px solid #ffc107;
+}
+
+.conditions h4 {
+    color: #856404;
+    margin-bottom: 15px;
+}
+
+.conditions ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.conditions li {
+    margin: 10px 0;
+    color: #856404;
+    line-height: 1.5;
+}
+
+.signatures {
+    margin: 50px 0;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+}
+
+.signature-section {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+}
+
+.signature-box {
+    text-align: center;
+    width: 200px;
+}
+
+.signature-box p {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 12px;
+}
+
+.signature-line {
+    width: 150px;
+    height: 2px;
+    background: #333;
+    margin: 0 auto 5px auto;
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 2px solid #0D3B6E;
+}
+
+.stamp {
+    text-align: center;
+}
+
+.stamp-circle {
+    width: 80px;
+    height: 80px;
+    border: 3px solid #0D3B6E;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.stamp-text {
+    text-align: center;
+    font-size: 8px;
+    font-weight: bold;
+    color: #0D3B6E;
+    line-height: 1.2;
+}
+
+.qr-code {
+    text-align: center;
+}
+
+.qr-code p {
+    font-size: 10px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.qr-placeholder {
+    width: 60px;
+    height: 60px;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6px;
+    text-align: center;
+    color: #999;
+    margin: 0 auto;
+}
+
+/* Print styles */
+@media print {
+    .certificate {
+        border: none;
+        box-shadow: none;
+    }
+    
+    .certificate::before {
+        display: none;
+    }
+}

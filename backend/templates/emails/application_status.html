@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ariza Statusi O'zgardi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #0D3B6E;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+            margin: -30px -30px 20px -30px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+        .status-pending { background-color: #F39C12; color: white; }
+        .status-under_review { background-color: #3498DB; color: white; }
+        .status-approved { background-color: #27AE60; color: white; }
+        .status-rejected { background-color: #E74C3C; color: white; }
+        .status-additional_docs { background-color: #E67E22; color: white; }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #666;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #0D3B6E;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 O'zbekiston Futbol Federatsiyasi</h1>
+            <p>Litsenziya Ariza Tizimi</p>
+        </div>
+        
+        <h2>Assalomu alaykum, {{ user.full_name }}!</h2>
+        
+        <p>Sizning arizangiz statusi o'zgardi. Ariza tafsilotlari:</p>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>Ariza ID:</strong> {{ application.id }}</p>
+            <p><strong>Litsenziya turi:</strong> {{ application.license_type.name }}</p>
+            <p><strong>Yuborilgan sana:</strong> {{ application.submitted_at|date:"d.m.Y H:i" }}</p>
+            <p><strong>Joriy status:</strong> 
+                <span class="status-badge status-{{ application.status }}">
+                    {{ status_display }}
+                </span>
+            </p>
+        </div>
+        
+        {% if application.status == 'approved' %}
+            <div style="background-color: #d4edda; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #27AE60;">
+                <h3>🎉 Tabriklaymiz!</h3>
+                <p>Sizning arizangiz muvaffaqiyatli tasdiqlandi. Litsenziyangiz tez orada tayyor bo'ladi.</p>
+            </div>
+        {% elif application.status == 'rejected' %}
+            <div style="background-color: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #E74C3C;">
+                <h3>❌ Arizangiz rad etildi</h3>
+                {% if application.rejection_reason %}
+                    <p><strong>Rad etish sababi:</strong> {{ application.rejection_reason }}</p>
+                {% endif %}
+                <p>Iltimos, rad etish sabablarini diqqat bilan o'qing va qaytadan ariza topshirish uchun zarur hujjatlarni tayyorlang.</p>
+            </div>
+        {% elif application.status == 'additional_docs' %}
+            <div style="background-color: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #E67E22;">
+                <h3>📄 Qo'shimcha hujjatlar talab qilinadi</h3>
+                {% if application.admin_note %}
+                    <p><strong>Izoh:</strong> {{ application.admin_note }}</p>
+                {% endif %}
+                <p>Iltimos, talab qilingan qo'shimcha hujatlarni yuklang.</p>
+            </div>
+        {% elif application.status == 'under_review' %}
+            <div style="background-color: #d1ecf1; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #3498DB;">
+                <h3>🔍 Arizangiz ko'rib chiqilmoqda</h3>
+                <p>Sizning arizangiz admin tomonidan ko'rib chiqilmoqda. Natijalar haqida tez orada xabardor qilamiz.</p>
+            </div>
+        {% endif %}
+        
+        <div style="text-align: center;">
+            <a href="{{ site_url }}/dashboard" class="btn">Arizalarni Ko'rish</a>
+        </div>
+        
+        <div class="footer">
+            <p>© 2026 O'zbekiston Futbol Federatsiyasi</p>
+            <p>Bu xat avtomatik yuborildi. Iltimos, javob bermang.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Litsenziya Sertifikati</title>
+</head>
+<body>
+    <div class="certificate">
+        <header class="header">
+            <div class="logo-section">
+                <img src="{{ site_url }}/static/images/uff-logo.png" alt="UFF Logo" class="logo">
+                <h1>O'ZBEKISTON FUTBOL FEDERATSIYASI</h1>
+                <p>Uzbekistan Football Federation</p>
+            </div>
+        </header>
+        
+        <main class="content">
+            <div class="title-section">
+                <h2>LITSENZIYA SERTIFIKATI</h2>
+                <h3>LICENSE CERTIFICATE</h3>
+            </div>
+            
+            <div class="certificate-info">
+                <div class="info-row">
+                    <span class="label">Sertifikat raqami / Certificate No:</span>
+                    <span class="value">{{ application.id }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Berilgan sana / Issue Date:</span>
+                    <span class="value">{{ generated_date }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Amal qilish muddati / Valid Period:</span>
+                    <span class="value">{{ valid_from|date:"d.m.Y" }} - {{ valid_until|date:"d.m.Y" }}</span>
+                </div>
+            </div>
+            
+            <div class="licensee-info">
+                <h4>Litsenziya egasi haqida ma'lumot / Licensee Information</h4>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">F.I.SH. / Full Name:</span>
+                        <span class="value">{{ user.full_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Tug'ilgan sana / Date of Birth:</span>
+                        <span class="value">{{ user.date_of_birth|date:"d.m.Y" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Passport raqami / Passport No:</span>
+                        <span class="value">{{ user.passport_number }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Telefon / Phone:</span>
+                        <span class="value">{{ user.phone }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Viloyat / Region:</span>
+                        <span class="value">{{ user.region.name_uz|default:"Noma'lum" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="license-details">
+                <h4>Litsenziya tafsilotlari / License Details</h4>
+                <div class="license-type">
+                    <div class="type-badge">
+                        {{ license_type.name }}
+                    </div>
+                    <div class="type-description">
+                        {{ license_type.description|default:"Mutaxassis litsenziyasi" }}
+                    </div>
+                </div>
+                
+                {% if application.workplace %}
+                <div class="info-row">
+                    <span class="label">Ish joyi / Workplace:</span>
+                    <span class="value">{{ application.workplace }}</span>
+                </div>
+                {% endif %}
+                
+                {% if application.job_title %}
+                <div class="info-row">
+                    <span class="label">Lavozim / Position:</span>
+                    <span class="value">{{ application.job_title }}</span>
+                </div>
+                {% endif %}
+                
+                {% if application.coaching_years %}
+                <div class="info-row">
+                    <span class="label">Murabbiylik tajribasi / Coaching Experience:</span>
+                    <span class="value">{{ application.coaching_years }} yil</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="conditions">
+                <h4>Shartlar va qoidalar / Terms and Conditions</h4>
+                <ol>
+                    <li>Ushbu litsenziya O'zbekiston Futbol Federatsiyasi tomonidan beriladi.</li>
+                    <li>Litsenziya O'zbekiston Respublikasi hududida amal qiladi.</li>
+                    <li>Litsenziya egasi futbol qoidalariga va sport axloqiga rioiya qilishi shart.</li>
+                    <li>Litsenziyaning amal qilish muddati tugaganda, yangilash talab qilinadi.</li>
+                    <li>Litsenziya egasining sportdagi qoidabuzarliklari uchun litsenziya bekor qilinishi mumkin.</li>
+                </ol>
+            </div>
+            
+            <div class="signatures">
+                <div class="signature-section">
+                    <div class="signature-box">
+                        <p>Federatsiya raisi / Federation President</p>
+                        <div class="signature-line"></div>
+                        <p>_________________________</p>
+                    </div>
+                    <div class="signature-box">
+                        <p>Bosh mutaxassis / Chief Specialist</p>
+                        <div class="signature-line"></div>
+                        <p>_________________________</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div class="stamp">
+                    <div class="stamp-circle">
+                        <div class="stamp-text">
+                            O'ZBEKISTON<br>
+                            FUTBOL<br>
+                            FEDERATSIYASI
+                        </div>
+                    </div>
+                </div>
+                <div class="qr-code">
+                    <p>Sertifikatni tekshirish / Verify Certificate</p>
+                    <div class="qr-placeholder">
+                        [QR Code: {{ site_url }}/verify/{{ application.id }}]
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

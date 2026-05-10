@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminStatsOverview } from '@/components/admin/AdminStatsOverview';
-import { ApplicationsTable } from '@/components/admin/ApplicationsTable';
+import { ApplicationsTableNew } from '@/components/admin/ApplicationsTableNew';
 import { RecentActivity } from '@/components/admin/RecentActivity';
 import { QuickActions } from '@/components/admin/QuickActions';
 
@@ -37,7 +37,7 @@ export default function AdminPage() {
               <AdminStatsOverview />
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                  <ApplicationsTable />
+                  <ApplicationsTableNew />
                 </div>
                 <div className="space-y-6">
                   <QuickActions />
@@ -49,7 +49,7 @@ export default function AdminPage() {
 
           {activeTab === 'applications' && (
             <div>
-              <ApplicationsTable showAll={true} />
+              <ApplicationsTableNew showAll={true} />
             </div>
           )}
 
