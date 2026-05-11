@@ -68,6 +68,14 @@ class ApplicationListCreateView(APIView):
     )
     def post(self, request):
         """Create new application"""
+        print(f"DEBUG: ===== APPLICATION CREATION START =====")
+        print(f"DEBUG: User: {request.user}")
+        print(f"DEBUG: Request method: {request.method}")
+        print(f"DEBUG: Request content type: {request.content_type}")
+        print(f"DEBUG: Request POST data: {dict(request.POST)}")
+        print(f"DEBUG: Request FILES: {dict(request.FILES)}")
+        print(f"DEBUG: ========================================")
+        
         serializer = ApplicationCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -92,16 +100,11 @@ class ApplicationListCreateView(APIView):
         # Create application
         validated_data = serializer.validated_data
         
-        # Update user profile if full_name provided
+        # Extract full_name and phone for this application only
         full_name = validated_data.pop('full_name', None)
+        phone = validated_data.pop('phone', None)
         print(f"DEBUG: full_name received: {full_name}")
-        print(f"DEBUG: current user.full_name: {request.user.full_name}")
-        if full_name and not request.user.full_name:
-            request.user.full_name = full_name
-            request.user.save()
-            print(f"DEBUG: saved new full_name: {request.user.full_name}")
-        else:
-            print(f"DEBUG: full_name not saved. full_name={full_name}, user.full_name={request.user.full_name}")
+        print(f"DEBUG: phone received: {phone}")
         
         # License_type endi code bilan keladi, validation serializer da bo'ladi
         # Region from request data (validated_data) or user profile
@@ -109,9 +112,70 @@ class ApplicationListCreateView(APIView):
         
         application = Application.objects.create(
             user=request.user,
+            full_name=full_name,  # Save full_name to this application only
+            phone=phone,          # Save phone to this application only
             region=region,
             **validated_data
         )
+        
+        print(f"DEBUG: Saved application with full_name: {application.full_name}, phone: {application.phone}")
+        
+        print(f"DEBUG: Saved application with full_name: {application.full_name}")
+
+        # Handle document uploads
+        from apps.documents.models import Document
+        import uuid
+        import os
+        
+        print(f"DEBUG: ===== DOCUMENT UPLOAD DEBUG =====")
+        print(f"DEBUG: request.FILES = {request.FILES}")
+        print(f"DEBUG: request.FILES keys = {list(request.FILES.keys())}")
+        print(f"DEBUG: request.POST keys = {list(request.POST.keys())}")
+        print(f"DEBUG: request.content_type = {request.content_type}")
+        print(f"DEBUG: ======================================")
+        
+        document_fields = {
+            'passport': 'Pasport',
+            'photo_3x4': 'Rasm 3x4', 
+            'prev_license': 'Oldingi litsenziya'
+        }
+        
+        for field_name, display_name in document_fields.items():
+            if field_name in request.FILES:
+                print(f"DEBUG: Found file for {field_name}")
+                uploaded_file = request.FILES[field_name]
+                
+                # Generate unique filename
+                file_extension = os.path.splitext(uploaded_file.name)[1]
+                unique_filename = f"{uuid.uuid4()}{file_extension}"
+                
+                # Create documents directory if it doesn't exist
+                documents_dir = os.path.join('media', 'documents')
+                os.makedirs(documents_dir, exist_ok=True)
+                
+                # Save file to disk
+                file_path = os.path.join(documents_dir, unique_filename)
+                print(f"DEBUG: Saving file to: {file_path}")
+                print(f"DEBUG: Current working directory: {os.getcwd()}")
+                with open(file_path, 'wb+') as destination:
+                    for chunk in uploaded_file.chunks():
+                        destination.write(chunk)
+                
+                # Store the actual file URL
+                file_url = f"/media/documents/{unique_filename}"
+                print(f"DEBUG: File URL: {file_url}")
+                print(f"DEBUG: File exists after save: {os.path.exists(file_path)}")
+                
+                Document.objects.create(
+                    application=application,
+                    doc_type=field_name,
+                    file_url=file_url,
+                    file_name=uploaded_file.name,
+                    file_size=uploaded_file.size,
+                    mime_type=uploaded_file.content_type
+                )
+                
+                print(f"DEBUG: Saved document {field_name} - {uploaded_file.name}")
 
         # Create timeline entry
         ApplicationTimeline.objects.create(

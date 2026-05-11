@@ -51,6 +51,17 @@ interface Application {
   job_title?: string;
   coaching_years?: number;
   admin_note?: string;
+  documents?: Array<{
+    id: string;
+    doc_type: string;
+    doc_type_display: string;
+    file_url: string;
+    file_name: string;
+    file_size: number;
+    mime_type: string;
+    is_verified: boolean;
+    uploaded_at: string;
+  }>;
   timeline?: Array<{
     action: string;
     note: string;
@@ -143,6 +154,8 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
     console.log('Workplace:', app.workplace);
     console.log('Job title:', app.job_title);
     console.log('Coaching years:', app.coaching_years);
+    console.log('Documents:', app.documents);
+    console.log('Documents count:', app.documents?.length || 0);
     setSelectedApp(app);
     setDrawerOpen(true);
   };
@@ -737,6 +750,38 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                     </div>
                   </div>
                 </div>
+
+                {/* Documents */}
+                {selectedApp.documents && selectedApp.documents.length > 0 && (
+                  <div className="border-t pt-4 mt-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">Hujjatlar</h4>
+                    <div className="space-y-3">
+                      {selectedApp.documents.map((doc) => (
+                        <div key={doc.id} className="bg-gray-50 rounded-lg p-3 flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              {doc.doc_type === 'passport' && '📄'}
+                              {doc.doc_type === 'photo_3x4' && '📷'}
+                              {doc.doc_type === 'prev_license' && '📋'}
+                              {['certificate', 'diploma', 'medical'].includes(doc.doc_type) && '📜'}
+                              {doc.doc_type === 'other' && '📎'}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{doc.doc_type_display}</p>
+                              <p className="text-xs text-gray-500">{doc.file_name}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => window.open(doc.file_url, '_blank')}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            Ko'rish
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

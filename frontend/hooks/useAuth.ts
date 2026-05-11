@@ -99,6 +99,8 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: false,
       });
+      // Redirect to auth page
+      window.location.href = '/auth';
     }
   }, []);
 

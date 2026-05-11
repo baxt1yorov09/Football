@@ -140,6 +140,9 @@ export default function ApplicationWizardPage() {
       const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
       if (fullName) form.append('full_name', fullName);
       
+      // Add phone number
+      if (formData.phone) form.append('phone', formData.phone);
+      
       // Region formData'dan olinadi (user tanlaydi)
       if (formData.regionId) form.append('region', String(formData.regionId));
       
@@ -166,9 +169,44 @@ export default function ApplicationWizardPage() {
       if (formData.license_validity_end)   form.append('license_validity_end',   formData.license_validity_end);
 
       // Fayllar - backend kutayotgan nomlar
-      if (formData.passport)    form.append('passport',    formData.passport);
-      if (formData.photo_3x4)   form.append('photo_3x4',   formData.photo_3x4);
-      if (formData.prev_license) form.append('prev_license', formData.prev_license);
+      console.log('=== DEBUG FILES ===');
+      console.log('formData.passport:', formData.passport);
+      console.log('formData.photo_3x4:', formData.photo_3x4);
+      console.log('formData.prev_license:', formData.prev_license);
+      console.log('formData.documents:', formData.documents);
+      
+      // Extract files from documents object (from DocumentsStep)
+      if (formData.documents) {
+        if (formData.documents.passport && formData.documents.passport.length > 0) {
+          const passportFile = formData.documents.passport[0].file;
+          console.log('Appending passport file from documents:', passportFile);
+          form.append('passport', passportFile);
+        }
+        if (formData.documents.photo_3x4 && formData.documents.photo_3x4.length > 0) {
+          const photoFile = formData.documents.photo_3x4[0].file;
+          console.log('Appending photo_3x4 file from documents:', photoFile);
+          form.append('photo_3x4', photoFile);
+        }
+        if (formData.documents.prev_license && formData.documents.prev_license.length > 0) {
+          const licenseFile = formData.documents.prev_license[0].file;
+          console.log('Appending prev_license file from documents:', licenseFile);
+          form.append('prev_license', licenseFile);
+        }
+      }
+      
+      // Fallback to direct file fields (if any)
+      if (formData.passport) {
+        console.log('Appending passport file (direct)');
+        form.append('passport', formData.passport);
+      }
+      if (formData.photo_3x4) {
+        console.log('Appending photo_3x4 file (direct)');
+        form.append('photo_3x4', formData.photo_3x4);
+      }
+      if (formData.prev_license) {
+        console.log('Appending prev_license file (direct)');
+        form.append('prev_license', formData.prev_license);
+      }
 
       // Debug FormData content
       console.log('FormData entries:');
@@ -178,7 +216,12 @@ export default function ApplicationWizardPage() {
 
       const response = await apiClient.post(
         API_ENDPOINTS.applications.list,
-        form
+        form,
+        {
+          headers: {
+            'Content-Type': undefined,
+          },
+        }
       );
 
       localStorage.removeItem(`application_${licenseType}`);
