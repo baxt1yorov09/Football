@@ -94,9 +94,14 @@ class ApplicationListCreateView(APIView):
         
         # Update user profile if full_name provided
         full_name = validated_data.pop('full_name', None)
+        print(f"DEBUG: full_name received: {full_name}")
+        print(f"DEBUG: current user.full_name: {request.user.full_name}")
         if full_name and not request.user.full_name:
             request.user.full_name = full_name
             request.user.save()
+            print(f"DEBUG: saved new full_name: {request.user.full_name}")
+        else:
+            print(f"DEBUG: full_name not saved. full_name={full_name}, user.full_name={request.user.full_name}")
         
         # License_type endi code bilan keladi, validation serializer da bo'ladi
         # Region from request data (validated_data) or user profile

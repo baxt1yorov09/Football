@@ -651,7 +651,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
             </div>
             
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="flex-1 overflow-y-auto px-6 py-4" style={{ maxHeight: 'calc(100vh - 80px)' }}>
               <div className="space-y-4">
                 {/* Application Info */}
                 <div>

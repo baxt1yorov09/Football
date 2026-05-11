@@ -143,9 +143,22 @@ export default function ApplicationWizardPage() {
       // Region formData'dan olinadi (user tanlaydi)
       if (formData.regionId) form.append('region', String(formData.regionId));
       
-      if (formData.workplace)      form.append('workplace',      formData.workplace);
-      if (formData.job_title)      form.append('job_title',      formData.job_title);
-      if (formData.coaching_years) form.append('coaching_years', String(formData.coaching_years));
+      // Debug work info fields - use correct field names from ProfessionalStep
+      console.log('=== DEBUG FORM DATA ===');
+      console.log('formData.currentClub:', formData.currentClub);
+      console.log('formData.position:', formData.position);
+      console.log('formData.experience:', formData.experience);
+      
+      // Map ProfessionalStep fields to backend fields
+      if (formData.currentClub)   form.append('workplace',      formData.currentClub);
+      if (formData.position)      form.append('job_title',      formData.position);
+      if (formData.experience)    form.append('coaching_years', String(formData.experience));
+      
+      // Debug FormData content
+      console.log('FormData entries:');
+      Array.from(form.entries()).forEach(([key, value]) => {
+        console.log(`${key}:`, value);
+      });
       
       // Optional fields
       if (formData.prev_license_date)     form.append('prev_license_date',     formData.prev_license_date);

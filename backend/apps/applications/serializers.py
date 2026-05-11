@@ -74,12 +74,13 @@ class ApplicationCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    full_name = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = Application
         fields = [
             'license_type', 'region', 'workplace', 'job_title',
-            'coaching_years', 'prev_license_date'
+            'coaching_years', 'prev_license_date', 'full_name'
         ]
 
 
