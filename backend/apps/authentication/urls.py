@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import SendOTPView, VerifyOTPView, UserProfileView, LogoutView, RegionsListView
+from .views import SendOTPView, VerifyOTPView, UserProfileView, LogoutView, RegionsListView, AdminLoginView
 
 urlpatterns = [
     # OTP Authentication
@@ -18,4 +18,7 @@ urlpatterns = [
 
     # Regions
     path('regions', RegionsListView.as_view(), name='regions-list'),
+
+    # Admin Authentication
+    path('admin/login', AdminLoginView.as_view(), name='admin-login'),
 ]

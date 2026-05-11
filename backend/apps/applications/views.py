@@ -175,12 +175,59 @@ class ApplicationDetailView(APIView):
 
         ApplicationTimeline.objects.create(
             application=application,
-            action='rejected',
+            action='cancelled',
             note='Foydalanuvchi tomonidan bekor qilindi',
             created_by=request.user
         )
 
         return Response({'message': 'Ariza bekor qilindi'})
+
+    @swagger_auto_schema(
+        operation_description="Update application (only if pending)",
+        request_body=ApplicationCreateSerializer,
+        responses={200: ApplicationSerializer, 400: 'Bad Request', 403: 'Forbidden', 404: 'Not Found'}
+    )
+    def patch(self, request, application_id):
+        """Update application details (only allowed for pending applications)"""
+        try:
+            application = Application.objects.get(
+                id=application_id,
+                user=request.user
+            )
+        except Application.DoesNotExist:
+            return Response(
+                {'error': 'Ariza topilmadi'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Only pending applications can be updated
+        if application.status != 'pending':
+            return Response(
+                {'error': 'Faqat kutilayotgan arizalarni tahrirlash mumkin'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Update fields
+        allowed_fields = ['workplace', 'job_title', 'coaching_years', 'license_type']
+        for field in allowed_fields:
+            if field in request.data:
+                setattr(application, field, request.data[field])
+
+        application.save()
+
+        # Create timeline entry
+        ApplicationTimeline.objects.create(
+            application=application,
+            action='updated',
+            note='Ariza ma\'lumotlari yangilandi',
+            created_by=request.user
+        )
+
+        serializer = ApplicationSerializer(application)
+        return Response({
+            'application': serializer.data,
+            'message': 'Ariza ma\'lumotlari yangilandi'
+        })
 
 
 class AdminApplicationListView(APIView):
