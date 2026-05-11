@@ -12,12 +12,23 @@ import {
   Clock,
   MoreHorizontal,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  Edit3,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -25,7 +36,9 @@ interface Application {
   id: string;
   user_name: string;
   user_phone: string;
-  license_type_name: string;
+  license_type_name?: string;
+  license_type_code?: string;
+  license_type?: number | string;
   status: string;
   status_display: string;
   submitted_at: string;
@@ -33,6 +46,17 @@ interface Application {
   reviewed_by_name?: string;
   rejection_reason?: string;
   region?: string;
+  region_name?: string;
+  workplace?: string;
+  job_title?: string;
+  coaching_years?: number;
+  admin_note?: string;
+  timeline?: Array<{
+    action: string;
+    note: string;
+    created_at: string;
+    created_by_name: string;
+  }>;
 }
 
 interface ApplicationsTableProps {
@@ -58,6 +82,25 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Drawer state for viewing details
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [appToDelete, setAppToDelete] = useState<Application | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [appToEdit, setAppToEdit] = useState<Application | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    workplace: '',
+    job_title: '',
+    coaching_years: '',
+  });
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     fetchApplications();
@@ -75,12 +118,18 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
         
       const response = await apiClient.get(endpoint);
       
+      console.log('API Response:', response.data);
+      
       // Admin endpoint returns { applications, statistics }
       // User endpoint returns array directly or { applications }
       const apps = isAdmin 
         ? response.data.applications 
         : (response.data.applications || response.data);
-        
+      
+      console.log('Parsed apps:', apps);
+      console.log('First app user_name:', apps?.[0]?.user_name);
+      console.log('First app region:', apps?.[0]?.region);
+      
       setApplications(apps || []);
     } catch (err: any) {
       console.error('Error fetching applications:', err);
@@ -94,7 +143,80 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
     }
   };
 
+  // Open drawer to view details
+  const openDrawer = (app: Application) => {
+    setSelectedApp(app);
+    setDrawerOpen(true);
+  };
+
+  // Open delete dialog
+  const openDeleteDialog = (app: Application) => {
+    setAppToDelete(app);
+    setDeleteDialogOpen(true);
+  };
+
+  // Delete application
+  const handleDelete = async () => {
+    if (!appToDelete) return;
+    
+    try {
+      setDeleting(true);
+      await apiClient.delete(`/applications/${appToDelete.id}/`);
+      
+      // Remove from list
+      setApplications(prev => prev.filter(app => app.id !== appToDelete.id));
+      setDeleteDialogOpen(false);
+      setAppToDelete(null);
+    } catch (err: any) {
+      console.error('Error deleting application:', err);
+      alert(err.response?.data?.error || 'Arizani o\'chirishda xatolik yuz berdi');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Open edit dialog
+  const openEditDialog = (app: Application) => {
+    setAppToEdit(app);
+    setEditFormData({
+      workplace: app.workplace || '',
+      job_title: app.job_title || '',
+      coaching_years: app.coaching_years ? String(app.coaching_years) : '',
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Edit application
+  const handleEdit = async () => {
+    if (!appToEdit) return;
+    
+    try {
+      setEditing(true);
+      const response = await apiClient.patch(`/applications/${appToEdit.id}/`, {
+        workplace: editFormData.workplace,
+        job_title: editFormData.job_title,
+        coaching_years: editFormData.coaching_years ? parseInt(editFormData.coaching_years) : null,
+      });
+      
+      // Update in list
+      setApplications(prev => prev.map(app => 
+        app.id === appToEdit.id ? { ...app, ...response.data } : app
+      ));
+      setEditDialogOpen(false);
+      setAppToEdit(null);
+    } catch (err: any) {
+      console.error('Error editing application:', err);
+      alert(err.response?.data?.error || 'Arizani tahrirlashda xatolik yuz berdi');
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  // Filter out cancelled applications and apply search/status filters
   const filteredApplications = applications.filter(app => {
+    // Don't show cancelled applications
+    if (app.status === 'cancelled') return false;
+    
     // Handle undefined/null values safely
     const userName = app?.user_name || '';
     const appId = app?.id || '';
@@ -113,7 +235,8 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
   );
 
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold text-[#0D3B6E]">
           {showAll ? 'Barcha arizalar' : 'So\'nggi arizalar'}
@@ -190,14 +313,30 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                     Yuklanmoqda...
                   </td>
                 </tr>
+              ) : !user ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center">
+                    <div className="text-gray-600 mb-4">
+                      <p className="text-lg font-medium mb-2">Tizimga kiring</p>
+                      <p className="text-sm">O'z arizalaringizni ko'rish uchun tizimga kiring</p>
+                    </div>
+                    <a 
+                      href="/login"
+                      className="inline-block px-6 py-2 bg-[#1A56A0] text-white rounded-lg hover:bg-[#0D3B6E] transition-colors"
+                    >
+                      Kirish
+                    </a>
+                  </td>
+                </tr>
               ) : paginatedApplications.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-gray-500">
-                    Arizalar topilmadi
+                    <p className="mb-2">Arizalar topilmadi</p>
+                    <p className="text-sm text-gray-400">Siz hali hech qanday ariza yubormagansiz</p>
                   </td>
                 </tr>
               ) : paginatedApplications.map((application, index) => {
-                const status = statusConfig[application.status as keyof typeof statusConfig];
+                const status = statusConfig[application.status as keyof typeof statusConfig] || statusConfig.pending;
                 const StatusIcon = status.icon;
 
                 return (
@@ -211,12 +350,70 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                     <td className="p-4 font-mono text-sm">{application.id}</td>
                     <td className="p-4">
                       <div>
-                        <p className="font-medium text-gray-900">{application.user_name}</p>
-                        <p className="text-sm text-gray-500">{application.user_phone}</p>
+                        {(() => {
+                          // Agar user_name "Ism kiritilmagan" bo'lsa, kulrang ko'rsat
+                          const isEmptyName = !application.user_name || 
+                            application.user_name === 'Ism kiritilmagan' ||
+                            application.user_name?.startsWith('+') || 
+                            application.user_name?.match(/^\d/);
+                          
+                          return (
+                            <>
+                              <p className={isEmptyName ? 'text-gray-400 italic' : 'font-medium text-gray-900'}>
+                                {isEmptyName ? 'Ism kiritilmagan' : application.user_name}
+                              </p>
+                              {application.user_phone && (
+                                <p className="text-sm text-gray-500">{application.user_phone}</p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="p-4">
-                      <span className="text-sm font-medium">{application.license_type_name}</span>
+                      {(() => {
+                        // license_type_code or license_type_name or map from ID
+                        const code = application.license_type_code || application.license_type_name;
+                        if (code) {
+                          return (
+                            <Badge 
+                              className="text-sm font-medium px-3 py-1"
+                              style={{ 
+                                backgroundColor: code.includes('PRO') ? '#E74C3C' : '#3498DB',
+                                color: 'white'
+                              }}
+                            >
+                              {code}
+                            </Badge>
+                          );
+                        }
+                        // Map from license_type ID if needed
+                        const idToCode: Record<number, string> = {
+                          1: 'C', 2: 'B', 3: 'A', 4: 'D', 5: 'PRO',
+                          6: 'GK_1', 7: 'GK_2', 8: 'GK_3',
+                          9: 'FITNESS_1', 10: 'FITNESS_2', 11: 'FITNESS_3',
+                          12: 'SELEK', 13: 'PSYCH',
+                          14: 'ANALYTICS_1', 15: 'ANALYTICS_2',
+                          16: 'C_RENEWAL', 17: 'B_RENEWAL', 18: 'A_RENEWAL', 19: 'PRO_RENEWAL',
+                          20: 'BEACH',
+                          21: 'FUTSAL_1', 22: 'FUTSAL_2', 23: 'FUTSAL_3',
+                          24: 'FUTSAL_GK_1', 25: 'FUTSAL_GK_2', 26: 'FUTSAL_GK_3'
+                        };
+                        const mappedCode = typeof application.license_type === 'number' 
+                          ? idToCode[application.license_type] 
+                          : application.license_type;
+                        return (
+                          <Badge 
+                            className="text-sm font-medium px-3 py-1"
+                            style={{ 
+                              backgroundColor: mappedCode?.includes('PRO') ? '#E74C3C' : '#3498DB',
+                              color: 'white'
+                            }}
+                          >
+                            {mappedCode || 'Noma\'lum'}
+                          </Badge>
+                        );
+                      })()}
                     </td>
                     <td className="p-4 text-sm text-gray-600">{new Date(application.submitted_at).toLocaleDateString('uz-UZ')}</td>
                     <td className="p-4">
@@ -233,7 +430,13 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                         {status.label}
                       </Badge>
                     </td>
-                    <td className="p-4 text-sm text-gray-600">{application.region || '-'}</td>
+                    <td className="p-4 text-sm">
+                      {application.region_name || application.region ? (
+                        <span className="text-gray-900">{application.region_name || application.region}</span>
+                      ) : (
+                        <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                      )}
+                    </td>
                     <td className="p-4">
                       {application.reviewed_by_name ? (
                         <span className="text-sm text-gray-600">{application.reviewed_by_name}</span>
@@ -242,13 +445,37 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                       )}
                     </td>
                     <td className="p-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <Button variant="ghost" size="sm">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => openDrawer(application)}
+                          title="Ko'rish"
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
+                        
+                        {/* Show edit/delete buttons - DEBUG: showing for all */}
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => openEditDialog(application)}
+                            title="Tahrirlash"
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => openDeleteDialog(application)}
+                            title="O'chirish"
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
                       </div>
                     </td>
                   </motion.tr>
@@ -291,6 +518,106 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
         )}
       </CardContent>
     </Card>
+
+    {/* Delete Confirmation Dialog */}
+    <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DialogContent className="sm:max-w-md bg-white">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertCircle className="w-5 h-5" />
+            Arizani o'chirish
+          </DialogTitle>
+          <DialogDescription>
+            Haqiqatan ham bu arizani o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div className="bg-gray-50 p-3 rounded-md">
+            <p className="text-sm"><strong>Ariza ID:</strong> {appToDelete?.id}</p>
+            <p className="text-sm"><strong>Litsenziya:</strong> {appToDelete?.license_type_code}</p>
+            <p className="text-sm"><strong>Status:</strong> {appToDelete?.status_display}</p>
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={deleting}
+          >
+            Bekor qilish
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? 'O\'chirilmoqda...' : 'O\'chirish'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Edit Dialog */}
+    <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <DialogContent className="sm:max-w-md bg-white">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-blue-600">
+            <Edit3 className="w-5 h-5" />
+            Arizani tahrirlash
+          </DialogTitle>
+          <DialogDescription>
+            Ariza ma'lumotlarini yangilang
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700">Ish joyi</label>
+            <Input
+              value={editFormData.workplace}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, workplace: e.target.value }))}
+              placeholder="Ish joyi nomi"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">Lavozim</label>
+            <Input
+              value={editFormData.job_title}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, job_title: e.target.value }))}
+              placeholder="Lavozimingiz"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700">Murabbiylik staji (yil)</label>
+            <Input
+              type="number"
+              value={editFormData.coaching_years}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, coaching_years: e.target.value }))}
+              placeholder="Masalan: 5"
+              className="mt-1"
+            />
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setEditDialogOpen(false)}
+            disabled={editing}
+          >
+            Bekor qilish
+          </Button>
+          <Button
+            onClick={handleEdit}
+            disabled={editing}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {editing ? 'Saqlanmoqda...' : 'Saqlash'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

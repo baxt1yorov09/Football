@@ -92,11 +92,19 @@ class ApplicationListCreateView(APIView):
         # Create application
         validated_data = serializer.validated_data
         
+        # Update user profile if full_name provided
+        full_name = validated_data.pop('full_name', None)
+        if full_name and not request.user.full_name:
+            request.user.full_name = full_name
+            request.user.save()
+        
         # License_type endi code bilan keladi, validation serializer da bo'ladi
+        # Region from request data (validated_data) or user profile
+        region = validated_data.pop('region', None) or getattr(request.user, 'region', None)
         
         application = Application.objects.create(
             user=request.user,
-            region=getattr(request.user, 'region', None),  # Get region from user profile, None if doesn't exist
+            region=region,
             **validated_data
         )
 
@@ -159,14 +167,14 @@ class ApplicationDetailView(APIView):
             )
         except Application.DoesNotExist:
             return Response(
-                {'error': 'Ariza topilmadi'},
+                {'error': f'Ariza topilmadi: {application_id}. Foydalanuvchi: {request.user.id} ({request.user.phone})'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
         # Only pending applications can be cancelled
         if application.status not in ['pending', 'under_review']:
             return Response(
-                {'error': 'Faqat kutilayotgan arizalarni bekor qilish mumkin'},
+                {'error': f'Faqat "Kutilmoqda" yoki "Ko\'rib chiqilmoqda" statusidagi arizalarni o\'chirish mumkin. Joriy status: "{application.status}". Ariza ID: {application.id}'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -200,10 +208,10 @@ class ApplicationDetailView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Only pending applications can be updated
-        if application.status != 'pending':
+        # Only pending and under_review applications can be updated
+        if application.status not in ['pending', 'under_review']:
             return Response(
-                {'error': 'Faqat kutilayotgan arizalarni tahrirlash mumkin'},
+                {'error': f'Faqat "Kutilmoqda" yoki "Ko\'rib chiqilmoqda" statusidagi arizalarni tahrirlash mumkin. Joriy status: "{application.status}". Ariza ID: {application.id}'},
                 status=status.HTTP_403_FORBIDDEN
             )
 

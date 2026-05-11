@@ -135,7 +135,13 @@ export default function ApplicationWizardPage() {
       
       // Backend code bilan ishlaydi
       form.append('license_type', licenseType);
-      // Region ni backend user profilidan oladi - formdan yuborish shart emas
+      
+      // Add user name from firstName and lastName
+      const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
+      if (fullName) form.append('full_name', fullName);
+      
+      // Region formData'dan olinadi (user tanlaydi)
+      if (formData.regionId) form.append('region', String(formData.regionId));
       
       if (formData.workplace)      form.append('workplace',      formData.workplace);
       if (formData.job_title)      form.append('job_title',      formData.job_title);

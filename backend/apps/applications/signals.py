@@ -128,11 +128,13 @@ def send_timeline_notification(timeline):
     if timeline.note:
         message += f"\n\nIzoh: {timeline.note}"
     
+    license_name = application.license_type.name_uz if application.license_type else 'Noma\'lum'
+    
     message += f"""
 
 Ariza ma'lumotlari:
 - Ariza ID: {application.id}
-- Litsenziya turi: {application.license_type.name_uz}
+- Litsenziya turi: {license_name}
 - Sana: {timeline.created_at.strftime('%d.%m.%Y %H:%M')}
 
 Hurmat bilan,
