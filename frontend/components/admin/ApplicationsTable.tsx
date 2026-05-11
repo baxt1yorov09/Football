@@ -117,18 +117,12 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
         : API_ENDPOINTS.applications.list;
         
       const response = await apiClient.get(endpoint);
-      
-      console.log('API Response:', response.data);
-      
+      const data = response.data;
       // Admin endpoint returns { applications, statistics }
       // User endpoint returns array directly or { applications }
       const apps = isAdmin 
         ? response.data.applications 
         : (response.data.applications || response.data);
-      
-      console.log('Parsed apps:', apps);
-      console.log('First app user_name:', apps?.[0]?.user_name);
-      console.log('First app region:', apps?.[0]?.region);
       
       setApplications(apps || []);
     } catch (err: any) {
@@ -145,9 +139,18 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
 
   // Open drawer to view details
   const openDrawer = (app: Application) => {
+    console.log('Opening drawer for app:', app);
+    console.log('Workplace:', app.workplace);
+    console.log('Job title:', app.job_title);
+    console.log('Coaching years:', app.coaching_years);
     setSelectedApp(app);
     setDrawerOpen(true);
   };
+
+  // Debug drawer state
+  useEffect(() => {
+    console.log('Drawer state changed:', { drawerOpen, selectedApp: !!selectedApp });
+  }, [drawerOpen, selectedApp]);
 
   // Open delete dialog
   const openDeleteDialog = (app: Application) => {
@@ -455,27 +458,29 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                           <Eye className="w-4 h-4" />
                         </Button>
                         
-                        {/* Show edit/delete buttons - DEBUG: showing for all */}
-                        <>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => openEditDialog(application)}
-                            title="Tahrirlash"
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => openDeleteDialog(application)}
-                            title="O'chirish"
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
+                        {/* Show edit/delete for pending and under_review applications */}
+                        {!isAdmin && (application.status === 'pending' || application.status === 'under_review') && (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => openEditDialog(application)}
+                              title="Tahrirlash"
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => openDeleteDialog(application)}
+                              title="O'chirish"
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </motion.tr>
@@ -617,6 +622,127 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Application Details Drawer */}
+    {selectedApp && (
+      <div className={`fixed inset-0 z-50 overflow-hidden ${drawerOpen ? 'block' : 'hidden'}`}>
+        {/* Backdrop */}
+        <div 
+          className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
+          onClick={() => setDrawerOpen(false)}
+        />
+        
+        {/* Drawer Panel */}
+        <div className={`absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl transform transition-transform ${
+          drawerOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}>
+          <div className="h-full flex flex-col" style={{ minHeight: '100vh' }}>
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Ariza tafsilotlari</h3>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-4">
+                {/* Application Info */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Ariza ma'lumotlari</h4>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">ID:</span>
+                      <span className="text-sm font-medium">{selectedApp.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Litsenziya:</span>
+                      <span className="text-sm font-medium">{selectedApp.license_type_code || 'Noma\'lum'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Status:</span>
+                      <span className="text-sm font-medium">{selectedApp.status_display}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Yuborilgan:</span>
+                      <span className="text-sm font-medium">
+                        {new Date(selectedApp.submitted_at).toLocaleDateString('uz-UZ')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Applicant Info */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Arizachi</h4>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Ism:</span>
+                      <span className="text-sm font-medium">
+                        {selectedApp.user_name === 'Ism kiritilmagan' ? (
+                          <span className="text-gray-400 italic">Ism kiritilmagan</span>
+                        ) : (
+                          selectedApp.user_name
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Telefon:</span>
+                      <span className="text-sm font-medium">{selectedApp.user_phone}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Viloyat:</span>
+                      <span className="text-sm font-medium">
+                        {selectedApp.region_name || selectedApp.region || (
+                          <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Work Info */}
+                <div className="border-t pt-4 mt-4 bg-blue-50">
+                  <h4 className="text-sm font-medium text-gray-500 mb-3">Ish ma'lumotlari</h4>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-3 border-2 border-blue-200">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Ish joyi:</span>
+                      <span className="text-sm font-medium">
+                        {selectedApp.workplace ? selectedApp.workplace : (
+                          <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Lavozim:</span>
+                      <span className="text-sm font-medium">
+                        {selectedApp.job_title ? selectedApp.job_title : (
+                          <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Murabbiylik staji:</span>
+                      <span className="text-sm font-medium">
+                        {selectedApp.coaching_years ? `${selectedApp.coaching_years} yil` : (
+                          <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }
