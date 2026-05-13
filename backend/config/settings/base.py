@@ -34,6 +34,7 @@ LOCAL_APPS = [
     'apps.documents',
     'apps.notifications',
     'apps.reports',
+    'apps.system_settings',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -48,6 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.system_settings.middleware.MaintenanceModeMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

@@ -35,6 +35,8 @@ urlpatterns = [
     path('api/notifications', include('apps.notifications.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/reports/', include('apps.reports.urls')),
+    path('api/settings/', include('apps.system_settings.urls')),
+    path('api/settings', include('apps.system_settings.urls')),
 ]
 
 # Always serve media files (remove DEBUG condition)
