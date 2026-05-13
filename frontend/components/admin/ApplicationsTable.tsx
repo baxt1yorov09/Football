@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 interface Application {
   id: string;
@@ -75,15 +76,16 @@ interface ApplicationsTableProps {
 }
 
 const statusConfig = {
-  pending: { label: 'Kutilmoqda', color: '#F39C12', bgColor: '#F39C12/10', icon: Clock },
-  under_review: { label: 'Ko\'rib chiqilmoqda', color: '#3498DB', bgColor: '#3498DB/10', icon: Eye },
-  additional_docs: { label: 'Qo\'shimcha hujjatlar', color: '#E67E22', bgColor: '#E67E22/10', icon: Clock },
-  approved: { label: 'Tasdiqlangan', color: '#27AE60', bgColor: '#27AE60/10', icon: CheckCircle },
-  rejected: { label: 'Rad etilgan', color: '#E74C3C', bgColor: '#E74C3C/10', icon: XCircle },
+  pending:         { tKey: 'applications.status.pending',         color: '#F39C12', bgColor: '#F39C12/10', icon: Clock },
+  under_review:    { tKey: 'applications.status.under_review',    color: '#3498DB', bgColor: '#3498DB/10', icon: Eye },
+  additional_docs: { tKey: 'applications.status.additional_docs', color: '#E67E22', bgColor: '#E67E22/10', icon: Clock },
+  approved:        { tKey: 'applications.status.approved',        color: '#27AE60', bgColor: '#27AE60/10', icon: CheckCircle },
+  rejected:        { tKey: 'applications.status.rejected',        color: '#E74C3C', bgColor: '#E74C3C/10', icon: XCircle },
 };
 
 export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
   const { user } = useAuth();
+  const { t, locale } = useI18n();
   const isAdmin = user?.role === 'admin';
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -139,9 +141,9 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
     } catch (err: any) {
       console.error('Error fetching applications:', err);
       if (err.response?.status === 403) {
-        setError('Ruxsat yo\'q: Admin huquqlari talab qilinadi');
+        setError(t('common.error'));
       } else {
-        setError('Arizalarni yuklashda xatolik yuz berdi');
+        setError(t('common.error'));
       }
     } finally {
       setLoading(false);
@@ -185,7 +187,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
       setAppToDelete(null);
     } catch (err: any) {
       console.error('Error deleting application:', err);
-      alert(err.response?.data?.error || 'Arizani o\'chirishda xatolik yuz berdi');
+      alert(err.response?.data?.error || t('common.error'));
     } finally {
       setDeleting(false);
     }
@@ -222,7 +224,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
       setAppToEdit(null);
     } catch (err: any) {
       console.error('Error editing application:', err);
-      alert(err.response?.data?.error || 'Arizani tahrirlashda xatolik yuz berdi');
+      alert(err.response?.data?.error || t('common.error'));
     } finally {
       setEditing(false);
     }
@@ -255,12 +257,12 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
       <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold text-[#0D3B6E]">
-          {showAll ? 'Barcha arizalar' : 'So\'nggi arizalar'}
+          {showAll ? t('applications.title') : t('dashboard.recent_applications')}
         </CardTitle>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {t('common.download')}
           </Button>
         </div>
       </CardHeader>
@@ -272,7 +274,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
-                  placeholder="Arizachi yoki ID bo'yicha qidirish..."
+                  placeholder={t('applications.search_placeholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-12 h-10"
@@ -286,9 +288,9 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="h-10 px-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#F39C12]"
               >
-                <option value="all">Barcha statuslar</option>
+                <option value="all">{t('common.all')}</option>
                 {Object.entries(statusConfig).map(([key, config]) => (
-                  <option key={key} value={key}>{config.label}</option>
+                  <option key={key} value={key}>{t(config.tKey)}</option>
                 ))}
               </select>
             </div>
@@ -301,13 +303,13 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left p-4 font-medium text-gray-700">ID</th>
-                <th className="text-left p-4 font-medium text-gray-700">Arizachi</th>
-                <th className="text-left p-4 font-medium text-gray-700">Litsenziya turi</th>
-                <th className="text-left p-4 font-medium text-gray-700">Yuborilgan</th>
-                <th className="text-left p-4 font-medium text-gray-700">Status</th>
-                <th className="text-left p-4 font-medium text-gray-700">Region</th>
-                <th className="text-left p-4 font-medium text-gray-700">Tekshiruvchi</th>
-                <th className="text-center p-4 font-medium text-gray-700">Amallar</th>
+                <th className="text-left p-4 font-medium text-gray-700">{t('applications.fields.full_name')}</th>
+                <th className="text-left p-4 font-medium text-gray-700">{t('applications.fields.license_type')}</th>
+                <th className="text-left p-4 font-medium text-gray-700">{t('applications.submitted_at')}</th>
+                <th className="text-left p-4 font-medium text-gray-700">{t('applications.filter_status')}</th>
+                <th className="text-left p-4 font-medium text-gray-700">{t('applications.fields.region')}</th>
+                <th className="text-left p-4 font-medium text-gray-700">{t('applications.reviewed_at')}</th>
+                <th className="text-center p-4 font-medium text-gray-700">{t('common.view')}</th>
               </tr>
             </thead>
             <tbody>
@@ -319,36 +321,35 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                       onClick={fetchApplications}
                       className="text-blue-500 hover:text-blue-700 underline"
                     >
-                      Qayta urinish
+                      {t('common.retry')}
                     </button>
                   </td>
                 </tr>
               ) : loading ? (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-gray-500">
-                    Yuklanmoqda...
+                    {t('common.loading')}
                   </td>
                 </tr>
               ) : !user ? (
                 <tr>
                   <td colSpan={8} className="p-8 text-center">
                     <div className="text-gray-600 mb-4">
-                      <p className="text-lg font-medium mb-2">Tizimga kiring</p>
-                      <p className="text-sm">O'z arizalaringizni ko'rish uchun tizimga kiring</p>
+                      <p className="text-lg font-medium mb-2">{t('common.error')}</p>
                     </div>
                     <a 
                       href="/login"
                       className="inline-block px-6 py-2 bg-[#1A56A0] text-white rounded-lg hover:bg-[#0D3B6E] transition-colors"
                     >
-                      Kirish
+                      {t('nav.portal')}
                     </a>
                   </td>
                 </tr>
               ) : paginatedApplications.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="p-8 text-center text-gray-500">
-                    <p className="mb-2">Arizalar topilmadi</p>
-                    <p className="text-sm text-gray-400">Siz hali hech qanday ariza yubormagansiz</p>
+                    <p className="mb-2">{t('applications.empty_title')}</p>
+                    <p className="text-sm text-gray-400">{t('applications.empty_subtitle')}</p>
                   </td>
                 </tr>
               ) : paginatedApplications.map((application, index) => {
@@ -376,7 +377,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                           return (
                             <>
                               <p className={isEmptyName ? 'text-gray-400 italic' : 'font-medium text-gray-900'}>
-                                {isEmptyName ? 'Ism kiritilmagan' : application.user_name}
+                                {isEmptyName ? '—' : application.user_name}
                               </p>
                               {application.user_phone && (
                                 <p className="text-sm text-gray-500">{application.user_phone}</p>
@@ -426,12 +427,12 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                               color: 'white'
                             }}
                           >
-                            {mappedCode || 'Noma\'lum'}
+                            {mappedCode || '—'}
                           </Badge>
                         );
                       })()}
                     </td>
-                    <td className="p-4 text-sm text-gray-600">{new Date(application.submitted_at).toLocaleDateString('uz-UZ')}</td>
+                    <td className="p-4 text-sm text-gray-600">{new Date(application.submitted_at).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}</td>
                     <td className="p-4">
                       <Badge 
                         variant="secondary"
@@ -443,14 +444,14 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                         className="flex items-center gap-1 w-fit"
                       >
                         <StatusIcon className="w-3 h-3" />
-                        {status.label}
+                        {t(status.tKey)}
                       </Badge>
                     </td>
                     <td className="p-4 text-sm">
                       {application.region_name || application.region ? (
                         <span className="text-gray-900">{application.region_name || application.region}</span>
                       ) : (
-                        <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                        <span className="text-gray-400 italic">—</span>
                       )}
                     </td>
                     <td className="p-4">
@@ -466,7 +467,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                           variant="ghost" 
                           size="sm"
                           onClick={() => openDrawer(application)}
-                          title="Ko'rish"
+                          title={t('common.view')}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -478,7 +479,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                               variant="ghost" 
                               size="sm"
                               onClick={() => openEditDialog(application)}
-                              title="Tahrirlash"
+                              title={t('common.edit')}
                               className="text-blue-600 hover:text-blue-800"
                             >
                               <Edit3 className="w-4 h-4" />
@@ -487,7 +488,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                               variant="ghost" 
                               size="sm"
                               onClick={() => openDeleteDialog(application)}
-                              title="O'chirish"
+                              title={t('common.delete')}
                               className="text-red-600 hover:text-red-800"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -508,7 +509,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600">
-                {filteredApplications.length} ta arizadan {(currentPage - 1) * 10 + 1}-{Math.min(currentPage * 10, filteredApplications.length)} ko'rsatilmoqda
+                {(currentPage - 1) * 10 + 1}–{Math.min(currentPage * 10, filteredApplications.length)} / {filteredApplications.length}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -543,17 +544,17 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <AlertCircle className="w-5 h-5" />
-            Arizani o'chirish
+            {t('applications.cancel_title')}
           </DialogTitle>
           <DialogDescription>
-            Haqiqatan ham bu arizani o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi.
+            {t('applications.cancel_message')}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <div className="bg-gray-50 p-3 rounded-md">
-            <p className="text-sm"><strong>Ariza ID:</strong> {appToDelete?.id}</p>
-            <p className="text-sm"><strong>Litsenziya:</strong> {appToDelete?.license_type_code}</p>
-            <p className="text-sm"><strong>Status:</strong> {appToDelete?.status_display}</p>
+            <p className="text-sm"><strong>ID:</strong> {appToDelete?.id}</p>
+            <p className="text-sm"><strong>{t('applications.fields.license_type')}:</strong> {appToDelete?.license_type_code}</p>
+            <p className="text-sm"><strong>{t('applications.filter_status')}:</strong> {appToDelete?.status_display}</p>
           </div>
         </div>
         <DialogFooter className="gap-2">
@@ -562,14 +563,14 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
             onClick={() => setDeleteDialogOpen(false)}
             disabled={deleting}
           >
-            Bekor qilish
+            {t('common.cancel')}
           </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
             disabled={deleting}
           >
-            {deleting ? 'O\'chirilmoqda...' : 'O\'chirish'}
+            {deleting ? t('common.loading') : t('common.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -581,38 +582,38 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-blue-600">
             <Edit3 className="w-5 h-5" />
-            Arizani tahrirlash
+            {t('common.edit')}
           </DialogTitle>
           <DialogDescription>
-            Ariza ma'lumotlarini yangilang
+            {t('applications.info_title')}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-700">Ish joyi</label>
+            <label className="text-sm font-medium text-gray-700">{t('applications.fields.workplace')}</label>
             <Input
               value={editFormData.workplace}
               onChange={(e) => setEditFormData(prev => ({ ...prev, workplace: e.target.value }))}
-              placeholder="Ish joyi nomi"
+              placeholder={t('applications.fields.workplace')}
               className="mt-1"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Lavozim</label>
+            <label className="text-sm font-medium text-gray-700">{t('applications.fields.job_title')}</label>
             <Input
               value={editFormData.job_title}
               onChange={(e) => setEditFormData(prev => ({ ...prev, job_title: e.target.value }))}
-              placeholder="Lavozimingiz"
+              placeholder={t('applications.fields.job_title')}
               className="mt-1"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Murabbiylik staji (yil)</label>
+            <label className="text-sm font-medium text-gray-700">{t('applications.fields.coaching_years')} ({t('applications.fields.years')})</label>
             <Input
               type="number"
               value={editFormData.coaching_years}
               onChange={(e) => setEditFormData(prev => ({ ...prev, coaching_years: e.target.value }))}
-              placeholder="Masalan: 5"
+              placeholder="5"
               className="mt-1"
             />
           </div>
@@ -623,14 +624,14 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
             onClick={() => setEditDialogOpen(false)}
             disabled={editing}
           >
-            Bekor qilish
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleEdit}
             disabled={editing}
             className="bg-blue-600 hover:bg-blue-700"
           >
-            {editing ? 'Saqlanmoqda...' : 'Saqlash'}
+            {editing ? t('common.saving') : t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -652,7 +653,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
           <div className="h-full flex flex-col" style={{ minHeight: '100vh' }}>
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Ariza tafsilotlari</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('applications.info_title')}</h3>
               <button
                 onClick={() => setDrawerOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -668,24 +669,24 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
               <div className="space-y-4">
                 {/* Application Info */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Ariza ma'lumotlari</h4>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">{t('applications.info_title')}</h4>
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">ID:</span>
                       <span className="text-sm font-medium">{selectedApp.id}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Litsenziya:</span>
-                      <span className="text-sm font-medium">{selectedApp.license_type_code || 'Noma\'lum'}</span>
+                      <span className="text-sm text-gray-600">{t('applications.fields.license_type')}:</span>
+                      <span className="text-sm font-medium">{selectedApp.license_type_code || '—'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Status:</span>
+                      <span className="text-sm text-gray-600">{t('applications.filter_status')}:</span>
                       <span className="text-sm font-medium">{selectedApp.status_display}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Yuborilgan:</span>
+                      <span className="text-sm text-gray-600">{t('applications.submitted_at')}:</span>
                       <span className="text-sm font-medium">
-                        {new Date(selectedApp.submitted_at).toLocaleDateString('uz-UZ')}
+                        {new Date(selectedApp.submitted_at).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}
                       </span>
                     </div>
                   </div>
@@ -693,27 +694,27 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
 
                 {/* Applicant Info */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Arizachi</h4>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">{t('applications.fields.full_name')}</h4>
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Ism:</span>
+                      <span className="text-sm text-gray-600">{t('applications.fields.full_name')}:</span>
                       <span className="text-sm font-medium">
                         {selectedApp.user_name === 'Ism kiritilmagan' ? (
-                          <span className="text-gray-400 italic">Ism kiritilmagan</span>
+                          <span className="text-gray-400 italic">—</span>
                         ) : (
                           selectedApp.user_name
                         )}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Telefon:</span>
+                      <span className="text-sm text-gray-600">{t('applications.fields.phone')}:</span>
                       <span className="text-sm font-medium">{selectedApp.user_phone}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Viloyat:</span>
+                      <span className="text-sm text-gray-600">{t('applications.fields.region')}:</span>
                       <span className="text-sm font-medium">
                         {selectedApp.region_name || selectedApp.region || (
-                          <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                          <span className="text-gray-400 italic">—</span>
                         )}
                       </span>
                     </div>
@@ -722,29 +723,29 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
 
                 {/* Work Info */}
                 <div className="border-t pt-4 mt-4 bg-blue-50">
-                  <h4 className="text-sm font-medium text-gray-500 mb-3">Ish ma'lumotlari</h4>
+                  <h4 className="text-sm font-medium text-gray-500 mb-3">{t('applications.info_title')}</h4>
                   <div className="bg-gray-50 rounded-lg p-4 space-y-3 border-2 border-blue-200">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Ish joyi:</span>
+                      <span className="text-sm text-gray-600">{t('applications.fields.workplace')}:</span>
                       <span className="text-sm font-medium">
                         {selectedApp.workplace ? selectedApp.workplace : (
-                          <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                          <span className="text-gray-400 italic">—</span>
                         )}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Lavozim:</span>
+                      <span className="text-sm text-gray-600">{t('applications.fields.job_title')}:</span>
                       <span className="text-sm font-medium">
                         {selectedApp.job_title ? selectedApp.job_title : (
-                          <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                          <span className="text-gray-400 italic">—</span>
                         )}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Murabbiylik staji:</span>
+                      <span className="text-sm text-gray-600">{t('applications.fields.coaching_years')}:</span>
                       <span className="text-sm font-medium">
-                        {selectedApp.coaching_years ? `${selectedApp.coaching_years} yil` : (
-                          <span className="text-gray-400 italic">Ko'rsatilmagan</span>
+                        {selectedApp.coaching_years ? `${selectedApp.coaching_years} ${t('applications.fields.years')}` : (
+                          <span className="text-gray-400 italic">—</span>
                         )}
                       </span>
                     </div>
@@ -754,7 +755,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                 {/* Documents */}
                 {selectedApp.documents && selectedApp.documents.length > 0 && (
                   <div className="border-t pt-4 mt-4">
-                    <h4 className="text-sm font-medium text-gray-500 mb-3">Hujjatlar</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-3">{t('applications.docs_title')}</h4>
                     <div className="space-y-3">
                       {selectedApp.documents.map((doc) => (
                         <div key={doc.id} className="bg-gray-50 rounded-lg p-3 flex items-center justify-between">
@@ -775,7 +776,7 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
                             onClick={() => window.open(doc.file_url, '_blank')}
                             className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                           >
-                            Ko'rish
+                            {t('common.view')}
                           </button>
                         </div>
                       ))}

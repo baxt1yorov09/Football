@@ -12,43 +12,44 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
-const quickActions = [
-  {
-    title: 'Yangi litsenziya',
-    description: 'Litsenziya yaratish',
-    icon: Award,
-    color: '#F39C12',
-    bgColor: '#F39C12/10',
-    action: 'create-license'
-  },
-  {
-    title: 'Arizalarni export',
-    description: 'Excel faylda yuklab olish',
-    icon: Download,
-    color: '#3498DB',
-    bgColor: '#3498DB/10',
-    action: 'export-applications'
-  },
-  {
-    title: 'Bulk import',
-    description: 'Ko\'p foydalanuvchi import',
-    icon: Upload,
-    color: '#27AE60',
-    bgColor: '#27AE60/10',
-    action: 'bulk-import'
-  },
-  {
-    title: 'System backup',
-    description: 'Tizimni zaxiralash',
-    icon: Settings,
-    color: '#9B59B6',
-    bgColor: '#9B59B6/10',
-    action: 'system-backup'
-  },
-];
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 export function QuickActions() {
+  const { t } = useI18n();
+  const quickActions = [
+    {
+      title: t('admin.lic_panel.new_license'),
+      description: t('admin.lic_panel.title'),
+      icon: Award,
+      color: '#F39C12',
+      bgColor: '#F39C12/10',
+      action: 'create-license'
+    },
+    {
+      title: t('admin.lic_panel.export'),
+      description: t('common.download'),
+      icon: Download,
+      color: '#3498DB',
+      bgColor: '#3498DB/10',
+      action: 'export-applications'
+    },
+    {
+      title: t('admin.users_panel.new_user'),
+      description: t('admin.users_panel.subtitle'),
+      icon: Upload,
+      color: '#27AE60',
+      bgColor: '#27AE60/10',
+      action: 'bulk-import'
+    },
+    {
+      title: t('admin.settings'),
+      description: t('admin.tabs.system'),
+      icon: Settings,
+      color: '#9B59B6',
+      bgColor: '#9B59B6/10',
+      action: 'system-backup'
+    },
+  ];
   const handleAction = (action: string) => {
     console.log('Action:', action);
     // TODO: Implement action handlers
@@ -58,7 +59,7 @@ export function QuickActions() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-bold text-[#0D3B6E]">
-          Tezkor amallar
+          {t('admin.realtime_stats')}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">

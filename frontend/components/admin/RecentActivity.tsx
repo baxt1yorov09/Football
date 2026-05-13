@@ -10,6 +10,7 @@ import {
   Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 const activities = [
   {
@@ -60,14 +61,15 @@ const activities = [
 ];
 
 export function RecentActivity() {
+  const { t } = useI18n();
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-lg font-bold text-[#0D3B6E]">
-          So'nggi faoliyat
+          {t('admin.recent_apps')}
         </CardTitle>
         <button className="text-sm text-[#1A56A0] hover:text-[#F39C12]">
-          Barchasini ko'rish
+          {t('dashboard.view_all')}
         </button>
       </CardHeader>
       <CardContent className="p-0">

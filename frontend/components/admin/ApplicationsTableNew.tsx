@@ -35,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 interface Application {
   id: string;
@@ -81,16 +82,17 @@ interface ApplicationsTableProps {
 }
 
 const statusConfig = {
-  pending: { label: 'Kutilmoqda', color: '#F39C12', bgColor: '#F39C12/10', icon: Clock },
-  under_review: { label: 'Ko\'rib chiqilmoqda', color: '#3498DB', bgColor: '#3498DB/10', icon: Eye },
-  additional_docs: { label: 'Qo\'shimcha hujjatlar', color: '#E67E22', bgColor: '#E67E22/10', icon: Clock },
-  approved: { label: 'Tasdiqlangan', color: '#27AE60', bgColor: '#27AE60/10', icon: CheckCircle },
-  rejected: { label: 'Rad etilgan', color: '#E74C3C', bgColor: '#E74C3C/10', icon: XCircle },
-  cancelled: { label: 'Bekor qilingan', color: '#7F8C8D', bgColor: '#7F8C8D/10', icon: Archive },
+  pending:         { tKey: 'applications.status.pending',         color: '#F39C12', bgColor: '#F39C12/10', icon: Clock },
+  under_review:    { tKey: 'applications.status.under_review',    color: '#3498DB', bgColor: '#3498DB/10', icon: Eye },
+  additional_docs: { tKey: 'applications.status.additional_docs', color: '#E67E22', bgColor: '#E67E22/10', icon: Clock },
+  approved:        { tKey: 'applications.status.approved',        color: '#27AE60', bgColor: '#27AE60/10', icon: CheckCircle },
+  rejected:        { tKey: 'applications.status.rejected',        color: '#E74C3C', bgColor: '#E74C3C/10', icon: XCircle },
+  cancelled:       { tKey: 'applications.status.cancelled',       color: '#7F8C8D', bgColor: '#7F8C8D/10', icon: Archive },
 };
 
 export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps) {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [hasAdminToken, setHasAdminToken] = useState(false);
 
   useEffect(() => {
@@ -290,7 +292,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
-                  placeholder="Arizachi yoki ID bo'yicha qidirish..."
+                  placeholder={t('applications.search_placeholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-12"
@@ -303,13 +305,13 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">Barcha statuslar</option>
-                <option value="pending">Kutilmoqda</option>
-                <option value="under_review">Ko'rib chiqilmoqda</option>
-                <option value="additional_docs">Qo'shimcha hujjatlar</option>
-                <option value="approved">Tasdiqlangan</option>
-                <option value="rejected">Rad etilgan</option>
-                <option value="cancelled">Bekor qilingan</option>
+                <option value="all">{t('common.all')}</option>
+                <option value="pending">{t('applications.status.pending')}</option>
+                <option value="under_review">{t('applications.status.under_review')}</option>
+                <option value="additional_docs">{t('applications.status.additional_docs')}</option>
+                <option value="approved">{t('applications.status.approved')}</option>
+                <option value="rejected">{t('applications.status.rejected')}</option>
+                <option value="cancelled">{t('applications.status.cancelled')}</option>
               </select>
             </div>
           </div>
@@ -390,7 +392,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                         backgroundColor: statusConfig[app.status as keyof typeof statusConfig]?.bgColor,
                       }}
                     >
-                      {statusConfig[app.status as keyof typeof statusConfig]?.label}
+                      {(() => { const sc = statusConfig[app.status as keyof typeof statusConfig]; return sc ? t(sc.tKey) : app.status; })()}
                     </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -402,7 +404,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                         variant="outline" 
                         size="sm"
                         onClick={() => openDrawer(app)}
-                        title="Ko'rish"
+                        title={t('common.view')}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -414,7 +416,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                             onClick={() => handleApprove(app.id)}
                             disabled={actionLoading === app.id}
                             className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                            title="Tasdiqlash"
+                            title={t('applications.status.approved')}
                           >
                             {actionLoading === app.id ? (
                               <RefreshCw className="w-4 h-4 animate-spin" />
@@ -431,7 +433,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                             }}
                             disabled={actionLoading === app.id}
                             className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                            title="Rad etish"
+                            title={t('applications.status.rejected')}
                           >
                             <XCircle className="w-4 h-4" />
                           </Button>
@@ -598,7 +600,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     <div className="pt-3 border-t border-gray-200">
                       <div className="flex items-center gap-2 text-gray-600">
                         <Building2 className="w-4 h-4" />
-                        <span className="text-sm"><strong>Ish joyi:</strong> {selectedAppDetails.workplace}</span>
+                        <span className="text-sm"><strong>{t('applications.fields.workplace')}:</strong> {selectedAppDetails.workplace}</span>
                       </div>
                     </div>
                   )}
@@ -625,7 +627,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 </h3>
                 <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Litsenziya turi</span>
+                    <span className="text-gray-600">{t('applications.fields.license_type')}</span>
                     <Badge 
                       className="px-3 py-1 text-sm font-semibold"
                       style={{ 
@@ -638,8 +640,8 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Hujjatlar soni</span>
-                    <span className="font-medium text-gray-900">{selectedAppDetails.documents_count || 0} ta</span>
+                    <span className="text-gray-600">{t('applications.docs_title')}</span>
+                    <span className="font-medium text-gray-900">{selectedAppDetails.documents_count || 0}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-gray-200">
                     <span className="text-gray-600">Holat</span>
@@ -650,7 +652,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                         color: 'white'
                       }}
                     >
-                      {selectedAppDetails.status_display}
+                      {(() => { const sc = statusConfig[selectedAppDetails.status as keyof typeof statusConfig]; return sc ? t(sc.tKey) : selectedAppDetails.status_display; })()}
                     </Badge>
                   </div>
                   {selectedAppDetails.reviewed_by_name && (
@@ -696,7 +698,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                       );
                     })
                   ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">Hujjatlar topilmadi</p>
+                    <p className="text-sm text-gray-500 text-center py-4">{t('admin.no_data')}</p>
                   )}
                 </div>
               </div>
@@ -710,7 +712,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 <textarea
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
-                  placeholder="Sabab yozing..."
+                  placeholder={t('applications.rejection_reason')}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1A56A0] resize-none min-h-[100px]"
                 />
               </div>
@@ -811,14 +813,14 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <XCircle className="w-8 h-8 text-red-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Arizani rad etish</h3>
-              <p className="text-gray-600">Rad etish sababini kiriting</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{t('applications.status.rejected')}</h3>
+              <p className="text-gray-600">{t('applications.rejection_reason')}</p>
             </div>
 
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Sababni batafsil yozing..."
+              placeholder={t('applications.rejection_reason')}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 resize-none mb-6 min-h-[100px]"
             />
 
@@ -895,10 +897,10 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               ) : (
                 <div className="text-center p-8">
                   <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">Bu faylni ko'rish mumkin emas</p>
+                  <p className="text-gray-600 mb-4">{t('common.error')}</p>
                   <Button onClick={() => window.open(previewDoc.url, '_blank')}>
                     <Download className="w-4 h-4 mr-2" />
-                    Yuklab olish
+                    {t('common.download')}
                   </Button>
                 </div>
               )}

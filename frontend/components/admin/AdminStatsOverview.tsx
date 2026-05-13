@@ -8,6 +8,7 @@ import {
   AlertCircle, MapPin, Activity, ChevronRight,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 // ============ Types ============
 interface Overview {
@@ -92,34 +93,33 @@ function getToken(): string | null {
   return localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: 'bg-amber-50', text: 'text-amber-700', label: 'Kutilmoqda' },
-  under_review: { bg: 'bg-blue-50', text: 'text-blue-700', label: "Ko'rib chiqilmoqda" },
-  additional_docs: { bg: 'bg-orange-50', text: 'text-orange-700', label: "Qo'shimcha hujjat" },
-  approved: { bg: 'bg-green-50', text: 'text-green-700', label: 'Tasdiqlangan' },
-  rejected: { bg: 'bg-red-50', text: 'text-red-700', label: 'Rad etilgan' },
-  cancelled: { bg: 'bg-gray-50', text: 'text-gray-700', label: 'Bekor qilingan' },
+const STATUS_COLORS: Record<string, { bg: string; text: string; tKey: string }> = {
+  pending:         { bg: 'bg-amber-50',  text: 'text-amber-700',  tKey: 'applications.status.pending' },
+  under_review:    { bg: 'bg-blue-50',   text: 'text-blue-700',   tKey: 'applications.status.under_review' },
+  additional_docs: { bg: 'bg-orange-50', text: 'text-orange-700', tKey: 'applications.status.additional_docs' },
+  approved:        { bg: 'bg-green-50',  text: 'text-green-700',  tKey: 'applications.status.approved' },
+  rejected:        { bg: 'bg-red-50',    text: 'text-red-700',    tKey: 'applications.status.rejected' },
+  cancelled:       { bg: 'bg-gray-50',   text: 'text-gray-700',   tKey: 'applications.status.cancelled' },
 };
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: (k: string, v?: any) => string, locale: string = 'uz'): string {
   try {
     const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-    if (diff < 60) return 'Hozirgina';
-    if (diff < 3600) return `${Math.floor(diff / 60)} daqiqa oldin`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} soat oldin`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)} kun oldin`;
-    return new Date(iso).toLocaleDateString('uz-UZ');
+    if (diff < 60) return t('common.just_now');
+    if (diff < 3600) return t('common.minutes_ago', { n: Math.floor(diff / 60) });
+    if (diff < 86400) return t('common.hours_ago', { n: Math.floor(diff / 3600) });
+    if (diff < 604800) return t('common.days_ago', { n: Math.floor(diff / 86400) });
+    return new Date(iso).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ');
   } catch {
     return iso;
   }
 }
 
-function monthLabel(monthIso: string): string {
-  // "2026-05" → "May 26"
+function monthLabel(monthIso: string, locale: string = 'uz'): string {
   try {
     const [y, m] = monthIso.split('-');
     const date = new Date(Number(y), Number(m) - 1, 1);
-    return date.toLocaleDateString('uz-UZ', { month: 'short', year: '2-digit' });
+    return date.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ', { month: 'short', year: '2-digit' });
   } catch {
     return monthIso;
   }
@@ -127,6 +127,7 @@ function monthLabel(monthIso: string): string {
 
 // ============ MAIN COMPONENT ============
 export function AdminStatsOverview() {
+  const { t, locale } = useI18n();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -149,7 +150,7 @@ export function AdminStatsOverview() {
       const payload = await res.json();
       setData(payload);
     } catch (e: any) {
-      setError(e.message || 'Yuklab bo\'lmadi');
+      setError(e.message || t('common.error'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -187,14 +188,14 @@ export function AdminStatsOverview() {
       <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-center gap-3">
         <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
         <div className="flex-1">
-          <p className="font-medium text-red-900">Statistikani yuklab bo'lmadi</p>
+          <p className="font-medium text-red-900">{t('admin.failed_load')}</p>
           <p className="text-sm text-red-700 mt-1">{error}</p>
         </div>
         <button
           onClick={() => fetchData(true)}
           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
         >
-          Qayta urinish
+          {t('common.retry')}
         </button>
       </div>
     );
@@ -203,36 +204,37 @@ export function AdminStatsOverview() {
   const { overview, changes, periods, license_distribution, region_stats, monthly_trend, recent_activity } = data;
 
   // Top KPI cards
+  const numLocale = locale === 'ru' ? 'ru-RU' : 'uz-UZ';
   const kpis = [
     {
-      label: 'Jami arizalar',
-      value: overview.total_applications.toLocaleString('uz-UZ'),
+      label: t('admin.total_apps'),
+      value: overview.total_applications.toLocaleString(numLocale),
       change: changes.applications_month_pct,
-      sub: `+${overview.new_users_this_month} yangi oy davomida`,
+      sub: t('admin.new_users_month', { n: overview.new_users_this_month }),
       icon: FileText,
       color: '#3498DB',
     },
     {
-      label: 'Faol litsenziyalar',
-      value: overview.active_licenses.toLocaleString('uz-UZ'),
+      label: t('admin.active_licenses'),
+      value: overview.active_licenses.toLocaleString(numLocale),
       change: changes.licenses_pct,
-      sub: `${overview.expired_licenses} ta tugagan`,
+      sub: t('admin.expired_count', { n: overview.expired_licenses }),
       icon: Award,
       color: '#27AE60',
     },
     {
-      label: 'Murabbiylar',
-      value: overview.total_users.toLocaleString('uz-UZ'),
+      label: t('admin.coaches'),
+      value: overview.total_users.toLocaleString(numLocale),
       change: changes.users_pct,
-      sub: `+${overview.new_users_this_month} oy davomida`,
+      sub: t('admin.new_users_month', { n: overview.new_users_this_month }),
       icon: Users,
       color: '#F39C12',
     },
     {
-      label: 'Kutilayotgan arizalar',
-      value: (overview.pending_applications + overview.under_review).toLocaleString('uz-UZ'),
+      label: t('admin.pending_apps'),
+      value: (overview.pending_applications + overview.under_review).toLocaleString(numLocale),
       change: -changes.applications_week_pct,
-      sub: `${overview.pending_applications} yangi, ${overview.under_review} ko'rilmoqda`,
+      sub: t('admin.pending_breakdown', { n: overview.pending_applications, m: overview.under_review }),
       icon: Clock,
       color: '#E74C3C',
     },
@@ -248,7 +250,7 @@ export function AdminStatsOverview() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500 flex items-center gap-2">
           <Activity className="w-4 h-4" />
-          Real vaqt statistika
+          {t('admin.realtime_stats')}
           {refreshing && <RefreshCw className="w-3 h-3 animate-spin" />}
         </p>
         <button
@@ -257,7 +259,7 @@ export function AdminStatsOverview() {
           className="text-sm px-3 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          Yangilash
+          {t('admin.refresh')}
         </button>
       </div>
 
@@ -285,7 +287,7 @@ export function AdminStatsOverview() {
                         <span className={`text-sm font-medium ${isUp ? 'text-green-500' : 'text-red-500'}`}>
                           {isUp ? '+' : ''}{kpi.change.toFixed(1)}%
                         </span>
-                        <span className="text-xs text-gray-500 truncate">vs o'tgan oy</span>
+                        <span className="text-xs text-gray-500 truncate">{t('admin.vs_last_month')}</span>
                       </div>
                       <p className="text-xs text-gray-400 mt-1 truncate">{kpi.sub}</p>
                     </div>
@@ -310,14 +312,14 @@ export function AdminStatsOverview() {
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-[#0D3B6E] mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Arizalar statistikasi
+              {t('admin.apps_stats')}
             </h3>
             <div className="space-y-3">
               {[
-                { key: 'today', label: 'Bugun' },
-                { key: 'yesterday', label: 'Kecha' },
-                { key: 'week', label: 'Hafta' },
-                { key: 'month', label: 'Oy' },
+                { key: 'today',     label: t('admin.period.today') },
+                { key: 'yesterday', label: t('admin.period.yesterday') },
+                { key: 'week',      label: t('admin.period.week') },
+                { key: 'month',     label: t('admin.period.month') },
               ].map((p) => {
                 const s = (periods as any)[p.key] as PeriodStat;
                 return (
@@ -356,10 +358,10 @@ export function AdminStatsOverview() {
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-[#0D3B6E] mb-4 flex items-center gap-2">
               <Award className="w-5 h-5" />
-              Litsenziyalar taqsimoti
+              {t('admin.license_dist')}
             </h3>
             {license_distribution.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">Ma'lumot yo'q</p>
+              <p className="text-sm text-gray-500 text-center py-8">{t('admin.no_data')}</p>
             ) : (
               <div className="space-y-3">
                 {license_distribution.slice(0, 6).map((lic, idx) => {
@@ -401,10 +403,10 @@ export function AdminStatsOverview() {
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-[#0D3B6E] mb-4 flex items-center gap-2">
               <MapPin className="w-5 h-5" />
-              Hududlar bo'yicha (top 10)
+              {t('admin.regions_top')}
             </h3>
             {region_stats.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">Ma'lumot yo'q</p>
+              <p className="text-sm text-gray-500 text-center py-8">{t('admin.no_data')}</p>
             ) : (
               <div className="space-y-2">
                 {region_stats.map((r, idx) => {
@@ -437,10 +439,10 @@ export function AdminStatsOverview() {
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-[#0D3B6E] mb-4 flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
-              6 oylik trend
+              {t('admin.monthly_trend')}
             </h3>
             {monthly_trend.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">Ma'lumot yo'q</p>
+              <p className="text-sm text-gray-500 text-center py-8">{t('admin.no_data')}</p>
             ) : (
               <>
                 <div className="flex items-end justify-between gap-2 h-48">
@@ -468,7 +470,7 @@ export function AdminStatsOverview() {
                           </motion.div>
                         </div>
                         <span className="text-xs text-gray-500 -rotate-45 origin-top-left mt-2 whitespace-nowrap">
-                          {monthLabel(m.month)}
+                          {monthLabel(m.month, locale)}
                         </span>
                       </div>
                     );
@@ -477,11 +479,11 @@ export function AdminStatsOverview() {
                 <div className="flex items-center justify-center gap-4 mt-6 text-xs text-gray-600">
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 bg-gradient-to-t from-[#1A56A0] to-[#3498DB] rounded" />
-                    Jami
+                    {t('admin.legend_total')}
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-3 bg-green-500 rounded" />
-                    Tasdiqlangan
+                    {t('admin.legend_approved')}
                   </div>
                 </div>
               </>
@@ -496,12 +498,12 @@ export function AdminStatsOverview() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-[#0D3B6E] flex items-center gap-2">
               <Activity className="w-5 h-5" />
-              So'nggi arizalar
+              {t('admin.recent_apps')}
             </h3>
-            <span className="text-xs text-gray-400">{recent_activity.length} ta</span>
+            <span className="text-xs text-gray-400">{recent_activity.length}</span>
           </div>
           {recent_activity.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-8">Hozircha arizalar yo'q</p>
+            <p className="text-sm text-gray-500 text-center py-8">{t('admin.no_apps_yet')}</p>
           ) : (
             <div className="divide-y divide-gray-100">
               {recent_activity.map((a) => {
@@ -512,7 +514,7 @@ export function AdminStatsOverview() {
                       {(a.full_name || '?').charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{a.full_name || 'Noma\'lum'}</p>
+                      <p className="font-medium text-gray-900 truncate">{a.full_name || '—'}</p>
                       <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
                         {a.license_type && <span>{a.license_type}</span>}
                         {a.license_type && a.region && <span>•</span>}
@@ -521,9 +523,9 @@ export function AdminStatsOverview() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${sc.bg} ${sc.text}`}>
-                        {sc.label}
+                        {t(sc.tKey)}
                       </span>
-                      <p className="text-xs text-gray-400 mt-1">{timeAgo(a.submitted_at)}</p>
+                      <p className="text-xs text-gray-400 mt-1">{timeAgo(a.submitted_at, t, locale)}</p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
                   </div>

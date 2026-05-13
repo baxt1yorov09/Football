@@ -8,10 +8,12 @@ import { ArrowRight, Shield, Award, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 export default function ApplyPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const { t } = useI18n();
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -19,7 +21,7 @@ export default function ApplyPage() {
       <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Yuklanmoqda...</p>
+          <p className="text-gray-600">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -34,40 +36,40 @@ export default function ApplyPage() {
   const licenseTypes = [
     {
       type: 'PRO',
-      title: 'PRO Litsenziya',
-      description: 'Professional murabbiylar uchun eng yuqori toifadagi litsenziya',
+      title: t('apply.types.pro_title'),
+      description: t('apply.types.pro_desc'),
       icon: Shield,
       color: 'bg-blue-500',
       href: '/apply/PRO'
     },
     {
       type: 'A',
-      title: 'A Toifa Litsenziya',
-      description: 'Yuqori darajadagi murabbiylar uchun litsenziya',
+      title: t('apply.types.a_title'),
+      description: t('apply.types.a_desc'),
       icon: Award,
       color: 'bg-green-500',
       href: '/apply/A'
     },
     {
       type: 'B',
-      title: 'B Toifa Litsenziya',
-      description: 'O\'rta darajadagi murabbiylar uchun litsenziya',
+      title: t('apply.types.b_title'),
+      description: t('apply.types.b_desc'),
       icon: Users,
       color: 'bg-orange-500',
       href: '/apply/B'
     },
     {
       type: 'C',
-      title: 'C Toifa Litsenziya',
-      description: 'Boshlang\'ich darajadagi murabbiylar uchun litsenziya',
+      title: t('apply.types.c_title'),
+      description: t('apply.types.c_desc'),
       icon: Award,
       color: 'bg-purple-500',
       href: '/apply/C'
     },
     {
       type: 'D',
-      title: 'D Toifa Litsenziya',
-      description: 'Yoshlar jamoalari uchun litsenziya',
+      title: t('apply.types.d_title'),
+      description: t('apply.types.d_desc'),
       icon: Users,
       color: 'bg-red-500',
       href: '/apply/D'
@@ -87,10 +89,10 @@ export default function ApplyPage() {
             className="text-center mb-12"
           >
             <h1 className="text-4xl font-bold text-[#0D3B6E] mb-4">
-              Litsenziya olish
+              {t('apply.title')}
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              O\'zingizga mos litsenziya turini tanlang va arizangizni online tarzda topshiring
+              {t('apply.subtitle')}
             </p>
           </motion.div>
 
@@ -123,7 +125,7 @@ export default function ApplyPage() {
                       </p>
                       <Link href={license.href}>
                         <Button className="w-full group-hover:bg-blue-600 transition-colors">
-                          Ariza berish
+                          {t('apply.apply_button')}
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                       </Link>
@@ -145,34 +147,34 @@ export default function ApplyPage() {
               <CardContent className="p-8">
                 <div className="text-center">
                   <h3 className="text-2xl font-bold text-[#0D3B6E] mb-4">
-                    Ariza berish jarayoni
+                    {t('apply.process_title')}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8 text-left">
                     <div>
                       <div className="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center mx-auto mb-4">
                         <span className="font-bold">1</span>
                       </div>
-                      <h4 className="font-semibold text-lg mb-2">Litsenziya turini tanlang</h4>
+                      <h4 className="font-semibold text-lg mb-2">{t('apply.step1_title')}</h4>
                       <p className="text-gray-600">
-                        O\'zingizga mos keladigan litsenziya turini tanlang
+                        {t('apply.step1_desc')}
                       </p>
                     </div>
                     <div>
                       <div className="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center mx-auto mb-4">
                         <span className="font-bold">2</span>
                       </div>
-                      <h4 className="font-semibold text-lg mb-2">Ma\'lumotlarni to\'ldiring</h4>
+                      <h4 className="font-semibold text-lg mb-2">{t('apply.step2_title')}</h4>
                       <p className="text-gray-600">
-                        Kerakli barcha ma\'lumotlarni to\'g\'ri kiriting
+                        {t('apply.step2_desc')}
                       </p>
                     </div>
                     <div>
                       <div className="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center mx-auto mb-4">
                         <span className="font-bold">3</span>
                       </div>
-                      <h4 className="font-semibold text-lg mb-2">Arizani yuboring</h4>
+                      <h4 className="font-semibold text-lg mb-2">{t('apply.step3_title')}</h4>
                       <p className="text-gray-600">
-                        Arizangizni tekshirish uchun yuboring
+                        {t('apply.step3_desc')}
                       </p>
                     </div>
                   </div>

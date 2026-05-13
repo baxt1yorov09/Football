@@ -11,6 +11,7 @@ import { User, Mail, Phone, Calendar, Shield, Camera, Edit, Loader2 } from 'luci
 import { apiClient } from '@/lib/api/client';
 import { PhoneChangeModal } from '@/components/profile/PhoneChangeModal';
 import { AvatarCropModal } from '@/components/profile/AvatarCropModal';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 interface UserProfile {
   id: string;
@@ -36,6 +37,7 @@ interface License {
 }
 
 export default function ProfilePage() {
+  const { t, locale } = useI18n();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [licenses, setLicenses] = useState<License[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -82,14 +84,14 @@ export default function ProfilePage() {
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!formData.full_name?.trim()) errs.full_name = 'Ism familiya kiritish shart';
-    if (!formData.birth_date) errs.birth_date = 'Tug\'ilgan sana kiritish shart';
+    if (!formData.full_name?.trim()) errs.full_name = t('profile.errors.full_name_required');
+    if (!formData.birth_date) errs.birth_date = t('profile.errors.birth_date_required');
     else {
       const age = Math.floor((Date.now() - new Date(formData.birth_date).getTime()) / (365.25 * 24 * 3600 * 1000));
-      if (age < 16) errs.birth_date = 'Yosh 16 dan kam bo\'lmasligi kerak';
+      if (age < 16) errs.birth_date = t('profile.errors.age_too_young');
     }
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errs.email = 'Email format noto\'g\'ri';
+      errs.email = t('profile.errors.email_invalid');
     }
     return errs;
   };
@@ -138,9 +140,9 @@ export default function ProfilePage() {
 
   const getLicenseStatus = (expiresAt: string) => {
     const daysLeft = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (24 * 3600 * 1000));
-    if (daysLeft < 0) return { label: 'Muddati tugagan', color: '#E74C3C', bg: '#FDECEC' };
-    if (daysLeft <= 30) return { label: `${daysLeft} kun qoldi`, color: '#E67E22', bg: '#FEF5EC' };
-    return { label: 'Faol', color: '#27AE60', bg: '#EAFAF1' };
+    if (daysLeft < 0) return { label: t('profile.status.expired'), color: '#E74C3C', bg: '#FDECEC' };
+    if (daysLeft <= 30) return { label: t('profile.status.days_left', { n: daysLeft }), color: '#E67E22', bg: '#FEF5EC' };
+    return { label: t('profile.status.active'), color: '#27AE60', bg: '#EAFAF1' };
   };
 
   if (isLoading) {
@@ -148,7 +150,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-[#1A56A0] mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Profil yuklanmoqda...</p>
+          <p className="text-gray-500 text-sm">{t('profile.loading')}</p>
         </div>
       </div>
     );
@@ -171,10 +173,10 @@ export default function ProfilePage() {
           >
             <div>
               <h1 className="text-3xl font-bold text-[#0D3B6E]">
-                Profil
+                {t('profile.title')}
               </h1>
               <p className="text-gray-600 mt-1">
-                Shaxsiy ma'lumotlaringiz va litsenziyangiz
+                {t('profile.subtitle')}
               </p>
             </div>
             <Button
@@ -183,7 +185,7 @@ export default function ProfilePage() {
               className="flex items-center gap-2"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? <Edit className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-              {isSaving ? 'Saqlanmoqda...' : isEditing ? 'Saqlash' : 'Tahrirlash'}
+              {isSaving ? t('profile.saving') : isEditing ? t('profile.save') : t('profile.edit')}
             </Button>
           </motion.div>
 
@@ -219,14 +221,14 @@ export default function ProfilePage() {
                   </div>
                   <CardTitle className="text-xl">{profile.full_name}</CardTitle>
                   <Badge className={profile.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                    {profile.is_active ? 'Faol' : 'Faol emas'}
+                    {profile.is_active ? t('profile.status.active') : t('profile.status.inactive')}
                   </Badge>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 text-left">
                     <div className="flex items-center gap-3">
                       <Mail className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm">{profile.email || 'Email kiritilmagan'}</span>
+                      <span className="text-sm">{profile.email || t('profile.fields.email')}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Phone className="w-4 h-4 text-gray-400" />
@@ -234,7 +236,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm">{profile.birth_date ? new Date(profile.birth_date).toLocaleDateString('uz-UZ') : 'Kiritilmagan'}</span>
+                      <span className="text-sm">{profile.birth_date ? new Date(profile.birth_date).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ') : '—'}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -252,7 +254,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="w-5 h-5" />
-                    Shaxsiy ma'lumotlar
+                    {t('profile.sections.personal')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -260,7 +262,7 @@ export default function ProfilePage() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          F.I.O.
+                          {t('profile.fields.full_name')}
                         </label>
                         <input
                           type="text"
@@ -273,7 +275,7 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Email
+                          {t('profile.fields.email')}
                         </label>
                         <input
                           type="email"
@@ -286,7 +288,7 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Telefon
+                          {t('profile.fields.phone')}
                         </label>
                         <div className="flex gap-2">
                           <input
@@ -302,7 +304,7 @@ export default function ProfilePage() {
                               onClick={() => setShowPhoneModal(true)}
                               className="text-xs"
                             >
-                              O'zgartirish
+                              {t('profile.fields.phone_change')}
                             </Button>
                           )}
                         </div>
@@ -311,7 +313,7 @@ export default function ProfilePage() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Tug\'ilgan sana
+                          {t('profile.fields.birth_date')}
                         </label>
                         <input
                           type="date"
@@ -324,7 +326,7 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Klub
+                          {t('profile.fields.workplace')}
                         </label>
                         <input
                           type="text"
@@ -339,7 +341,7 @@ export default function ProfilePage() {
                   {isEditing && (
                     <div className="mt-4 flex gap-2">
                       <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-                        Bekor qilish
+                        {t('profile.cancel')}
                       </Button>
                     </div>
                   )}
@@ -358,14 +360,14 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="w-5 h-5" />
-                    Litsenziya ma'lumotlari
+                    {t('profile.sections.license')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {licenses.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
                       <Shield className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Hali litsenziya yo'q</p>
+                      <p className="text-sm">{t('profile.license.no_license')}</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -378,23 +380,23 @@ export default function ProfilePage() {
                           >
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                               <div className="space-y-2">
-                                <p className="text-sm text-gray-600">Litsenziya raqami</p>
+                                <p className="text-sm text-gray-600">{t('profile.license.number')}</p>
                                 <p className="font-semibold text-lg">{lic.license_number}</p>
                               </div>
                               <div className="space-y-2">
-                                <p className="text-sm text-gray-600">Litsenziya turi</p>
+                                <p className="text-sm text-gray-600">{t('profile.license.type')}</p>
                                 <span className="inline-block text-xs font-bold px-2 py-1 rounded-lg text-white" style={{ backgroundColor: lic.color_hex }}>
                                   {lic.license_type_code}
                                 </span>
                               </div>
                               <div className="space-y-2">
-                                <p className="text-sm text-gray-600">Berilgan sana</p>
-                                <p className="font-semibold text-lg">{new Date(lic.issued_at).toLocaleDateString('uz-UZ')}</p>
+                                <p className="text-sm text-gray-600">{t('profile.license.issued')}</p>
+                                <p className="font-semibold text-lg">{new Date(lic.issued_at).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}</p>
                               </div>
                               <div className="space-y-2">
-                                <p className="text-sm text-gray-600">Tugash sanasi</p>
+                                <p className="text-sm text-gray-600">{t('profile.license.expires')}</p>
                                 <div className="flex items-center gap-2">
-                                  <p className="font-semibold text-lg">{new Date(lic.expires_at).toLocaleDateString('uz-UZ')}</p>
+                                  <p className="font-semibold text-lg">{new Date(lic.expires_at).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}</p>
                                   <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ color: licStatus.color, backgroundColor: licStatus.bg }}>
                                     {licStatus.label}
                                   </span>

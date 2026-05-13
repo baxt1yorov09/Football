@@ -20,6 +20,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 // ============ LICENSES MANAGEMENT PANEL (Real API) ============
 interface APILicense {
@@ -69,6 +70,7 @@ function licApi(path: string, method: string = 'GET', body?: any): Promise<any> 
 }
 
 function LicensesPanel() {
+  const { t, locale } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -152,7 +154,7 @@ function LicensesPanel() {
   const handleRevoke = async (id: string, reason: string) => {
     try {
       await licApi(`/api/licenses/admin/${id}/revoke/`, 'POST', { reason });
-      showToast('Litsenziya bekor qilindi');
+      showToast(t('common.success'));
       setRevokeLic(null);
       loadData(false);
     } catch (e: any) {
@@ -163,7 +165,7 @@ function LicensesPanel() {
   const handleSuspend = async (id: string, reason: string) => {
     try {
       await licApi(`/api/licenses/admin/${id}/update/`, 'PATCH', { action: 'suspend', reason });
-      showToast("Litsenziya to'xtatildi");
+      showToast(t('common.success'));
       setEditLic(null);
       loadData(false);
     } catch (e: any) {
@@ -174,7 +176,7 @@ function LicensesPanel() {
   const handleActivate = async (id: string) => {
     try {
       await licApi(`/api/licenses/admin/${id}/update/`, 'PATCH', { action: 'activate' });
-      showToast('Litsenziya faollashtirildi');
+      showToast(t('common.success'));
       setEditLic(null);
       loadData(false);
     } catch (e: any) {
@@ -185,7 +187,7 @@ function LicensesPanel() {
   const handleExtend = async (id: string, days: number) => {
     try {
       await licApi(`/api/licenses/admin/${id}/update/`, 'PATCH', { extends_days: days });
-      showToast(`Muddat ${days} kunga uzaytirildi`);
+      showToast(t('common.success'));
       setEditLic(null);
       loadData(false);
     } catch (e: any) {
@@ -212,7 +214,7 @@ function LicensesPanel() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      showToast('Export tayyor');
+      showToast(t('common.success'));
     } catch (e: any) {
       showToast(e.message, 'error');
     }
@@ -222,7 +224,7 @@ function LicensesPanel() {
     try {
       const body: any = { ids: selectedLicenses, action, ...extra };
       const r = await licApi('/api/licenses/admin/bulk/', 'POST', body);
-      showToast(`${r.affected} ta litsenziya yangilandi`);
+      showToast(t('common.success'));
       setSelectedLicenses([]);
       setBulkAction(null);
       loadData(false);
@@ -241,17 +243,17 @@ function LicensesPanel() {
 
   // ── Status/Type config ───────────────────
   const STATUS_CFG: Record<string, { label: string; bg: string; text: string; icon: any }> = {
-    active:    { label: 'Faol',             bg: 'bg-green-50',  text: 'text-green-700',  icon: CheckCircle },
-    expired:   { label: "Muddati o'tgan",   bg: 'bg-red-50',    text: 'text-red-700',    icon: XCircle },
-    suspended: { label: "To'xtatilgan",     bg: 'bg-amber-50',  text: 'text-amber-700',  icon: Clock },
-    revoked:   { label: 'Bekor qilingan',   bg: 'bg-gray-50',   text: 'text-gray-700',   icon: XCircle },
+    active:    { label: t('licenses.status.active'),    bg: 'bg-green-50',  text: 'text-green-700',  icon: CheckCircle },
+    expired:   { label: t('licenses.status.expired'),   bg: 'bg-red-50',    text: 'text-red-700',    icon: XCircle },
+    suspended: { label: t('licenses.status.suspended'), bg: 'bg-amber-50',  text: 'text-amber-700',  icon: Clock },
+    revoked:   { label: t('licenses.status.revoked'),   bg: 'bg-gray-50',   text: 'text-gray-700',   icon: XCircle },
   };
 
   const STAT_CARDS = [
-    { key: 'total',     label: 'Jami litsenziyalar', icon: Award,        color: '#1A56A0', filter: '' },
-    { key: 'active',    label: 'Faol litsenziyalar',  icon: CheckCircle,  color: '#27AE60', filter: 'active' },
-    { key: 'expired',   label: "Muddati o'tgan",      icon: AlertCircle,  color: '#E74C3C', filter: 'expired' },
-    { key: 'suspended', label: "To'xtatilgan",        icon: Clock,        color: '#F39C12', filter: 'suspended' },
+    { key: 'total',     label: t('licenses.kpi.total'),         icon: Award,       color: '#1A56A0', filter: '' },
+    { key: 'active',    label: t('licenses.kpi.active'),        icon: CheckCircle, color: '#27AE60', filter: 'active' },
+    { key: 'expired',   label: t('licenses.kpi.expired'),       icon: AlertCircle, color: '#E74C3C', filter: 'expired' },
+    { key: 'suspended', label: t('licenses.status.suspended'),  icon: Clock,       color: '#F39C12', filter: 'suspended' },
   ];
 
   // Pagination range
@@ -286,15 +288,15 @@ function LicensesPanel() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Litsenziyalar boshqaruvi</h1>
-          <p className="text-gray-500 mt-1">Barcha murabbiylar litsenziyalarini boshqarish</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('admin.lic_panel.title')}</h1>
+          <p className="text-gray-500 mt-1">{t('admin.lic_panel.subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => loadData(false)}
             disabled={refreshing}
             className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all"
-            title="Yangilash"
+            title={t('admin.refresh')}
           >
             <RefreshCw className={`w-4 h-4 text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -303,7 +305,7 @@ function LicensesPanel() {
             className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
           >
             <Download className="w-5 h-5" />
-            Export
+            {t('admin.lic_panel.export')}
           </button>
           {canWrite && (
             <button
@@ -311,7 +313,7 @@ function LicensesPanel() {
               className="flex items-center gap-2 px-4 py-2.5 bg-[#1A56A0] text-white rounded-xl hover:bg-[#0D3B6E] transition-all shadow-lg shadow-blue-500/25"
             >
               <Plus className="w-5 h-5" />
-              Yangi litsenziya
+              {t('admin.lic_panel.new_license')}
             </button>
           )}
         </div>
@@ -361,7 +363,7 @@ function LicensesPanel() {
               ) : (
                 <>
                   <p className="text-2xl font-bold text-gray-900">
-                    {Number(value || 0).toLocaleString('uz-UZ')}
+                    {Number(value || 0).toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}
                   </p>
                   <p className="text-sm text-gray-500 mt-0.5">{card.label}</p>
                 </>
@@ -380,7 +382,7 @@ function LicensesPanel() {
         >
           <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
           <p className="text-sm text-amber-800 flex-1">
-            <strong>{stats.expiring_soon} ta</strong> litsenziyaning muddati 30 kunda tugaydi.
+            {t('licenses.expiring_banner_title', { n: stats.expiring_soon })}
           </p>
         </motion.div>
       )}
@@ -392,7 +394,7 @@ function LicensesPanel() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Qidirish (ID, F.I.O, email, telefon)..."
+              placeholder={t('common.search')}
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] focus:border-transparent"
@@ -404,18 +406,18 @@ function LicensesPanel() {
               onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
               className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
             >
-              <option value="">Barcha holatlar</option>
-              <option value="active">Faol</option>
-              <option value="expired">Muddati o'tgan</option>
-              <option value="suspended">To'xtatilgan</option>
-              <option value="revoked">Bekor qilingan</option>
+              <option value="">{t('licenses.filter_all')}</option>
+              <option value="active">{t('licenses.status.active')}</option>
+              <option value="expired">{t('licenses.status.expired')}</option>
+              <option value="suspended">{t('licenses.status.suspended')}</option>
+              <option value="revoked">{t('licenses.status.revoked')}</option>
             </select>
             <select
               value={filterType}
               onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }}
               className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
             >
-              <option value="">Barcha turlar</option>
+              <option value="">{t('licenses.filter_all')}</option>
               {['D','C','B','A','PRO','GK_1','GK_2','GK_3',
                 'FITNESS_1','FITNESS_2','FITNESS_3',
                 'FUTSAL_1','FUTSAL_2','FUTSAL_3',
@@ -436,7 +438,7 @@ function LicensesPanel() {
             exit={{ opacity: 0, y: -10 }}
             className="bg-[#1A56A0] text-white rounded-xl p-4 flex items-center justify-between flex-wrap gap-3"
           >
-            <p className="font-medium">{selectedLicenses.length} ta tanlandi</p>
+            <p className="font-medium">{selectedLicenses.length}</p>
             <div className="flex gap-2 flex-wrap">
               {canWrite && (
                 <button
@@ -444,7 +446,7 @@ function LicensesPanel() {
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 rounded-lg text-xs font-medium"
                 >
                   <CheckCircle className="w-3.5 h-3.5" />
-                  Faollashtirish
+                  {t('admin.lic_panel.activate')}
                 </button>
               )}
               {canWrite && (
@@ -453,7 +455,7 @@ function LicensesPanel() {
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 rounded-lg text-xs font-medium"
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  To'xtatish
+                  {t('admin.lic_panel.suspend')}
                 </button>
               )}
               {canRevoke && (
@@ -462,7 +464,7 @@ function LicensesPanel() {
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-medium"
                 >
                   <XCircle className="w-3.5 h-3.5" />
-                  Bekor qilish
+                  {t('admin.lic_panel.revoke')}
                 </button>
               )}
               <button
@@ -482,7 +484,7 @@ function LicensesPanel() {
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
           <p className="text-sm text-red-700 flex-1">{error}</p>
           <button onClick={() => loadData(false)} className="text-sm text-red-700 underline">
-            Qayta urinish
+            {t('common.retry')}
           </button>
         </div>
       )}
@@ -501,10 +503,10 @@ function LicensesPanel() {
                     className="w-4 h-4 rounded border-gray-300 text-[#1A56A0] focus:ring-[#1A56A0]"
                   />
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Litsenziya</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Egasi</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Turi</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Holat</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin.table.license')}</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin.table.owner')}</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin.table.type')}</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('admin.table.status')}</th>
                 <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Berilgan</th>
                 <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Muddati</th>
                 <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Amallar</th>
@@ -525,7 +527,7 @@ function LicensesPanel() {
                 <tr>
                   <td colSpan={8} className="px-4 py-16 text-center text-gray-400">
                     <Award className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                    <p className="text-sm">Litsenziya topilmadi</p>
+                    <p className="text-sm">{t('admin.lic_panel.not_found')}</p>
                   </td>
                 </tr>
               ) : (
@@ -1117,6 +1119,7 @@ function BulkReasonModal({ open, title, danger, onClose, onConfirm }: {
 
 // ============ USERS MANAGEMENT PANEL ============
 function UsersPanel() {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -1133,9 +1136,9 @@ function UsersPanel() {
   ];
 
   const roleConfig = {
-    Coach: { label: 'Murabbiy', color: 'bg-blue-100 text-blue-800', icon: Award },
-    Admin: { label: 'Admin', color: 'bg-purple-100 text-purple-800', icon: Shield },
-    Manager: { label: 'Menejer', color: 'bg-green-100 text-green-800', icon: Briefcase },
+    Coach:   { label: t('header.coach'), color: 'bg-blue-100 text-blue-800',   icon: Award },
+    Admin:   { label: t('header.admin'), color: 'bg-purple-100 text-purple-800', icon: Shield },
+    Manager: { label: 'Manager',         color: 'bg-green-100 text-green-800',  icon: Briefcase },
   };
 
   const filteredUsers = users.filter(user => {
@@ -1148,10 +1151,10 @@ function UsersPanel() {
   });
 
   const stats = [
-    { label: 'Jami foydalanuvchilar', value: '2,847', change: '+5%', icon: Users },
-    { label: 'Murabbiylar', value: '2,456', change: '+8%', icon: Award },
-    { label: 'Adminlar', value: '12', change: '0%', icon: Shield },
-    { label: 'Faol hozir', value: '234', change: '+12%', icon: Activity },
+    { label: t('admin.users_panel.all_users'),  value: '2,847', change: '+5%',  icon: Users },
+    { label: t('admin.coaches'),                value: '2,456', change: '+8%',  icon: Award },
+    { label: t('header.admin'),                 value: '12',    change: '0%',   icon: Shield },
+    { label: t('admin.users_panel.active_now'), value: '234',   change: '+12%', icon: Activity },
   ];
 
   return (
@@ -1159,8 +1162,8 @@ function UsersPanel() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Foydalanuvchilar boshqaruvi</h1>
-          <p className="text-gray-500 mt-1">Tizim foydalanuvchilarini boshqarish</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('admin.users_panel.title')}</h1>
+          <p className="text-gray-500 mt-1">{t('admin.users_panel.subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <button 
@@ -1168,11 +1171,11 @@ function UsersPanel() {
             className="flex items-center gap-2 px-4 py-2.5 bg-[#1A56A0] text-white rounded-xl hover:bg-[#0D3B6E] transition-all shadow-lg shadow-blue-500/25"
           >
             <Plus className="w-5 h-5" />
-            Foydalanuvchi qo'shish
+            {t('admin.users_panel.new_user')}
           </button>
           <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all">
             <Download className="w-5 h-5" />
-            Export
+            {t('admin.lic_panel.export')}
           </button>
         </div>
       </div>
@@ -1209,7 +1212,7 @@ function UsersPanel() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Qidirish (F.I.O, email, telefon)..."
+              placeholder={t('common.search')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] focus:border-transparent"
@@ -1221,19 +1224,19 @@ function UsersPanel() {
               onChange={(e) => setFilterRole(e.target.value)}
               className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
             >
-              <option value="all">Barcha rollar</option>
-              <option value="Coach">Murabbiy</option>
-              <option value="Admin">Admin</option>
-              <option value="Manager">Menejer</option>
+              <option value="all">{t('common.all')}</option>
+              <option value="Coach">{t('header.coach')}</option>
+              <option value="Admin">{t('header.admin')}</option>
+              <option value="Manager">Manager</option>
             </select>
             <select 
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
             >
-              <option value="all">Barcha holatlar</option>
-              <option value="active">Faol</option>
-              <option value="inactive">Faol emas</option>
+              <option value="all">{t('common.all')}</option>
+              <option value="active">{t('profile.status.active')}</option>
+              <option value="inactive">{t('profile.status.inactive')}</option>
             </select>
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button 
@@ -1295,11 +1298,11 @@ function UsersPanel() {
 
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Arizalar</p>
+                    <p className="text-xs text-gray-500">{t('admin.table.applications')}</p>
                     <p className="text-lg font-semibold text-gray-900">{user.applications}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">Litsenziyalar</p>
+                    <p className="text-xs text-gray-500">{t('admin.table.licenses')}</p>
                     <p className="text-lg font-semibold text-gray-900">{user.licenses}</p>
                   </div>
                 </div>
@@ -1330,10 +1333,10 @@ function UsersPanel() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Foydalanuvchi</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Rol</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Hudud</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Holat</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t('admin.table.user')}</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t('admin.table.role')}</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t('admin.table.region')}</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">{t('admin.table.status')}</th>
                 <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">So'ngi faoliyat</th>
                 <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Amallar</th>
               </tr>
@@ -1394,6 +1397,7 @@ function UsersPanel() {
 
 // ============ REPORTS PANEL ============
 function ReportsPanel() {
+  const { t } = useI18n();
   const [dateRange, setDateRange] = useState('last30');
   const [reportType, setReportType] = useState('all');
 
@@ -1415,10 +1419,10 @@ function ReportsPanel() {
   };
 
   const quickStats = [
-    { label: 'Jami hisobotlar', value: '156', icon: FileText, color: 'blue' },
-    { label: 'Yuklanishlar', value: '12.5K', icon: Download, color: 'green' },
-    { label: 'Bugun yaratilgan', value: '3', icon: Plus, color: 'purple' },
-    { label: 'Oylik hisobotlar', value: '24', icon: Calendar, color: 'orange' },
+    { label: t('admin.reports_panel.total_reports'),   value: '156',   icon: FileText, color: 'blue' },
+    { label: t('admin.reports_panel.downloads'),       value: '12.5K', icon: Download, color: 'green' },
+    { label: t('admin.reports_panel.today_created'),   value: '3',     icon: Plus,     color: 'purple' },
+    { label: t('admin.reports_panel.monthly_reports'), value: '24',    icon: Calendar, color: 'orange' },
   ];
 
   return (
@@ -1426,8 +1430,8 @@ function ReportsPanel() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Hisobotlar</h1>
-          <p className="text-gray-500 mt-1">Tizim hisobotlari va statistikalar</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('admin.reports_panel.title')}</h1>
+          <p className="text-gray-500 mt-1">{t('admin.reports_panel.subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1A56A0] text-white rounded-xl hover:bg-[#0D3B6E] transition-all shadow-lg shadow-blue-500/25">
@@ -1610,6 +1614,7 @@ function ReportsPanel() {
 
 // ============ MAIN ADMIN PAGE ============
 export default function AdminPage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1635,7 +1640,7 @@ export default function AdminPage() {
       <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-[#1A56A0] animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Yuklanmoqda...</p>
+          <p className="text-gray-600">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -1657,10 +1662,10 @@ export default function AdminPage() {
             className="mb-8"
           >
             <h1 className="text-3xl font-bold text-[#0D3B6E]">
-              Admin Panel
+              {t('admin.panel')}
             </h1>
             <p className="text-gray-600 mt-1">
-              O'zbekiston Futbol Federatsiyasi - Boshqaruv tizimi
+              {t('admin.subtitle')}
             </p>
           </motion.div>
 
