@@ -177,15 +177,15 @@ export default function SettingsPanel() {
   const [logsRunning, setLogsRunning] = useState(false);
 
   // i18n & theme hooks
-  const { locale, setLocale } = useI18n();
+  const { locale, setLocale, t } = useI18n();
   const { theme, setTheme } = useTheme();
 
   const tabs = [
-    { id: 'general', label: 'Umumiy', icon: Settings },
-    { id: 'security', label: 'Xavfsizlik', icon: Lock },
-    { id: 'notifications', label: 'Bildirishnomalar', icon: Bell },
-    { id: 'system', label: 'Tizim', icon: Database },
-    { id: 'appearance', label: "Ko'rinish", icon: Award },
+    { id: 'general', label: t('admin.tabs.general'), icon: Settings },
+    { id: 'security', label: t('admin.tabs.security'), icon: Lock },
+    { id: 'notifications', label: t('admin.tabs.notifications'), icon: Bell },
+    { id: 'system', label: t('admin.tabs.system'), icon: Database },
+    { id: 'appearance', label: t('admin.tabs.appearance'), icon: Award },
   ];
 
   // Load all data on mount
