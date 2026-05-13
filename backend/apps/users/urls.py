@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     ChangePasswordView,
     ChangePhoneView,
+    CompleteOnboardingView,
     DeleteAccountView,
     ExportUserDataView,
     TwoFactorDisableView,
@@ -16,6 +17,8 @@ urlpatterns = [
     path('me/', UserProfileView.as_view()),
     path('me/avatar', UserAvatarView.as_view(), name='user-avatar'),
     path('me/avatar/', UserAvatarView.as_view()),
+    path('onboarding/complete', CompleteOnboardingView.as_view(), name='onboarding-complete'),
+    path('onboarding/complete/', CompleteOnboardingView.as_view()),
     path('change-phone', ChangePhoneView.as_view(), name='change-phone'),
     path('change-phone/', ChangePhoneView.as_view()),
     path('change-password', ChangePasswordView.as_view(), name='change-password'),

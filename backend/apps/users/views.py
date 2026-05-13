@@ -378,3 +378,72 @@ class DeleteAccountView(APIView):
             pass
 
         return Response({'detail': "Hisob o'chirildi"})
+
+
+class CompleteOnboardingView(APIView):
+    """Complete onboarding for new users"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        # Check if onboarding already completed
+        if user.is_onboarded:
+            return Response(
+                {'error': 'Onboarding allaqachon tugallangan'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Required fields
+        required = ['first_name', 'last_name', 'birth_date', 'gender', 'region']
+        missing = [f for f in required if not data.get(f)]
+        if missing:
+            return Response(
+                {'error': f'Majburiy maydonlar: {", ".join(missing)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update user fields
+        user.first_name = data['first_name'].strip()
+        user.last_name = data['last_name'].strip()
+        user.middle_name = data.get('middle_name', '').strip()
+        user.full_name = f"{data['last_name']} {data['first_name']} {data.get('middle_name', '')}".strip()
+        user.birth_date = datetime.strptime(data['birth_date'], '%Y-%m-%d').date()
+        user.gender = data['gender']
+        user.email = data.get('email', '').strip() or None
+        user.workplace = data.get('workplace', '').strip()
+        user.job_title = data.get('job_title', '').strip()
+        user.coaching_years = int(data.get('coaching_years', 0))
+        user.is_onboarded = True
+
+        # Region
+        try:
+            from apps.users.models import Region
+            user.region = Region.objects.get(id=data['region'])
+        except Region.DoesNotExist:
+            return Response({'error': 'Viloyat topilmadi'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.save()
+
+        return Response({
+            'success': True,
+            'user': {
+                'id': str(user.id),
+                'full_name': user.full_name,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'phone': user.phone,
+                'email': user.email or '',
+                'birth_date': str(user.birth_date),
+                'gender': user.gender,
+                'region_id': user.region_id,
+                'region_name': user.region.name_uz if user.region else None,
+                'workplace': user.workplace,
+                'job_title': user.job_title,
+                'coaching_years': user.coaching_years,
+                'is_onboarded': True,
+                'role': user.role,
+                'avatar_url': request.build_absolute_uri(user.avatar.url) if user.avatar else None,
+            }
+        })

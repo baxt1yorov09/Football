@@ -126,9 +126,15 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
   // Initial unread count fetch + polling
   useEffect(() => {
+    if (!checkAuth()) return;
+    
     fetchUnreadCount();
     if (pollInterval > 0) {
-      const id = setInterval(fetchUnreadCount, pollInterval);
+      const id = setInterval(() => {
+        if (checkAuth()) {
+          fetchUnreadCount();
+        }
+      }, pollInterval);
       return () => clearInterval(id);
     }
   }, [fetchUnreadCount, pollInterval]);

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Bell, User, LogOut, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useUserStore } from '@/store/userStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useI18n } from '@/lib/i18n/I18nProvider';
@@ -16,9 +17,15 @@ function roleLabel(role: string | undefined, t: (k: string) => string) {
 }
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user: storeUser } = useUserStore();
+  const { logout: authLogout } = useAuth();
   const { unreadCount } = useNotifications({ pollInterval: 30_000 });
   const { locale, setLocale, t } = useI18n();
+
+  // Fallback to localStorage if store is empty
+  const user = storeUser || (() => {
+    try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+  })();
 
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -85,9 +92,9 @@ export function Header() {
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="w-5 h-5 text-gray-600" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
                   {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
+              </span>
               )}
             </Button>
           </Link>
@@ -98,15 +105,21 @@ export function Header() {
               <p className="text-sm font-medium text-gray-900">
                 {user?.full_name || t('header.user')}
               </p>
-              <p className="text-xs text-gray-500">{roleLabel(user?.role, t)}</p>
+              <p className="text-xs text-gray-500">
+                {user?.job_title || roleLabel(user?.role, t)}
+              </p>
             </div>
-            <div className="w-10 h-10 bg-[#1A56A0] rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-[#1A56A0] to-[#0D3B6E] rounded-full flex items-center justify-center">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+              ) : (
+                <User className="w-5 h-5 text-white" />
+              )}
             </div>
             <Button
               variant="ghost"
               size="icon"
-              onClick={logout}
+              onClick={authLogout}
               className="text-gray-500 hover:text-red-500"
               aria-label={t('common.logout')}
             >

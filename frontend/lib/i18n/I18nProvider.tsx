@@ -46,6 +46,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }
     } catch {}
 
+    // Check for auth before fetching from backend
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
     // Try to fetch from backend (overrides if user has it set)
     apiClient
       .get('/users/me/')

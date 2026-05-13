@@ -63,6 +63,10 @@ export function useAuth() {
       localStorage.setItem('accessToken', access);
       localStorage.setItem('refreshToken', refresh);
 
+      // Set cookies for middleware compatibility
+      document.cookie = `accessToken=${access}; path=/; max-age=900`; // 15 min
+      document.cookie = `refreshToken=${refresh}; path=/; max-age=2592000`; // 30 days
+
       if (!is_new_user) {
         setState({
           user,

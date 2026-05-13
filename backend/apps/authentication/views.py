@@ -129,6 +129,8 @@ class VerifyOTPView(APIView):
         is_new_user = False
         try:
             user = User.objects.get(phone=phone)
+            # Check if user has completed onboarding
+            is_new_user = not user.is_onboarded
         except User.DoesNotExist:
             # Create new user with minimal data
             user = User.objects.create(

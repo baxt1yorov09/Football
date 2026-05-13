@@ -42,17 +42,27 @@ class User(AbstractUser):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     phone = models.CharField(max_length=20, unique=True, verbose_name="Telefon raqam")
+    
+    # Onboarding fields
+    is_onboarded = models.BooleanField(default=False, verbose_name="Onboarding tugallangan")
+    first_name = models.CharField(max_length=100, blank=True, verbose_name="Ism")
+    last_name = models.CharField(max_length=100, blank=True, verbose_name="Familiya")
+    middle_name = models.CharField(max_length=100, blank=True, verbose_name="Otasining ismi")
     full_name = models.CharField(max_length=200, blank=True, null=True, verbose_name="To'liq ism")
+    email = models.EmailField(blank=True, null=True, verbose_name="Email")
     birth_date = models.DateField(blank=True, null=True, verbose_name="Tug'ilgan sana")
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default='male', blank=True, null=True, verbose_name="Jins")
     region = models.ForeignKey(Region, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Viloyat")
+    workplace = models.CharField(max_length=300, blank=True, null=True, verbose_name="Ish joyi")
+    job_title = models.CharField(max_length=200, blank=True, null=True, verbose_name="Lavozim")
+    coaching_years = models.PositiveIntegerField(default=0, verbose_name="Murabbiylik tajribasi (yil)")
+    
+    # Profile
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='coach', verbose_name="Rol")
     is_active = models.BooleanField(default=True, verbose_name="Faol")
     avatar = models.ImageField(upload_to=user_avatar_path, null=True, blank=True, verbose_name="Avatar")
     avatar_url = models.URLField(blank=True, null=True, verbose_name="Avatar URL (legacy)")
-    workplace = models.CharField(max_length=300, blank=True, null=True, verbose_name="Ish joyi")
-    job_title = models.CharField(max_length=200, blank=True, null=True, verbose_name="Lavozim")
-    coaching_years = models.PositiveIntegerField(default=0, verbose_name="Murabbiylik tajribasi (yil)")
+    
     # Settings
     language = models.CharField(max_length=5, default='uz', verbose_name="Til")
     theme = models.CharField(max_length=10, default='light', verbose_name="Mavzu")
