@@ -51,17 +51,17 @@ function getToken(): string | null {
   return localStorage.getItem('accessToken') || localStorage.getItem('adminAccessToken');
 }
 
-const STATUS_CFG: Record<MyLicense['status'], { label: string; bg: string; text: string; ring: string; icon: any }> = {
-  active:    { label: 'Faol',             bg: 'bg-green-50',  text: 'text-green-700',  ring: 'ring-green-200', icon: CheckCircle },
-  expired:   { label: "Muddati o'tgan",   bg: 'bg-red-50',    text: 'text-red-700',    ring: 'ring-red-200',   icon: XCircle },
-  suspended: { label: "To'xtatilgan",     bg: 'bg-amber-50',  text: 'text-amber-700',  ring: 'ring-amber-200', icon: Clock },
-  revoked:   { label: 'Bekor qilingan',   bg: 'bg-gray-50',   text: 'text-gray-700',   ring: 'ring-gray-200',  icon: XCircle },
+const STATUS_CFG: Record<MyLicense['status'], { tKey: string; bg: string; text: string; ring: string; icon: any }> = {
+  active:    { tKey: 'licenses.status.active',    bg: 'bg-green-50',  text: 'text-green-700',  ring: 'ring-green-200', icon: CheckCircle },
+  expired:   { tKey: 'licenses.status.expired',   bg: 'bg-red-50',    text: 'text-red-700',    ring: 'ring-red-200',   icon: XCircle },
+  suspended: { tKey: 'licenses.status.suspended', bg: 'bg-amber-50',  text: 'text-amber-700',  ring: 'ring-amber-200', icon: Clock },
+  revoked:   { tKey: 'licenses.status.revoked',   bg: 'bg-gray-50',   text: 'text-gray-700',   ring: 'ring-gray-200',  icon: XCircle },
 };
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string = 'uz'): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('uz-UZ', {
+    return new Date(iso).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ', {
       day: '2-digit', month: 'long', year: 'numeric',
     });
   } catch { return iso; }
@@ -69,7 +69,7 @@ function formatDate(iso: string): string {
 
 // ============ MAIN ============
 export default function LicensesPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [data, setData] = useState<APIResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -158,10 +158,10 @@ export default function LicensesPage() {
             <div>
               <h1 className="text-3xl font-bold text-[#0D3B6E] flex items-center gap-3">
                 <ShieldCheck className="w-8 h-8 text-[#1A56A0]" />
-                Mening litsenziyalarim
+                {t('licenses.title')}
               </h1>
               <p className="text-gray-600 mt-1">
-                UFF tomonidan berilgan barcha murabbiylik litsenziyalaringiz
+                {t('licenses.subtitle')}
               </p>
             </div>
             <div className="flex gap-2">
@@ -169,7 +169,7 @@ export default function LicensesPage() {
                 onClick={() => fetchData(false)}
                 disabled={refreshing}
                 className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-all"
-                title="Yangilash"
+                title={t('licenses.refresh')}
               >
                 <RefreshCw className={`w-4 h-4 text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
@@ -178,7 +178,7 @@ export default function LicensesPage() {
                 className="flex items-center gap-2 px-4 py-2.5 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-blue-500/25"
               >
                 <Plus className="w-4 h-4" />
-                Yangi ariza berish
+                {t('licenses.new_application')}
               </Link>
             </div>
           </motion.div>
@@ -186,10 +186,10 @@ export default function LicensesPage() {
           {/* Summary cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {[
-              { key: 'total',         label: 'Jami litsenziyalar', icon: Award,         color: '#1A56A0' },
-              { key: 'active',        label: 'Faol',               icon: CheckCircle,   color: '#27AE60' },
-              { key: 'expired',       label: "Muddati o'tgan",     icon: AlertCircle,   color: '#E74C3C' },
-              { key: 'expiring_soon', label: 'Yaqinda tugaydi',    icon: Clock,         color: '#F39C12' },
+              { key: 'total',         label: t('licenses.kpi.total'),         icon: Award,       color: '#1A56A0' },
+              { key: 'active',        label: t('licenses.kpi.active'),        icon: CheckCircle, color: '#27AE60' },
+              { key: 'expired',       label: t('licenses.kpi.expired'),       icon: AlertCircle, color: '#E74C3C' },
+              { key: 'expiring_soon', label: t('licenses.kpi.expiring_soon'), icon: Clock,       color: '#F39C12' },
             ].map((card, idx) => {
               const Icon = card.icon;
               const value = data?.summary ? (data.summary as any)[card.key] : 0;
@@ -237,17 +237,17 @@ export default function LicensesPage() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-amber-900">
-                  {data.summary.expiring_soon} ta litsenziyangiz yaqinda tugaydi
+                  {t('licenses.expiring_banner_title', { n: data.summary.expiring_soon })}
                 </p>
                 <p className="text-sm text-amber-700 mt-0.5">
-                  30 kun ichida muddat tugaydigan litsenziyalar uchun yangilash arizasini yuboring
+                  {t('licenses.expiring_banner_subtitle')}
                 </p>
               </div>
               <Link
                 href="/apply"
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-all whitespace-nowrap"
               >
-                Yangilash
+                {t('licenses.renew')}
               </Link>
             </motion.div>
           )}
@@ -264,7 +264,7 @@ export default function LicensesPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Litsenziya raqami yoki turi bo'yicha qidirish..."
+                  placeholder={t('licenses.search_placeholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
@@ -275,11 +275,11 @@ export default function LicensesPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
               >
-                <option value="all">Barchasi</option>
-                <option value="active">Faol</option>
-                <option value="expired">Muddati o'tgan</option>
-                <option value="suspended">To'xtatilgan</option>
-                <option value="revoked">Bekor qilingan</option>
+                <option value="all">{t('licenses.filter_all')}</option>
+                <option value="active">{t('licenses.status.active')}</option>
+                <option value="expired">{t('licenses.status.expired')}</option>
+                <option value="suspended">{t('licenses.status.suspended')}</option>
+                <option value="revoked">{t('licenses.status.revoked')}</option>
               </select>
             </div>
           </motion.div>
@@ -290,7 +290,7 @@ export default function LicensesPage() {
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
               <p className="text-sm text-red-700 flex-1">{error}</p>
               <button onClick={() => fetchData(true)} className="text-sm text-red-700 underline">
-                Qayta urinish
+                {t('licenses.retry')}
               </button>
             </div>
           )}
@@ -312,6 +312,7 @@ export default function LicensesPage() {
               hasFilter={!!search || statusFilter !== 'all'}
               total={data?.summary.total || 0}
               onReset={() => { setSearch(''); setStatusFilter('all'); }}
+              t={t}
             />
           ) : (
             <motion.div
@@ -326,6 +327,8 @@ export default function LicensesPage() {
                   lic={lic}
                   onView={() => setDetailLic(lic)}
                   onDownload={() => handleDownloadPdf(lic)}
+                  t={t}
+                  locale={locale}
                 />
               ))}
             </motion.div>
@@ -338,16 +341,20 @@ export default function LicensesPage() {
         lic={detailLic}
         onClose={() => setDetailLic(null)}
         onDownload={handleDownloadPdf}
+        t={t}
+        locale={locale}
       />
     </div>
   );
 }
 
 // ============ LICENSE CARD ============
-function LicenseCard({ lic, onView, onDownload }: {
+function LicenseCard({ lic, onView, onDownload, t, locale }: {
   lic: MyLicense;
   onView: () => void;
   onDownload: () => void;
+  t: (k: string, vars?: any) => string;
+  locale: string;
 }) {
   const sc = STATUS_CFG[lic.status];
   const StatusIcon = sc.icon;
@@ -382,13 +389,13 @@ function LicenseCard({ lic, onView, onDownload }: {
           </div>
           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${sc.bg} ${sc.text}`}>
             <StatusIcon className="w-3 h-3" />
-            {sc.label}
+            {t(sc.tKey)}
           </span>
         </div>
 
         {/* Type name */}
         <div className="mb-4">
-          <p className="text-xs text-gray-500 mb-0.5">Litsenziya turi</p>
+          <p className="text-xs text-gray-500 mb-0.5">{t('licenses.detail.license_type')}</p>
           <p className="font-semibold text-gray-900">{lic.license_type_name}</p>
         </div>
 
@@ -403,16 +410,16 @@ function LicenseCard({ lic, onView, onDownload }: {
         {/* Dates */}
         <div className="grid grid-cols-2 gap-3 pb-4 mb-4 border-b border-gray-100">
           <div>
-            <p className="text-xs text-gray-500 mb-0.5">Berilgan</p>
-            <p className="text-sm font-medium text-gray-900">{formatDate(lic.issued_at)}</p>
+            <p className="text-xs text-gray-500 mb-0.5">{t('licenses.issued')}</p>
+            <p className="text-sm font-medium text-gray-900">{formatDate(lic.issued_at, locale)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-0.5">Tugaydi</p>
+            <p className="text-xs text-gray-500 mb-0.5">{t('licenses.expires')}</p>
             <p className={`text-sm font-medium ${
               lic.status === 'expired' ? 'text-red-600' :
               lic.is_expiring_soon ? 'text-amber-600' : 'text-gray-900'
             }`}>
-              {formatDate(lic.expires_at)}
+              {formatDate(lic.expires_at, locale)}
             </p>
           </div>
         </div>
@@ -423,8 +430,8 @@ function LicenseCard({ lic, onView, onDownload }: {
             lic.is_expiring_soon ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'
           }`}>
             {lic.is_expiring_soon
-              ? `⚠ Faqat ${lic.days_left} kun qoldi`
-              : `${lic.days_left} kun amal qiladi`}
+              ? `⚠ ${t('licenses.days_left_warning', { n: lic.days_left })}`
+              : t('licenses.days_left', { n: lic.days_left })}
           </div>
         )}
 
@@ -435,7 +442,7 @@ function LicenseCard({ lic, onView, onDownload }: {
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 hover:border-[#1A56A0] hover:bg-blue-50 hover:text-[#1A56A0] rounded-lg text-sm font-medium text-gray-700 transition-all"
           >
             <Eye className="w-4 h-4" />
-            Ko'rish
+            {t('licenses.view')}
           </button>
           <button
             onClick={onDownload}
@@ -451,22 +458,23 @@ function LicenseCard({ lic, onView, onDownload }: {
 }
 
 // ============ EMPTY STATE ============
-function EmptyState({ hasFilter, total, onReset }: {
+function EmptyState({ hasFilter, total, onReset, t }: {
   hasFilter: boolean;
   total: number;
   onReset: () => void;
+  t: (k: string, vars?: any) => string;
 }) {
   if (hasFilter) {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
         <Search className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Hech narsa topilmadi</h3>
-        <p className="text-sm text-gray-500 mb-6">Qidiruv shartlariga mos litsenziyalar yo'q</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('licenses.no_match_title')}</h3>
+        <p className="text-sm text-gray-500 mb-6">{t('licenses.no_match_subtitle')}</p>
         <button
           onClick={onReset}
           className="px-5 py-2.5 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-xl text-sm font-medium transition-all"
         >
-          Filtrlarni tozalash
+          {t('licenses.reset_filters')}
         </button>
       </div>
     );
@@ -478,28 +486,29 @@ function EmptyState({ hasFilter, total, onReset }: {
         <Sparkles className="w-10 h-10 text-white" />
       </div>
       <h3 className="text-xl font-bold text-gray-900 mb-2">
-        Sizda hali litsenziya yo'q
+        {t('licenses.empty_title')}
       </h3>
       <p className="text-sm text-gray-600 max-w-md mx-auto mb-6">
-        UFF tomonidan tasdiqlangan murabbiylik litsenziyasini olish uchun ariza yuboring.
-        Tasdiqlangandan so'ng litsenziyangiz shu yerda paydo bo'ladi.
+        {t('licenses.empty_subtitle')}
       </p>
       <Link
         href="/apply"
         className="inline-flex items-center gap-2 px-6 py-3 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-500/25"
       >
         <Plus className="w-4 h-4" />
-        Ariza yuborish
+        {t('licenses.empty_action')}
       </Link>
     </div>
   );
 }
 
 // ============ DETAIL MODAL ============
-function LicenseDetailModal({ lic, onClose, onDownload }: {
+function LicenseDetailModal({ lic, onClose, onDownload, t, locale }: {
   lic: MyLicense | null;
   onClose: () => void;
   onDownload: (lic: MyLicense) => void;
+  t: (k: string, vars?: any) => string;
+  locale: string;
 }) {
   return (
     <AnimatePresence>
@@ -534,7 +543,7 @@ function LicenseDetailModal({ lic, onClose, onDownload }: {
                   {lic.license_type_code}
                 </div>
                 <div>
-                  <p className="text-sm text-white/80 uppercase tracking-wider">Litsenziya</p>
+                  <p className="text-sm text-white/80 uppercase tracking-wider">{t('licenses.detail.license_number')}</p>
                   <p className="font-mono font-bold text-2xl">{lic.license_number}</p>
                   <p className="text-sm text-white/90 mt-1">{lic.license_type_name}</p>
                 </div>
@@ -550,7 +559,7 @@ function LicenseDetailModal({ lic, onClose, onDownload }: {
                   return (
                     <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ${sc.bg} ${sc.text} ${sc.ring}`}>
                       <Icon className="w-4 h-4" />
-                      {sc.label}
+                      {t(sc.tKey)}
                     </span>
                   );
                 })()}
@@ -559,8 +568,8 @@ function LicenseDetailModal({ lic, onClose, onDownload }: {
                     lic.is_expiring_soon ? 'text-amber-600' : 'text-gray-500'
                   }`}>
                     {lic.is_expiring_soon
-                      ? `⚠ ${lic.days_left} kun qoldi`
-                      : `${lic.days_left} kun amal qiladi`}
+                      ? `⚠ ${t('licenses.days_left_warning', { n: lic.days_left })}`
+                      : t('licenses.days_left', { n: lic.days_left })}
                   </span>
                 )}
               </div>
@@ -568,12 +577,12 @@ function LicenseDetailModal({ lic, onClose, onDownload }: {
               {/* Details grid */}
               <div className="space-y-3 mb-5">
                 {[
-                  { label: 'Litsenziya turi', value: lic.license_type_name, icon: Award },
-                  { label: 'Tur kodi',        value: lic.license_type_code, icon: FileText },
-                  { label: 'Kategoriya',      value: lic.license_type_category, icon: ShieldCheck },
-                  { label: 'Hudud',           value: lic.region || '—', icon: MapPin },
-                  { label: 'Berilgan sana',   value: formatDate(lic.issued_at), icon: Calendar },
-                  { label: 'Tugash sanasi',   value: formatDate(lic.expires_at), icon: Calendar },
+                  { label: t('licenses.detail.license_type'), value: lic.license_type_name, icon: Award },
+                  { label: t('licenses.detail.type_code'),    value: lic.license_type_code, icon: FileText },
+                  { label: t('licenses.detail.category'),     value: lic.license_type_category, icon: ShieldCheck },
+                  { label: t('licenses.detail.region'),       value: lic.region || '—', icon: MapPin },
+                  { label: t('licenses.detail.issued_date'),  value: formatDate(lic.issued_at, locale), icon: Calendar },
+                  { label: t('licenses.detail.expiry_date'),  value: formatDate(lic.expires_at, locale), icon: Calendar },
                 ].map((row) => {
                   const Icon = row.icon;
                   return (
@@ -591,9 +600,9 @@ function LicenseDetailModal({ lic, onClose, onDownload }: {
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-900">Tekshirish kodi</p>
+                    <p className="text-sm font-medium text-blue-900">{t('licenses.detail.verification_title')}</p>
                     <p className="text-xs text-blue-700 mt-0.5">
-                      Litsenziya haqiqiyligini tekshirish uchun ID dan foydalaning
+                      {t('licenses.detail.verification_subtitle')}
                     </p>
                     <code className="block mt-2 text-xs font-mono bg-white px-2 py-1 rounded border border-blue-200 break-all">
                       {lic.id}
@@ -608,14 +617,14 @@ function LicenseDetailModal({ lic, onClose, onDownload }: {
                   onClick={onClose}
                   className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                 >
-                  Yopish
+                  {t('licenses.detail.close')}
                 </button>
                 <button
                   onClick={() => onDownload(lic)}
                   className="flex-1 py-2.5 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  PDF yuklab olish
+                  {t('licenses.detail.download_pdf')}
                 </button>
               </div>
             </div>

@@ -9,28 +9,29 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useUserDashboard, DashboardApplication } from '@/hooks/useUserDashboard';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
-const STATUS_CFG: Record<string, { color: string; icon: any; label: string }> = {
-  pending:          { color: '#F39C12', icon: Clock,       label: 'Kutilmoqda' },
-  under_review:     { color: '#3498DB', icon: Eye,         label: "Ko'rib chiqilmoqda" },
-  additional_docs:  { color: '#E67E22', icon: FileText,    label: "Qo'shimcha hujjat" },
-  approved:         { color: '#27AE60', icon: CheckCircle, label: 'Tasdiqlangan' },
-  license_issued:   { color: '#27AE60', icon: CheckCircle, label: 'Litsenziya berildi' },
-  rejected:         { color: '#E74C3C', icon: XCircle,     label: 'Rad etilgan' },
-  cancelled:        { color: '#95A5A6', icon: XCircle,     label: 'Bekor qilingan' },
+const STATUS_CFG: Record<string, { color: string; icon: any; tKey: string }> = {
+  pending:          { color: '#F39C12', icon: Clock,       tKey: 'applications.status.pending' },
+  under_review:     { color: '#3498DB', icon: Eye,         tKey: 'applications.status.under_review' },
+  additional_docs:  { color: '#E67E22', icon: FileText,    tKey: 'applications.status.additional_docs' },
+  approved:         { color: '#27AE60', icon: CheckCircle, tKey: 'applications.status.approved' },
+  license_issued:   { color: '#27AE60', icon: CheckCircle, tKey: 'applications.status.license_issued' },
+  rejected:         { color: '#E74C3C', icon: XCircle,     tKey: 'applications.status.rejected' },
+  cancelled:        { color: '#95A5A6', icon: XCircle,     tKey: 'applications.status.cancelled' },
 };
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string = 'uz'): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString('uz-UZ', {
+    return new Date(iso).toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
   } catch { return iso; }
 }
 
-function AppRow({ app, index }: { app: DashboardApplication; index: number }) {
+function AppRow({ app, index, t, locale }: { app: DashboardApplication; index: number; t: (k: string, v?: any) => string; locale: string }) {
   const cfg = STATUS_CFG[app.status] || STATUS_CFG.pending;
   const StatusIcon = cfg.icon;
 
@@ -62,19 +63,19 @@ function AppRow({ app, index }: { app: DashboardApplication; index: number }) {
                 border: 'none',
               }}
             >
-              {cfg.label}
+              {t(cfg.tKey)}
             </Badge>
           </div>
           <p className="text-sm text-gray-700 mt-1 truncate">
-            {app.license_type_name || app.license_type_code || 'Litsenziya arizasi'}
+            {app.license_type_name || app.license_type_code || t('applications.title')}
           </p>
           <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
-            <span>Yuborildi: {formatDate(app.submitted_at)}</span>
-            {app.reviewed_at && <span>Ko'rib chiqildi: {formatDate(app.reviewed_at)}</span>}
+            <span>{t('applications.submitted_at')}: {formatDate(app.submitted_at, locale)}</span>
+            {app.reviewed_at && <span>{t('applications.reviewed_at')}: {formatDate(app.reviewed_at, locale)}</span>}
           </div>
           {app.rejection_reason && (
             <p className="text-xs text-red-500 mt-1 line-clamp-1">
-              Sabab: {app.rejection_reason}
+              {t('applications.rejection_reason')}: {app.rejection_reason}
             </p>
           )}
         </div>
@@ -82,7 +83,7 @@ function AppRow({ app, index }: { app: DashboardApplication; index: number }) {
 
       <Link href={`/applications/${app.id}`} className="flex-shrink-0">
         <Button variant="ghost" size="sm" className="text-[#1A56A0]">
-          Batafsil
+          {t('applications.view_details')}
         </Button>
       </Link>
     </motion.div>
@@ -103,6 +104,7 @@ function AppSkeleton() {
 
 export function RecentApplications() {
   const { data, loading, error } = useUserDashboard();
+  const { t, locale } = useI18n();
   const apps = data?.recent_applications || [];
 
   return (
@@ -110,13 +112,13 @@ export function RecentApplications() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold text-[#0D3B6E] flex items-center gap-2">
           <FileText className="w-5 h-5" />
-          So'nggi arizalar
+          {t('dashboard.recent_applications')}
         </CardTitle>
         <Link
           href="/applications"
           className="text-sm text-[#1A56A0] hover:text-[#F39C12] flex items-center gap-1"
         >
-          Barchasini ko'rish
+          {t('dashboard.view_all')}
           <ChevronRight className="w-4 h-4" />
         </Link>
       </CardHeader>
@@ -138,19 +140,19 @@ export function RecentApplications() {
             <div className="w-14 h-14 mx-auto mb-3 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center">
               <Sparkles className="w-7 h-7 text-[#1A56A0]" />
             </div>
-            <p className="font-medium text-gray-900 mb-1">Hali arizalar yo'q</p>
-            <p className="text-sm text-gray-500 mb-4">Birinchi arizangizni yuboring</p>
+            <p className="font-medium text-gray-900 mb-1">{t('applications.empty_title')}</p>
+            <p className="text-sm text-gray-500 mb-4">{t('applications.empty_subtitle')}</p>
             <Link href="/apply">
               <Button className="bg-[#1A56A0] hover:bg-[#0D3B6E]">
                 <Plus className="w-4 h-4 mr-2" />
-                Ariza yuborish
+                {t('licenses.empty_action')}
               </Button>
             </Link>
           </div>
         ) : (
           <div className="space-y-3">
             {apps.map((app, idx) => (
-              <AppRow key={app.id} app={app} index={idx} />
+              <AppRow key={app.id} app={app} index={idx} t={t} locale={locale} />
             ))}
           </div>
         )}

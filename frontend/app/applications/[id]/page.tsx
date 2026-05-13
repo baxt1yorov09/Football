@@ -13,6 +13,7 @@ import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import Link from 'next/link';
 import { invalidateDashboard } from '@/hooks/useUserDashboard';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 // ============ Types ============
 interface ApplicationDoc {
@@ -61,47 +62,47 @@ function getToken(): string | null {
   return localStorage.getItem('accessToken') || localStorage.getItem('adminAccessToken');
 }
 
-const STATUS_CFG: Record<string, { label: string; bg: string; text: string; ring: string; icon: any }> = {
-  pending:         { label: 'Kutilmoqda',          bg: 'bg-amber-50',  text: 'text-amber-700',  ring: 'ring-amber-200',  icon: Clock },
-  under_review:    { label: "Ko'rib chiqilmoqda",  bg: 'bg-blue-50',   text: 'text-blue-700',   ring: 'ring-blue-200',   icon: Eye },
-  additional_docs: { label: "Qo'shimcha hujjat",   bg: 'bg-orange-50', text: 'text-orange-700', ring: 'ring-orange-200', icon: FileText },
-  approved:        { label: 'Tasdiqlangan',        bg: 'bg-green-50',  text: 'text-green-700',  ring: 'ring-green-200',  icon: CheckCircle },
-  license_issued:  { label: 'Litsenziya berildi',  bg: 'bg-green-50',  text: 'text-green-700',  ring: 'ring-green-200',  icon: Award },
-  rejected:        { label: 'Rad etilgan',         bg: 'bg-red-50',    text: 'text-red-700',    ring: 'ring-red-200',    icon: XCircle },
-  cancelled:       { label: 'Bekor qilingan',      bg: 'bg-gray-50',   text: 'text-gray-700',   ring: 'ring-gray-200',   icon: XCircle },
+const STATUS_CFG: Record<string, { tKey: string; bg: string; text: string; ring: string; icon: any }> = {
+  pending:         { tKey: 'applications.status.pending',         bg: 'bg-amber-50',  text: 'text-amber-700',  ring: 'ring-amber-200',  icon: Clock },
+  under_review:    { tKey: 'applications.status.under_review',    bg: 'bg-blue-50',   text: 'text-blue-700',   ring: 'ring-blue-200',   icon: Eye },
+  additional_docs: { tKey: 'applications.status.additional_docs', bg: 'bg-orange-50', text: 'text-orange-700', ring: 'ring-orange-200', icon: FileText },
+  approved:        { tKey: 'applications.status.approved',        bg: 'bg-green-50',  text: 'text-green-700',  ring: 'ring-green-200',  icon: CheckCircle },
+  license_issued:  { tKey: 'applications.status.license_issued',  bg: 'bg-green-50',  text: 'text-green-700',  ring: 'ring-green-200',  icon: Award },
+  rejected:        { tKey: 'applications.status.rejected',        bg: 'bg-red-50',    text: 'text-red-700',    ring: 'ring-red-200',    icon: XCircle },
+  cancelled:       { tKey: 'applications.status.cancelled',       bg: 'bg-gray-50',   text: 'text-gray-700',   ring: 'ring-gray-200',   icon: XCircle },
 };
 
-const TIMELINE_ACTIONS: Record<string, { label: string; color: string; icon: any }> = {
-  created:          { label: 'Ariza yaratildi',     color: '#3498DB', icon: FileText },
-  submitted:        { label: 'Yuborildi',           color: '#3498DB', icon: FileCheck },
-  under_review:     { label: "Ko'rib chiqilmoqda",  color: '#3498DB', icon: Eye },
-  additional_docs:  { label: "Qo'shimcha hujjat",   color: '#E67E22', icon: FileText },
-  approved:         { label: 'Tasdiqlandi',         color: '#27AE60', icon: CheckCircle },
-  rejected:         { label: 'Rad etildi',          color: '#E74C3C', icon: XCircle },
-  cancelled:        { label: 'Bekor qilindi',       color: '#95A5A6', icon: XCircle },
-  license_issued:   { label: 'Litsenziya berildi',  color: '#27AE60', icon: Award },
-  note_added:       { label: 'Izoh qo\'shildi',     color: '#9B59B6', icon: MessageSquare },
+const TIMELINE_ACTIONS: Record<string, { tKey: string; color: string; icon: any }> = {
+  created:          { tKey: 'applications.timeline_actions.created',         color: '#3498DB', icon: FileText },
+  submitted:        { tKey: 'applications.timeline_actions.submitted',       color: '#3498DB', icon: FileCheck },
+  under_review:     { tKey: 'applications.timeline_actions.under_review',    color: '#3498DB', icon: Eye },
+  additional_docs:  { tKey: 'applications.timeline_actions.additional_docs', color: '#E67E22', icon: FileText },
+  approved:         { tKey: 'applications.timeline_actions.approved',        color: '#27AE60', icon: CheckCircle },
+  rejected:         { tKey: 'applications.timeline_actions.rejected',        color: '#E74C3C', icon: XCircle },
+  cancelled:        { tKey: 'applications.timeline_actions.cancelled',       color: '#95A5A6', icon: XCircle },
+  license_issued:   { tKey: 'applications.timeline_actions.license_issued',  color: '#27AE60', icon: Award },
+  note_added:       { tKey: 'applications.timeline_actions.note_added',      color: '#9B59B6', icon: MessageSquare },
 };
 
-function formatDate(iso?: string | null, withTime = true): string {
+function formatDate(iso?: string | null, withTime = true, locale: string = 'uz'): string {
   if (!iso) return '—';
   try {
     const d = new Date(iso);
-    return d.toLocaleString('uz-UZ', {
+    return d.toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ', {
       day: '2-digit', month: 'long', year: 'numeric',
       ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
     });
   } catch { return String(iso); }
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(iso: string, t: (k: string, v?: any) => string, locale: string = 'uz'): string {
   try {
     const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-    if (diff < 60) return 'Hozirgina';
-    if (diff < 3600) return `${Math.floor(diff / 60)} daqiqa oldin`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} soat oldin`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)} kun oldin`;
-    return formatDate(iso, false);
+    if (diff < 60) return t('common.just_now');
+    if (diff < 3600) return t('common.minutes_ago', { n: Math.floor(diff / 60) });
+    if (diff < 86400) return t('common.hours_ago', { n: Math.floor(diff / 3600) });
+    if (diff < 604800) return t('common.days_ago', { n: Math.floor(diff / 86400) });
+    return formatDate(iso, false, locale);
   } catch { return iso; }
 }
 
@@ -132,6 +133,7 @@ function getRegionName(app: Application | null) {
 export default function ApplicationDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t, locale } = useI18n();
   const appId = params?.id;
 
   const [app, setApp] = useState<Application | null>(null);
@@ -159,7 +161,7 @@ export default function ApplicationDetailPage() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (r.status === 404) {
-        setError('Ariza topilmadi');
+        setError(t('applications.not_found_title'));
         return;
       }
       if (!r.ok) {
@@ -193,7 +195,7 @@ export default function ApplicationDetailPage() {
         throw new Error(err.error || err.detail || `HTTP ${r.status}`);
       }
       invalidateDashboard();
-      showToast('Ariza bekor qilindi');
+      showToast(t('applications.timeline_actions.cancelled'));
       setShowCancel(false);
       fetchData(false);
     } catch (e: any) {
@@ -239,30 +241,30 @@ export default function ApplicationDetailPage() {
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#1A56A0] mb-6"
             >
               <ArrowLeft className="w-4 h-4" />
-              Arizalar ro'yxatiga qaytish
+              {t('applications.back_to_list')}
             </button>
             <div className="bg-white rounded-2xl border border-red-200 p-12 text-center shadow-sm">
               <div className="w-20 h-20 mx-auto mb-4 bg-red-50 rounded-2xl flex items-center justify-center">
                 <AlertCircle className="w-10 h-10 text-red-500" />
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">
-                {error === 'Ariza topilmadi' ? 'Ariza topilmadi' : 'Xatolik'}
+                {t('applications.not_found_title')}
               </h2>
               <p className="text-sm text-gray-600 mb-6">
-                {error || 'Ariza ma\'lumotlarini yuklab bo\'lmadi'}
+                {error || t('applications.not_found_subtitle')}
               </p>
               <div className="flex gap-3 justify-center">
                 <Link
                   href="/applications"
                   className="px-5 py-2.5 border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-medium text-gray-700"
                 >
-                  Arizalar ro'yxati
+                  {t('applications.back_to_list')}
                 </Link>
                 <button
                   onClick={() => fetchData(true)}
                   className="px-5 py-2.5 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-xl text-sm font-medium"
                 >
-                  Qayta urinish
+                  {t('licenses.retry')}
                 </button>
               </div>
             </div>
@@ -308,13 +310,13 @@ export default function ApplicationDetailPage() {
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#1A56A0] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Arizalar ro'yxati
+              {t('applications.back_to_list')}
             </button>
             <button
               onClick={() => fetchData(false)}
               disabled={refreshing}
               className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50"
-              title="Yangilash"
+              title={t('licenses.refresh')}
             >
               <RefreshCw className={`w-4 h-4 text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
@@ -337,7 +339,7 @@ export default function ApplicationDetailPage() {
                     {lt.code || <Award className="w-6 h-6" />}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Ariza</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('applications.title')}</p>
                     <h1 className="text-xl font-bold text-gray-900 break-all">
                       #{app.id.slice(0, 8).toUpperCase()}
                     </h1>
@@ -346,14 +348,14 @@ export default function ApplicationDetailPage() {
                 </div>
                 <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ring-1 ${sc.bg} ${sc.text} ${sc.ring}`}>
                   <StatusIcon className="w-4 h-4" />
-                  {sc.label}
+                  {t(sc.tKey)}
                 </span>
               </div>
 
               {/* Rejection reason if rejected */}
               {app.status === 'rejected' && app.rejection_reason && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-xs font-medium text-red-900 mb-1">Rad etish sababi</p>
+                  <p className="text-xs font-medium text-red-900 mb-1">{t('applications.rejection_reason')}</p>
                   <p className="text-sm text-red-800">{app.rejection_reason}</p>
                 </div>
               )}
@@ -363,7 +365,7 @@ export default function ApplicationDetailPage() {
                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                   <p className="text-xs font-medium text-blue-900 mb-1 flex items-center gap-1.5">
                     <MessageSquare className="w-3.5 h-3.5" />
-                    Admin izohi
+                    {t('applications.admin_note')}
                   </p>
                   <p className="text-sm text-blue-800">{app.admin_note}</p>
                 </div>
@@ -374,7 +376,7 @@ export default function ApplicationDetailPage() {
                 <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-center gap-3">
                   <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                   <p className="text-sm text-orange-800 flex-1">
-                    Qo'shimcha hujjatlar yuklash so'ralgan. Yuqoridagi admin izohini o'qing.
+                    {t('applications.docs_required_note')}
                   </p>
                 </div>
               )}
@@ -394,18 +396,18 @@ export default function ApplicationDetailPage() {
               >
                 <h2 className="text-base font-bold text-[#0D3B6E] mb-4 flex items-center gap-2">
                   <User className="w-5 h-5" />
-                  Ariza ma'lumotlari
+                  {t('applications.info_title')}
                 </h2>
                 <div className="space-y-3">
                   {[
-                    { icon: User,     label: 'F.I.O',           value: app.full_name || '—' },
-                    { icon: Phone,    label: 'Telefon',         value: app.phone || '—' },
-                    { icon: MapPin,   label: 'Hudud',           value: region || '—' },
-                    { icon: Award,    label: 'Litsenziya turi', value: lt.name || '—' },
-                    { icon: FileText, label: 'Ish joyi',        value: app.workplace || '—' },
-                    { icon: FileText, label: 'Lavozim',         value: app.job_title || '—' },
-                    { icon: Clock,    label: 'Murabbiylik tajribasi', value: app.coaching_years ? `${app.coaching_years} yil` : '—' },
-                    { icon: Calendar, label: 'Oldingi litsenziya', value: formatDate(app.prev_license_date, false) },
+                    { icon: User,     label: t('applications.fields.full_name'),      value: app.full_name || '—' },
+                    { icon: Phone,    label: t('applications.fields.phone'),          value: app.phone || '—' },
+                    { icon: MapPin,   label: t('applications.fields.region'),         value: region || '—' },
+                    { icon: Award,    label: t('applications.fields.license_type'),   value: lt.name || '—' },
+                    { icon: FileText, label: t('applications.fields.workplace'),      value: app.workplace || '—' },
+                    { icon: FileText, label: t('applications.fields.job_title'),      value: app.job_title || '—' },
+                    { icon: Clock,    label: t('applications.fields.coaching_years'), value: app.coaching_years ? `${app.coaching_years} ${t('applications.fields.years')}` : '—' },
+                    { icon: Calendar, label: t('applications.fields.prev_license'),   value: formatDate(app.prev_license_date, false, locale) },
                   ].map((row) => {
                     const Icon = row.icon;
                     return (
@@ -429,7 +431,7 @@ export default function ApplicationDetailPage() {
                 >
                   <h2 className="text-base font-bold text-[#0D3B6E] mb-4 flex items-center gap-2">
                     <FileText className="w-5 h-5" />
-                    Hujjatlar ({app.documents.length})
+                    {t('applications.docs_title')} ({app.documents.length})
                   </h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {app.documents.map((doc) => (
@@ -446,7 +448,7 @@ export default function ApplicationDetailPage() {
                             {doc.type_display || doc.type}
                           </p>
                           <p className="text-xs text-gray-500 truncate">
-                            {doc.filename || formatDate(doc.uploaded_at, false)}
+                            {doc.filename || formatDate(doc.uploaded_at, false, locale)}
                           </p>
                         </div>
                         <Eye className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -466,8 +468,8 @@ export default function ApplicationDetailPage() {
                   <div className="flex items-center gap-3">
                     <AlertCircle className="w-5 h-5 text-red-500" />
                     <div>
-                      <p className="text-sm font-medium text-red-900">Arizani bekor qilmoqchimisiz?</p>
-                      <p className="text-xs text-red-700 mt-0.5">Faqat ko'rib chiqilmagan arizalarni bekor qilish mumkin</p>
+                      <p className="text-sm font-medium text-red-900">{t('applications.cancel_banner_title')}</p>
+                      <p className="text-xs text-red-700 mt-0.5">{t('applications.cancel_banner_subtitle')}</p>
                     </div>
                   </div>
                   <button
@@ -475,7 +477,7 @@ export default function ApplicationDetailPage() {
                     className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Bekor qilish
+                    {t('applications.cancel')}
                   </button>
                 </motion.div>
               )}
@@ -491,33 +493,34 @@ export default function ApplicationDetailPage() {
               >
                 <h2 className="text-base font-bold text-[#0D3B6E] mb-5 flex items-center gap-2">
                   <Clock className="w-5 h-5" />
-                  Hodisalar tarixi
+                  {t('applications.timeline_title')}
                 </h2>
 
                 {/* Dates summary */}
                 <div className="space-y-2 mb-5 pb-5 border-b border-gray-100">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Yuborilgan</span>
-                    <span className="font-medium text-gray-900">{formatDate(app.submitted_at)}</span>
+                    <span className="text-gray-500">{t('applications.submitted_at')}</span>
+                    <span className="font-medium text-gray-900">{formatDate(app.submitted_at, true, locale)}</span>
                   </div>
                   {app.reviewed_at && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Ko'rib chiqilgan</span>
-                      <span className="font-medium text-gray-900">{formatDate(app.reviewed_at)}</span>
+                      <span className="text-gray-500">{t('applications.reviewed_at')}</span>
+                      <span className="font-medium text-gray-900">{formatDate(app.reviewed_at, true, locale)}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Timeline list */}
                 {timeline.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">Hodisalar yo'q</p>
+                  <p className="text-sm text-gray-400 text-center py-6">{t('applications.no_events')}</p>
                 ) : (
                   <div className="relative space-y-4 pl-6">
                     <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-100" />
                     {timeline.map((entry, idx) => {
                       const cfg = TIMELINE_ACTIONS[entry.action] || {
-                        label: entry.action, color: '#95A5A6', icon: Clock,
+                        tKey: '', color: '#95A5A6', icon: Clock,
                       };
+                      const label = cfg.tKey ? t(cfg.tKey) : entry.action;
                       const Icon = cfg.icon;
                       return (
                         <motion.div
@@ -534,11 +537,11 @@ export default function ApplicationDetailPage() {
                             <Icon className="w-2.5 h-2.5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{cfg.label}</p>
+                            <p className="text-sm font-medium text-gray-900">{label}</p>
                             {entry.note && (
                               <p className="text-xs text-gray-600 mt-0.5 break-words">{entry.note}</p>
                             )}
-                            <p className="text-xs text-gray-400 mt-1">{relativeTime(entry.created_at)}</p>
+                            <p className="text-xs text-gray-400 mt-1">{relativeTime(entry.created_at, t, locale)}</p>
                             {entry.created_by_name && (
                               <p className="text-xs text-gray-400">{entry.created_by_name}</p>
                             )}
@@ -575,10 +578,10 @@ export default function ApplicationDetailPage() {
                 <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
                   <AlertCircle className="w-5 h-5 text-red-500" />
                 </div>
-                <h3 className="font-semibold text-gray-900">Arizani bekor qilishni tasdiqlang</h3>
+                <h3 className="font-semibold text-gray-900">{t('applications.cancel_title')}</h3>
               </div>
               <p className="text-sm text-gray-600 mb-5">
-                Arizangiz bekor qilinadi va keyinroq qayta yuborish kerak bo'ladi. Davom etasizmi?
+                {t('applications.cancel_message')}
               </p>
               <div className="flex gap-2">
                 <button
@@ -586,7 +589,7 @@ export default function ApplicationDetailPage() {
                   disabled={cancelling}
                   className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 disabled:opacity-50"
                 >
-                  Yo'q
+                  {t('common.no')}
                 </button>
                 <button
                   onClick={handleCancel}
@@ -594,7 +597,7 @@ export default function ApplicationDetailPage() {
                   className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {cancelling && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Ha, bekor qilish
+                  {t('applications.confirm_cancel')}
                 </button>
               </div>
             </motion.div>
@@ -624,7 +627,7 @@ export default function ApplicationDetailPage() {
                   <h3 className="font-semibold text-gray-900 truncate">
                     {previewDoc.type_display || previewDoc.type}
                   </h3>
-                  <p className="text-xs text-gray-500">{formatDate(previewDoc.uploaded_at)}</p>
+                  <p className="text-xs text-gray-500">{formatDate(previewDoc.uploaded_at, true, locale)}</p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <a

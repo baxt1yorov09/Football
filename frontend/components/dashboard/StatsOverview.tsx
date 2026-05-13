@@ -21,28 +21,28 @@ export function StatsOverview() {
 
   const stats: StatItem[] = [
     {
-      label: 'Faol litsenziyalar',
+      label: t('dashboard.stats.active_licenses'),
       value: data?.stats.active_licenses ?? 0,
       icon: Award,
       color: '#27AE60',
       href: '/licenses?status=active',
     },
     {
-      label: 'Kutilayotgan arizalar',
+      label: t('dashboard.stats.pending_applications'),
       value: data?.stats.pending_applications ?? 0,
       icon: Clock,
       color: '#F39C12',
       href: '/applications?status=pending',
     },
     {
-      label: 'Tasdiqlangan',
+      label: t('applications.status.approved'),
       value: data?.stats.approved_applications ?? 0,
       icon: CheckCircle,
       color: '#3498DB',
       href: '/applications?status=approved',
     },
     {
-      label: 'Yaqinda tugaydi',
+      label: t('dashboard.stats.expiring_soon'),
       value: data?.stats.expiring_soon ?? 0,
       icon: AlertTriangle,
       color: '#E74C3C',
@@ -53,7 +53,7 @@ export function StatsOverview() {
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
-        Statistikani yuklab bo'lmadi: {error}
+        {t('common.error')}: {error}
       </div>
     );
   }

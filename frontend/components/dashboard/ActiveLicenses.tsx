@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useUserDashboard, DashboardLicense } from '@/hooks/useUserDashboard';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string = 'uz'): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('uz-UZ', {
+    return new Date(iso).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ', {
       day: '2-digit', month: 'short', year: 'numeric',
     });
   } catch { return iso; }
@@ -32,7 +33,7 @@ function LicenseSkeleton() {
   );
 }
 
-function LicenseRow({ lic, index }: { lic: DashboardLicense; index: number }) {
+function LicenseRow({ lic, index, t, locale }: { lic: DashboardLicense; index: number; t: (k: string, v?: any) => string; locale: string }) {
   const isPro = lic.license_type_code === 'PRO';
   const isExpiring = lic.is_expiring_soon;
 
@@ -51,7 +52,7 @@ function LicenseRow({ lic, index }: { lic: DashboardLicense; index: number }) {
       )}
       {isExpiring && (
         <div className="absolute -top-3 left-4 px-3 py-1 bg-[#E74C3C] text-white text-xs rounded-full font-medium">
-          {lic.days_left} kun qoldi!
+          {t('licenses.days_left_warning', { n: lic.days_left })}
         </div>
       )}
 
@@ -73,9 +74,9 @@ function LicenseRow({ lic, index }: { lic: DashboardLicense; index: number }) {
           </div>
           <p className="text-sm text-gray-600 font-mono truncate">{lic.license_number}</p>
           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 flex-wrap">
-            <span>Berildi: {formatDate(lic.issued_at)}</span>
+            <span>{t('licenses.issued')}: {formatDate(lic.issued_at, locale)}</span>
             <span className={isExpiring ? 'text-[#E74C3C] font-semibold' : ''}>
-              Tugaydi: {formatDate(lic.expires_at)}
+              {t('licenses.expires')}: {formatDate(lic.expires_at, locale)}
             </span>
           </div>
         </div>
@@ -88,16 +89,16 @@ function LicenseRow({ lic, index }: { lic: DashboardLicense; index: number }) {
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-              title="PDF yuklab olish"
+              title={t('licenses.detail.download_pdf')}
             >
               <Download className="w-4 h-4 text-gray-400 hover:text-[#1A56A0]" />
             </a>
           ) : (
-            <button className="p-2 hover:bg-blue-50 rounded-lg" disabled title="PDF tayyor emas">
+            <button className="p-2 hover:bg-blue-50 rounded-lg" disabled title={t('common.empty')}>
               <Download className="w-4 h-4 text-gray-300" />
             </button>
           )}
-          <Link href={`/verify/${lic.id}`} className="p-2 hover:bg-blue-50 rounded-lg" title="QR / Tekshirish">
+          <Link href={`/verify/${lic.id}`} className="p-2 hover:bg-blue-50 rounded-lg" title="QR">
             <QrCode className="w-4 h-4 text-gray-400 hover:text-[#1A56A0]" />
           </Link>
         </div>
@@ -108,6 +109,7 @@ function LicenseRow({ lic, index }: { lic: DashboardLicense; index: number }) {
 
 export function ActiveLicenses() {
   const { data, loading, error } = useUserDashboard();
+  const { t, locale } = useI18n();
   const licenses = data?.active_licenses || [];
   const expiringSoonTotal = data?.stats.expiring_soon || 0;
 
@@ -116,13 +118,13 @@ export function ActiveLicenses() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold text-[#0D3B6E] flex items-center gap-2">
           <Award className="w-5 h-5" />
-          Faol litsenziyalar
+          {t('dashboard.active_licenses')}
         </CardTitle>
         <Link
           href="/licenses"
           className="text-sm text-[#1A56A0] hover:text-[#F39C12] flex items-center gap-1"
         >
-          Barchasini ko'rish
+          {t('dashboard.view_all')}
           <ChevronRight className="w-4 h-4" />
         </Link>
       </CardHeader>
@@ -143,21 +145,21 @@ export function ActiveLicenses() {
             <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[#1A56A0] to-[#0D3B6E] rounded-2xl flex items-center justify-center">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
-            <h3 className="font-semibold text-gray-900 mb-1">Hali litsenziya yo'q</h3>
+            <h3 className="font-semibold text-gray-900 mb-1">{t('licenses.empty_title')}</h3>
             <p className="text-sm text-gray-600 mb-4">
-              UFF tomonidan litsenziya olish uchun ariza yuboring
+              {t('licenses.empty_subtitle')}
             </p>
             <Link href="/apply">
               <Button className="bg-[#1A56A0] hover:bg-[#0D3B6E]">
                 <Plus className="w-4 h-4 mr-2" />
-                Ariza yuborish
+                {t('licenses.empty_action')}
               </Button>
             </Link>
           </div>
         ) : (
           <>
             {licenses.map((lic, idx) => (
-              <LicenseRow key={lic.id} lic={lic} index={idx} />
+              <LicenseRow key={lic.id} lic={lic} index={idx} t={t} locale={locale} />
             ))}
 
             {/* Renewal CTA if any expiring */}
@@ -170,13 +172,13 @@ export function ActiveLicenses() {
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-[#0D3B6E]">
-                      {expiringSoonTotal} ta litsenziyangiz 30 kunda tugaydi
+                      {t('licenses.expiring_banner_title', { n: expiringSoonTotal })}
                     </p>
-                    <p className="text-sm text-gray-600">Yangilash arizasini hoziroq topshiring</p>
+                    <p className="text-sm text-gray-600">{t('licenses.expiring_banner_subtitle')}</p>
                   </div>
                   <Link href="/apply">
                     <Button className="bg-[#F39C12] hover:bg-[#E67E22]">
-                      Yangilash
+                      {t('licenses.renew')}
                     </Button>
                   </Link>
                 </div>
