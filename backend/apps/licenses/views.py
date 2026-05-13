@@ -19,24 +19,72 @@ except ImportError:
 
 
 class LicenseListView(APIView):
-    """Get all licenses for current user"""
+    """Get all licenses for current user (with rich data + summary stats)"""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        licenses = License.objects.filter(user=request.user).select_related('license_type').order_by('-issued_at')
+        from datetime import timedelta
+
+        qs = License.objects.filter(user=request.user).select_related(
+            'license_type', 'region'
+        ).order_by('-issued_at')
+
+        now = timezone.now()
         results = []
-        for lic in licenses:
+        active_count = 0
+        expired_count = 0
+        suspended_count = 0
+        expiring_soon = 0
+
+        for lic in qs:
+            comp = lic.computed_status
+            days_left = lic.days_until_expiry
+            if comp == 'active':
+                active_count += 1
+                if 0 < days_left <= 30:
+                    expiring_soon += 1
+            elif comp == 'expired':
+                expired_count += 1
+            elif comp == 'suspended':
+                suspended_count += 1
+
             results.append({
                 'id': str(lic.id),
                 'license_number': lic.license_number,
                 'license_type_code': lic.license_type.code,
                 'license_type_name': lic.license_type.name_uz,
-                'issued_at': str(lic.issued_at),
-                'expires_at': str(lic.expires_at),
-                'is_active': lic.is_active,
+                'license_type_category': lic.license_type.category,
                 'color_hex': lic.license_type.color_hex or '#1A56A0',
+                'region': (lic.region.name_uz if lic.region else
+                           (request.user.region.name_uz if request.user.region else '')),
+                'status': comp,
+                'status_display': {
+                    'active': 'Faol',
+                    'expired': "Muddati o'tgan",
+                    'suspended': "To'xtatilgan",
+                    'revoked': 'Bekor qilingan',
+                }.get(comp, comp),
+                'issued_at': lic.issued_at.strftime('%Y-%m-%d') if lic.issued_at else '',
+                'expires_at': lic.expires_at.strftime('%Y-%m-%d') if lic.expires_at else '',
+                'days_left': days_left,
+                'is_expiring_soon': 0 < days_left <= 30,
+                'is_active': lic.is_active,
+                'pdf_url': lic.pdf_url or '',
+                'qr_code_url': lic.qr_code_url or '',
+                'verification_url': f"/verify/{lic.id}",
             })
-        return Response({'results': results})
+
+        return Response({
+            'count': len(results),
+            'summary': {
+                'total': len(results),
+                'active': active_count,
+                'expired': expired_count,
+                'suspended': suspended_count,
+                'expiring_soon': expiring_soon,
+            },
+            'results': results,
+        })
 
 
 @api_view(['GET'])
