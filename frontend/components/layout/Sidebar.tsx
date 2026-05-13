@@ -12,18 +12,20 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-  { icon: FileText, label: 'Arizalarim', href: '/applications' },
-  { icon: Award, label: 'Litsenziyalarim', href: '/licenses' },
-  { icon: PlusCircle, label: 'Yangi ariza', href: '/apply' },
-  { icon: User, label: 'Profil', href: '/profile' },
-  { icon: Settings, label: 'Sozlamalar', href: '/settings' },
-];
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t } = useI18n();
+
+  const menuItems = [
+    { icon: LayoutDashboard, label: t('nav.dashboard'), href: '/dashboard' },
+    { icon: FileText, label: t('nav.applications'), href: '/applications' },
+    { icon: Award, label: t('nav.licenses'), href: '/licenses' },
+    { icon: PlusCircle, label: t('nav.apply'), href: '/apply' },
+    { icon: User, label: t('nav.profile'), href: '/profile' },
+    { icon: Settings, label: t('nav.settings'), href: '/settings' },
+  ];
 
   return (
     <aside className="fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 overflow-y-auto">
@@ -65,7 +67,7 @@ export function Sidebar() {
           className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-[#F39C12] to-[#E67E22] text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-shadow"
         >
           <PlusCircle className="w-5 h-5" />
-          Yangi ariza
+          {t('nav.apply')}
         </Link>
       </div>
     </aside>

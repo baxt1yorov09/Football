@@ -12,11 +12,13 @@ import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal';
 import { TwoFactorModal } from '@/components/settings/TwoFactorModal';
 import { ExportDataModal } from '@/components/settings/ExportDataModal';
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 export default function SettingsPage() {
+  const { t, locale, setLocale } = useI18n();
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState('uz');
+  const [language, setLanguage] = useState<'uz' | 'ru'>(locale);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [userPhone, setUserPhone] = useState('');
   const [saved, setSaved] = useState(false);
@@ -32,10 +34,11 @@ export default function SettingsPage() {
     (async () => {
       try {
         const res = await apiClient.get('/users/me/');
-        setLanguage(res.data.language || 'uz');
-        const t = res.data.theme || 'light';
-        setDarkMode(t === 'dark');
-        if (t === 'dark') document.documentElement.classList.add('dark');
+        const lng = res.data.language === 'ru' ? 'ru' : 'uz';
+        setLanguage(lng);
+        const themeVal = res.data.theme || 'light';
+        setDarkMode(themeVal === 'dark');
+        if (themeVal === 'dark') document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
         setNotifications(res.data.notifications_enabled ?? true);
         setTwoFactorEnabled(!!res.data.two_factor_enabled);
@@ -66,14 +69,11 @@ export default function SettingsPage() {
   };
 
   const handleLanguageChange = async (lang: string) => {
+    if (lang !== 'uz' && lang !== 'ru') return;
     setLanguage(lang);
-    document.documentElement.lang = lang;
     persistLocal({ language: lang });
-    try {
-      await apiClient.patch('/users/me/', { language: lang });
-    } catch (e) {
-      console.error('Language save failed:', e);
-    }
+    // Single source of truth — i18n provider handles document.lang + backend PATCH
+    await setLocale(lang);
   };
 
   const handleThemeChange = (isDark: boolean) => {
@@ -111,76 +111,75 @@ export default function SettingsPage() {
 
   const settingsSections = [
     {
-      title: 'Umumiy sozlamalar',
+      title: t('settings.sections.general'),
       icon: Settings,
       items: [
-        { 
-          label: 'Til', 
-          value: language, 
-          onChange: (value: string) => handleLanguageChange(value), 
-          type: 'select', 
+        {
+          label: t('settings.language'),
+          value: language,
+          onChange: (value: string) => handleLanguageChange(value),
+          type: 'select',
           options: [
-            { value: 'uz', label: 'O\'zbekcha' },
-            { value: 'ru', label: 'Русский' },
-            { value: 'en', label: 'English' }
-          ]
+            { value: 'uz', label: t('languages.uz') },
+            { value: 'ru', label: t('languages.ru') },
+          ],
         },
-        { 
-          label: 'Mavzu', 
-          value: darkMode, 
-          onChange: (value: boolean) => handleThemeChange(value), 
-          type: 'toggle' 
-        }
-      ]
+        {
+          label: t('settings.theme'),
+          value: darkMode,
+          onChange: (value: boolean) => handleThemeChange(value),
+          type: 'toggle',
+        },
+      ],
     },
     {
-      title: 'Bildirishnomalar',
+      title: t('settings.sections.notifications'),
       icon: Bell,
       items: [
-        { 
-          label: 'Bildirishnomalarni yoqish', 
-          value: notifications, 
-          onChange: (value: boolean) => handleNotificationsChange(value), 
-          type: 'toggle' 
-        }
-      ]
+        {
+          label: t('settings.enable_notifications'),
+          value: notifications,
+          onChange: (value: boolean) => handleNotificationsChange(value),
+          type: 'toggle',
+        },
+      ],
     },
     {
-      title: 'Xavfsizlik',
+      title: t('settings.sections.security'),
       icon: Shield,
       items: [
-        { 
-          label: 'Parolni o\'zgartirish', 
-          value: '', 
-          onChange: () => setShowPasswordModal(true), 
-          type: 'button' 
+        {
+          label: t('settings.change_password'),
+          value: '',
+          onChange: () => setShowPasswordModal(true),
+          type: 'button',
         },
-        { 
-          label: 'Ikki faktorli autentifikatsiya', 
-          value: twoFactorEnabled, 
-          onChange: (_value: boolean) => setShow2FAModal(true), 
-          type: 'toggle' 
-        }
-      ]
+        {
+          label: t('settings.two_factor'),
+          value: twoFactorEnabled,
+          onChange: (_value: boolean) => setShow2FAModal(true),
+          type: 'toggle',
+        },
+      ],
     },
     {
-      title: 'Ma\'lumotlar',
+      title: t('settings.sections.data'),
       icon: Database,
       items: [
-        { 
-          label: 'Ma\'lumotlarni eksport qilish', 
-          value: '', 
-          onChange: () => setShowExportModal(true), 
-          type: 'button' 
+        {
+          label: t('settings.export_data'),
+          value: '',
+          onChange: () => setShowExportModal(true),
+          type: 'button',
         },
-        { 
-          label: 'Hisobni o\'chirish', 
-          value: '', 
-          onChange: () => setShowDeleteModal(true), 
-          type: 'danger-button' 
-        }
-      ]
-    }
+        {
+          label: t('settings.delete_account'),
+          value: '',
+          onChange: () => setShowDeleteModal(true),
+          type: 'danger-button',
+        },
+      ],
+    },
   ];
 
   return (
@@ -197,10 +196,10 @@ export default function SettingsPage() {
             className="mb-8"
           >
             <h1 className="text-3xl font-bold text-[#0D3B6E]">
-              Sozlamalar
+              {t('settings.title')}
             </h1>
             <p className="text-gray-600 mt-1">
-              Hisobingiz sozlamalarini boshqaring
+              {t('settings.subtitle')}
             </p>
           </motion.div>
 
@@ -230,7 +229,7 @@ export default function SettingsPage() {
                               <p className="font-medium">{item.label}</p>
                               {item.type === 'toggle' && (
                                 <p className="text-sm text-gray-500">
-                                  {item.value ? 'Yoqilgan' : 'O\'chirilgan'}
+                                  {item.value ? t('settings.theme_on').split(' ')[0] : t('settings.theme_off')}
                                 </p>
                               )}
                             </div>
@@ -270,8 +269,11 @@ export default function SettingsPage() {
                                   size="sm"
                                   onClick={() => (item.onChange as () => void)()}
                                 >
-                                  {item.label.includes('o\'zgartirish') ? 'O\'zgartirish' : 
-                                   item.label.includes('eksport') ? 'Eksport qilish' : 'Ochish'}
+                                  {item.label === t('settings.change_password')
+                                    ? t('settings.change_password_action')
+                                    : item.label === t('settings.export_data')
+                                    ? t('settings.export_action')
+                                    : t('settings.open_action')}
                                 </Button>
                               )}
                               {item.type === 'danger-button' && (
@@ -282,7 +284,7 @@ export default function SettingsPage() {
                                   className="flex items-center gap-2"
                                 >
                                   <Trash2 className="w-4 h-4" />
-                                  {item.label.includes('o\'chirish') ? 'O\'chirish' : 'Boshqarish'}
+                                  {t('settings.delete_action')}
                                 </Button>
                               )}
                             </div>
@@ -304,7 +306,7 @@ export default function SettingsPage() {
             className="mt-8 text-center"
           >
             <Button size="lg" className="px-8" onClick={handleSaveAll}>
-              {saved ? 'Saqlandi ✓' : 'Sozlamalarni saqlash'}
+              {saved ? t('settings.saved_indicator') : t('settings.save_button')}
             </Button>
           </motion.div>
         </div>
