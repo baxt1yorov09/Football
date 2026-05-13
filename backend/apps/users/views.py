@@ -41,6 +41,106 @@ def _user_to_dict(user, request):
     }
 
 
+class UserDashboardView(APIView):
+    """
+    Foydalanuvchi dashboard ma'lumotlari:
+      - Statistika (faol/tugagan litsenziyalar, kutilayotgan/tasdiqlangan arizalar, expiring_soon)
+      - Top 3 ta faol litsenziya
+      - So'nggi 5 ta ariza
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.licenses.models import License
+        from apps.applications.models import Application
+
+        user = request.user
+        now = timezone.now()
+
+        # ─── Litsenziyalar ──────────────────────────
+        all_licenses = License.objects.filter(user=user).select_related(
+            'license_type', 'region'
+        ).order_by('-issued_at')
+
+        active_count = 0
+        expired_count = 0
+        suspended_count = 0
+        expiring_soon = 0
+        active_list = []
+
+        for lic in all_licenses:
+            comp = lic.computed_status
+            days_left = lic.days_until_expiry
+            if comp == 'active':
+                active_count += 1
+                if 0 < days_left <= 30:
+                    expiring_soon += 1
+                if len(active_list) < 3:
+                    active_list.append({
+                        'id': str(lic.id),
+                        'license_number': lic.license_number,
+                        'license_type_code': lic.license_type.code,
+                        'license_type_name': lic.license_type.name_uz,
+                        'color_hex': lic.license_type.color_hex or '#1A56A0',
+                        'issued_at': lic.issued_at.strftime('%Y-%m-%d') if lic.issued_at else '',
+                        'expires_at': lic.expires_at.strftime('%Y-%m-%d') if lic.expires_at else '',
+                        'days_left': days_left,
+                        'is_expiring_soon': 0 < days_left <= 30,
+                        'pdf_url': lic.pdf_url or '',
+                    })
+            elif comp == 'expired':
+                expired_count += 1
+            elif comp == 'suspended':
+                suspended_count += 1
+
+        # ─── Arizalar ───────────────────────────────
+        apps_qs = Application.objects.filter(user=user).select_related(
+            'license_type', 'region'
+        ).order_by('-submitted_at')
+
+        total_apps = apps_qs.count()
+        pending_apps = apps_qs.filter(status__in=['pending', 'under_review', 'additional_docs']).count()
+        approved_apps = apps_qs.filter(status__in=['approved', 'license_issued']).count()
+        rejected_apps = apps_qs.filter(status='rejected').count()
+
+        recent_apps = []
+        for app in apps_qs[:5]:
+            recent_apps.append({
+                'id': str(app.id),
+                'license_type_code': app.license_type.code if app.license_type else '',
+                'license_type_name': app.license_type.name_uz if app.license_type else '',
+                'status': app.status,
+                'status_display': dict(Application.STATUS_CHOICES).get(app.status, app.status),
+                'submitted_at': app.submitted_at.isoformat() if app.submitted_at else None,
+                'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None,
+                'rejection_reason': app.rejection_reason or '',
+                'admin_note': app.admin_note or '',
+            })
+
+        return Response({
+            'stats': {
+                'active_licenses': active_count,
+                'expired_licenses': expired_count,
+                'suspended_licenses': suspended_count,
+                'expiring_soon': expiring_soon,
+                'pending_applications': pending_apps,
+                'approved_applications': approved_apps,
+                'rejected_applications': rejected_apps,
+                'total_applications': total_apps,
+            },
+            'active_licenses': active_list,
+            'recent_applications': recent_apps,
+            'profile': {
+                'full_name': user.full_name or '',
+                'phone': user.phone,
+                'region': user.region.name_uz if user.region else '',
+                'role': user.role,
+                'is_onboarded': user.is_onboarded,
+            },
+            'server_time': now.isoformat(),
+        })
+
+
 class UserProfileView(APIView):
     """Get / Update current user profile"""
     permission_classes = [IsAuthenticated]

@@ -10,11 +10,14 @@ from .views import (
     TwoFactorVerifyView,
     UserProfileView,
     UserAvatarView,
+    UserDashboardView,
 )
 
 urlpatterns = [
     path('me', UserProfileView.as_view(), name='user-profile'),
     path('me/', UserProfileView.as_view()),
+    path('me/dashboard', UserDashboardView.as_view(), name='user-dashboard'),
+    path('me/dashboard/', UserDashboardView.as_view()),
     path('me/avatar', UserAvatarView.as_view(), name='user-avatar'),
     path('me/avatar/', UserAvatarView.as_view()),
     path('onboarding/complete', CompleteOnboardingView.as_view(), name='onboarding-complete'),
