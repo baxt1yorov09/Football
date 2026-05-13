@@ -38,18 +38,39 @@ class LicenseType(models.Model):
 
 class License(models.Model):
     """Chiqarilgan litsenziyalar"""
+    STATUS_CHOICES = [
+        ('active',    'Faol'),
+        ('expired',   "Muddati o'tgan"),
+        ('suspended', "To'xtatilgan"),
+        ('revoked',   'Bekor qilingan'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    application = models.OneToOneField('applications.Application', on_delete=models.CASCADE, verbose_name="Ariza")
-    user = models.ForeignKey('users.User', on_delete=models.CASCADE, verbose_name="Foydalanuvchi")
-    license_type = models.ForeignKey(LicenseType, on_delete=models.CASCADE, verbose_name="Litsenziya turi")
+    application = models.OneToOneField(
+        'applications.Application', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='license', verbose_name="Ariza"
+    )
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='licenses', verbose_name="Foydalanuvchi")
+    license_type = models.ForeignKey(LicenseType, on_delete=models.PROTECT, verbose_name="Litsenziya turi")
+    region = models.ForeignKey('users.Region', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Viloyat")
+
     license_number = models.CharField(max_length=50, unique=True, verbose_name="Litsenziya raqami")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name="Holati")
+
     issued_at = models.DateTimeField(auto_now_add=True, verbose_name="Berilgan sana")
     expires_at = models.DateTimeField(verbose_name="Amal qilish muddati")
+
+    revoked_at = models.DateTimeField(blank=True, null=True, verbose_name="Bekor qilingan sana")
+    revoke_reason = models.TextField(blank=True, null=True, verbose_name="Bekor qilish sababi")
+    suspended_at = models.DateTimeField(blank=True, null=True, verbose_name="To'xtatilgan sana")
+    suspend_reason = models.TextField(blank=True, null=True, verbose_name="To'xtatish sababi")
+
     pdf_url = models.URLField(blank=True, null=True, verbose_name="PDF URL")
     qr_code_url = models.URLField(blank=True, null=True, verbose_name="QR kod URL")
     is_active = models.BooleanField(default=True, verbose_name="Faol")
-    revoked_at = models.DateTimeField(blank=True, null=True, verbose_name="Bekor qilingan sana")
-    revoke_reason = models.TextField(blank=True, null=True, verbose_name="Bekor qilish sababi")
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, verbose_name="Yaratilgan sana")
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True, verbose_name="Yangilangan sana")
 
     class Meta:
         verbose_name = "Litsenziya"
@@ -58,3 +79,23 @@ class License(models.Model):
 
     def __str__(self):
         return f"{self.license_number} - {self.user.full_name}"
+
+    @property
+    def computed_status(self):
+        """Real holat (DB status + expiry sanasi)"""
+        from django.utils import timezone
+        if not self.is_active:
+            return 'revoked'
+        if self.status == 'suspended':
+            return 'suspended'
+        if self.expires_at and self.expires_at < timezone.now():
+            return 'expired'
+        return 'active'
+
+    @property
+    def days_until_expiry(self):
+        from django.utils import timezone
+        if not self.expires_at:
+            return 0
+        delta = self.expires_at - timezone.now()
+        return delta.days
