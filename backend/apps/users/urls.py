@@ -12,6 +12,18 @@ from .views import (
     UserAvatarView,
     UserDashboardView,
 )
+from .admin_views import (
+    AdminUserStatsView,
+    AdminUserListView,
+    AdminUserDetailView,
+    AdminUserUpdateView,
+    AdminUserToggleActiveView,
+    AdminUserDeleteView,
+    AdminUserCreateView,
+    AdminUserResetPasswordView,
+    AdminRegionListView,
+    AdminUserExportView,
+)
 
 urlpatterns = [
     path('me', UserProfileView.as_view(), name='user-profile'),
@@ -36,4 +48,26 @@ urlpatterns = [
     path('me/export/', ExportUserDataView.as_view()),
     path('me/delete', DeleteAccountView.as_view(), name='delete-account'),
     path('me/delete/', DeleteAccountView.as_view()),
+
+    # ───── Admin Users Management ─────
+    path('admin/stats', AdminUserStatsView.as_view(), name='admin-users-stats'),
+    path('admin/stats/', AdminUserStatsView.as_view()),
+    path('admin/list', AdminUserListView.as_view(), name='admin-users-list'),
+    path('admin/list/', AdminUserListView.as_view()),
+    path('admin/regions', AdminRegionListView.as_view(), name='admin-regions'),
+    path('admin/regions/', AdminRegionListView.as_view()),
+    path('admin/create', AdminUserCreateView.as_view(), name='admin-users-create'),
+    path('admin/create/', AdminUserCreateView.as_view()),
+    path('admin/export', AdminUserExportView.as_view(), name='admin-users-export'),
+    path('admin/export/', AdminUserExportView.as_view()),
+    path('admin/<uuid:user_id>', AdminUserDetailView.as_view(), name='admin-users-detail'),
+    path('admin/<uuid:user_id>/', AdminUserDetailView.as_view()),
+    path('admin/<uuid:user_id>/update', AdminUserUpdateView.as_view(), name='admin-users-update'),
+    path('admin/<uuid:user_id>/update/', AdminUserUpdateView.as_view()),
+    path('admin/<uuid:user_id>/toggle-active', AdminUserToggleActiveView.as_view(), name='admin-users-toggle'),
+    path('admin/<uuid:user_id>/toggle-active/', AdminUserToggleActiveView.as_view()),
+    path('admin/<uuid:user_id>/reset-password', AdminUserResetPasswordView.as_view(), name='admin-users-reset-pw'),
+    path('admin/<uuid:user_id>/reset-password/', AdminUserResetPasswordView.as_view()),
+    path('admin/<uuid:user_id>/delete', AdminUserDeleteView.as_view(), name='admin-users-delete'),
+    path('admin/<uuid:user_id>/delete/', AdminUserDeleteView.as_view()),
 ]
