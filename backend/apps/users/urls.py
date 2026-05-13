@@ -1,7 +1,27 @@
 from django.urls import path
-from .views import UserProfileView
+from .views import (
+    ChangePasswordView,
+    DeleteAccountView,
+    ExportUserDataView,
+    TwoFactorDisableView,
+    TwoFactorSetupView,
+    TwoFactorVerifyView,
+    UserProfileView,
+)
 
 urlpatterns = [
-    # User profile endpoints
     path('me', UserProfileView.as_view(), name='user-profile'),
+    path('me/', UserProfileView.as_view()),
+    path('change-password', ChangePasswordView.as_view(), name='change-password'),
+    path('change-password/', ChangePasswordView.as_view()),
+    path('2fa/setup', TwoFactorSetupView.as_view(), name='2fa-setup'),
+    path('2fa/setup/', TwoFactorSetupView.as_view()),
+    path('2fa/verify', TwoFactorVerifyView.as_view(), name='2fa-verify'),
+    path('2fa/verify/', TwoFactorVerifyView.as_view()),
+    path('2fa/disable', TwoFactorDisableView.as_view(), name='2fa-disable'),
+    path('2fa/disable/', TwoFactorDisableView.as_view()),
+    path('me/export', ExportUserDataView.as_view(), name='export-data'),
+    path('me/export/', ExportUserDataView.as_view()),
+    path('me/delete', DeleteAccountView.as_view(), name='delete-account'),
+    path('me/delete/', DeleteAccountView.as_view()),
 ]

@@ -1,18 +1,113 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Settings, Bell, Shield, Globe, Palette, Database, Trash2 } from 'lucide-react';
+import { Settings, Bell, Shield, Database, Trash2 } from 'lucide-react';
+import { apiClient } from '@/lib/api/client';
+import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal';
+import { TwoFactorModal } from '@/components/settings/TwoFactorModal';
+import { ExportDataModal } from '@/components/settings/ExportDataModal';
+import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
 
 export default function SettingsPage() {
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState('uz');
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [userPhone, setUserPhone] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  // Modal states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Load settings from backend
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiClient.get('/users/me/');
+        setLanguage(res.data.language || 'uz');
+        const t = res.data.theme || 'light';
+        setDarkMode(t === 'dark');
+        if (t === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+        setNotifications(res.data.notifications_enabled ?? true);
+        setTwoFactorEnabled(!!res.data.two_factor_enabled);
+        setUserPhone(res.data.phone || '');
+      } catch (e) {
+        // Fallback to localStorage
+        const stored = localStorage.getItem('uff-settings');
+        if (stored) {
+          try {
+            const s = JSON.parse(stored);
+            if (s.language) setLanguage(s.language);
+            if (s.theme === 'dark') {
+              setDarkMode(true);
+              document.documentElement.classList.add('dark');
+            }
+          } catch {}
+        }
+      }
+    })();
+  }, []);
+
+  // Persist + sync helpers
+  const persistLocal = (patch: Record<string, any>) => {
+    try {
+      const cur = JSON.parse(localStorage.getItem('uff-settings') || '{}');
+      localStorage.setItem('uff-settings', JSON.stringify({ ...cur, ...patch }));
+    } catch {}
+  };
+
+  const handleLanguageChange = async (lang: string) => {
+    setLanguage(lang);
+    document.documentElement.lang = lang;
+    persistLocal({ language: lang });
+    try {
+      await apiClient.patch('/users/me/', { language: lang });
+    } catch (e) {
+      console.error('Language save failed:', e);
+    }
+  };
+
+  const handleThemeChange = (isDark: boolean) => {
+    setDarkMode(isDark);
+    const theme = isDark ? 'dark' : 'light';
+    if (isDark) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+    persistLocal({ theme });
+    apiClient.patch('/users/me/', { theme }).catch(console.error);
+  };
+
+  const handleNotificationsChange = async (enabled: boolean) => {
+    setNotifications(enabled);
+    persistLocal({ notifications_enabled: enabled });
+    try {
+      await apiClient.patch('/users/me/', { notifications_enabled: enabled });
+    } catch (e) {
+      console.error('Notifications save failed:', e);
+    }
+  };
+
+  const handleSaveAll = async () => {
+    try {
+      await apiClient.patch('/users/me/', {
+        language,
+        theme: darkMode ? 'dark' : 'light',
+        notifications_enabled: notifications,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      console.error('Save failed:', e);
+    }
+  };
 
   const settingsSections = [
     {
@@ -22,7 +117,7 @@ export default function SettingsPage() {
         { 
           label: 'Til', 
           value: language, 
-          onChange: (value: string) => setLanguage(value), 
+          onChange: (value: string) => handleLanguageChange(value), 
           type: 'select', 
           options: [
             { value: 'uz', label: 'O\'zbekcha' },
@@ -33,7 +128,7 @@ export default function SettingsPage() {
         { 
           label: 'Mavzu', 
           value: darkMode, 
-          onChange: (value: boolean) => setDarkMode(value), 
+          onChange: (value: boolean) => handleThemeChange(value), 
           type: 'toggle' 
         }
       ]
@@ -45,7 +140,7 @@ export default function SettingsPage() {
         { 
           label: 'Bildirishnomalarni yoqish', 
           value: notifications, 
-          onChange: (value: boolean) => setNotifications(value), 
+          onChange: (value: boolean) => handleNotificationsChange(value), 
           type: 'toggle' 
         }
       ]
@@ -57,13 +152,13 @@ export default function SettingsPage() {
         { 
           label: 'Parolni o\'zgartirish', 
           value: '', 
-          onChange: () => {}, 
+          onChange: () => setShowPasswordModal(true), 
           type: 'button' 
         },
         { 
           label: 'Ikki faktorli autentifikatsiya', 
-          value: false, 
-          onChange: (value: boolean) => {}, 
+          value: twoFactorEnabled, 
+          onChange: (_value: boolean) => setShow2FAModal(true), 
           type: 'toggle' 
         }
       ]
@@ -75,13 +170,13 @@ export default function SettingsPage() {
         { 
           label: 'Ma\'lumotlarni eksport qilish', 
           value: '', 
-          onChange: () => {}, 
+          onChange: () => setShowExportModal(true), 
           type: 'button' 
         },
         { 
           label: 'Hisobni o\'chirish', 
           value: '', 
-          onChange: () => {}, 
+          onChange: () => setShowDeleteModal(true), 
           type: 'danger-button' 
         }
       ]
@@ -208,12 +303,33 @@ export default function SettingsPage() {
             transition={{ delay: 0.5 }}
             className="mt-8 text-center"
           >
-            <Button size="lg" className="px-8">
-              Sozlamalarni saqlash
+            <Button size="lg" className="px-8" onClick={handleSaveAll}>
+              {saved ? 'Saqlandi ✓' : 'Sozlamalarni saqlash'}
             </Button>
           </motion.div>
         </div>
       </main>
+
+      {/* Modals */}
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
+      <TwoFactorModal
+        isOpen={show2FAModal}
+        isEnabled={twoFactorEnabled}
+        onClose={() => setShow2FAModal(false)}
+        onSuccess={(enabled) => setTwoFactorEnabled(enabled)}
+      />
+      <ExportDataModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+      />
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        userPhone={userPhone}
+      />
     </div>
   );
 }
