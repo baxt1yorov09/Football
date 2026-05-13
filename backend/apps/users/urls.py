@@ -1,17 +1,23 @@
 from django.urls import path
 from .views import (
     ChangePasswordView,
+    ChangePhoneView,
     DeleteAccountView,
     ExportUserDataView,
     TwoFactorDisableView,
     TwoFactorSetupView,
     TwoFactorVerifyView,
     UserProfileView,
+    UserAvatarView,
 )
 
 urlpatterns = [
     path('me', UserProfileView.as_view(), name='user-profile'),
     path('me/', UserProfileView.as_view()),
+    path('me/avatar', UserAvatarView.as_view(), name='user-avatar'),
+    path('me/avatar/', UserAvatarView.as_view()),
+    path('change-phone', ChangePhoneView.as_view(), name='change-phone'),
+    path('change-phone/', ChangePhoneView.as_view()),
     path('change-password', ChangePasswordView.as_view(), name='change-password'),
     path('change-password/', ChangePasswordView.as_view()),
     path('2fa/setup', TwoFactorSetupView.as_view(), name='2fa-setup'),

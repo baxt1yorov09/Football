@@ -10,11 +10,12 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser
 
 User = get_user_model()
 
 
-def _user_to_dict(user):
+def _user_to_dict(user, request):
     return {
         'id': str(user.id),
         'phone': user.phone,
@@ -22,15 +23,21 @@ def _user_to_dict(user):
         'first_name': user.first_name,
         'last_name': user.last_name,
         'email': user.email,
+        'birth_date': str(user.birth_date) if user.birth_date else '',
+        'gender': user.gender or 'male',
         'region': user.region.name_uz if user.region else None,
+        'region_id': user.region.id if user.region else None,
         'role': user.role,
         'is_active': user.is_active,
-        'avatar_url': user.avatar_url,
+        'avatar_url': request.build_absolute_uri(user.avatar.url) if user.avatar else user.avatar_url,
+        'workplace': user.workplace,
+        'job_title': user.job_title,
+        'coaching_years': user.coaching_years,
         'language': user.language,
         'theme': user.theme,
         'notifications_enabled': user.notifications_enabled,
         'two_factor_enabled': user.two_factor_enabled,
-        'created_at': user.created_at,
+        'created_at': str(user.created_at),
     }
 
 
@@ -39,19 +46,31 @@ class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(_user_to_dict(request.user))
+        return Response(_user_to_dict(request.user, request))
 
     def patch(self, request):
         user = request.user
         allowed = {
             'full_name', 'email', 'language', 'theme',
             'notifications_enabled', 'avatar_url', 'workplace',
+            'birth_date', 'gender', 'region_id', 'job_title',
+            'coaching_years',
         }
         for key, value in request.data.items():
             if key in allowed:
-                setattr(user, key, value)
+                if key == 'region_id' and value:
+                    try:
+                        from apps.users.models import Region
+                        user.region = Region.objects.get(id=value)
+                    except Region.DoesNotExist:
+                        pass
+                elif key == 'birth_date' and value:
+                    from datetime import datetime
+                    user.birth_date = datetime.strptime(value, '%Y-%m-%d').date()
+                else:
+                    setattr(user, key, value)
         user.save()
-        return Response(_user_to_dict(user))
+        return Response(_user_to_dict(user, request))
 
 
 class ChangePasswordView(APIView):
@@ -276,6 +295,65 @@ class ExportUserDataView(APIView):
         filename = f'uff_data_{user.phone}_{datetime.now().strftime("%Y%m%d")}.zip'
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
+
+
+class UserAvatarView(APIView):
+    """Upload user avatar image"""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        avatar = request.FILES.get('avatar')
+        if not avatar:
+            return Response({'error': 'Fayl tanlanmadi'}, status=400)
+
+        if avatar.size > 5 * 1024 * 1024:
+            return Response({'error': 'Fayl 5MB dan oshmasligi kerak'}, status=400)
+        if not avatar.content_type.startswith('image/'):
+            return Response({'error': 'Faqat rasm fayllar'}, status=400)
+
+        if request.user.avatar:
+            request.user.avatar.delete(save=False)
+
+        request.user.avatar = avatar
+        request.user.save()
+
+        return Response({'avatar_url': request.build_absolute_uri(request.user.avatar.url)})
+
+
+class ChangePhoneView(APIView):
+    """Change phone number with OTP verification"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        new_phone = request.data.get('new_phone', '').strip()
+        otp_code = request.data.get('otp', '').strip()
+
+        if not new_phone or not otp_code:
+            return Response({'detail': 'Telefon va OTP kiritish shart'}, status=400)
+
+        from apps.authentication.models import OTPCode
+
+        try:
+            otp = OTPCode.objects.get(
+                phone=new_phone,
+                code=otp_code,
+                is_used=False,
+                expires_at__gt=timezone.now()
+            )
+        except OTPCode.DoesNotExist:
+            return Response({'detail': 'Noto\'g\'ri yoki eskirgan kod'}, status=400)
+
+        if User.objects.filter(phone=new_phone).exclude(id=request.user.id).exists():
+            return Response({'detail': 'Bu raqam allaqachon ro\'yxatdan o\'tgan'}, status=400)
+
+        otp.is_used = True
+        otp.save()
+
+        request.user.phone = new_phone
+        request.user.save()
+
+        return Response({'detail': 'Telefon muvaffaqiyatli yangilandi', 'new_phone': new_phone})
 
 
 class DeleteAccountView(APIView):

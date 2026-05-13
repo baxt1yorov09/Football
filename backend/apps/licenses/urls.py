@@ -1,5 +1,6 @@
 from django.urls import path
+from .views import LicenseListView
 
 urlpatterns = [
-    # Licenses URLs will be added here
+    path('', LicenseListView.as_view(), name='license-list'),
 ]

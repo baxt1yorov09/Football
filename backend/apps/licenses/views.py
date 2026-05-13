@@ -2,13 +2,41 @@ from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import datetime
 
 from .models import License, LicenseType
-from .services import generate_license_pdf, bulk_generate_licenses
-from applications.models import Application
+from apps.applications.models import Application
+
+# Services import - optional
+try:
+    from .services import generate_license_pdf, bulk_generate_licenses
+    SERVICES_AVAILABLE = True
+except ImportError:
+    SERVICES_AVAILABLE = False
+
+
+class LicenseListView(APIView):
+    """Get all licenses for current user"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        licenses = License.objects.filter(user=request.user).select_related('license_type').order_by('-issued_at')
+        results = []
+        for lic in licenses:
+            results.append({
+                'id': str(lic.id),
+                'license_number': lic.license_number,
+                'license_type_code': lic.license_type.code,
+                'license_type_name': lic.license_type.name_uz,
+                'issued_at': str(lic.issued_at),
+                'expires_at': str(lic.expires_at),
+                'is_active': lic.is_active,
+                'color_hex': lic.license_type.color_hex or '#1A56A0',
+            })
+        return Response({'results': results})
 
 
 @api_view(['GET'])
@@ -103,20 +131,25 @@ def license_verification(request, verification_code):
 @permission_classes([IsAuthenticated])
 def download_license_pdf(request, license_id):
     """Download license PDF"""
+    if not SERVICES_AVAILABLE:
+        return Response(
+            {'error': 'PDF generatsiya xizmatlari o\'rnatilmagan'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
     try:
         license_obj = get_object_or_404(License, id=license_id)
-        
+
         # Check if user owns the license or is admin
         if not (request.user.is_staff or license_obj.user == request.user):
             return Response(
-                {'error': 'Ruxsat berilmagan'}, 
+                {'error': 'Ruxsat berilmagan'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
         # Generate PDF
         certificate_style = request.GET.get('certificate', 'false').lower() == 'true'
         pdf_file = generate_license_pdf(license_id, certificate_style)
-        
+
         # Prepare response
         response = Response(
             pdf_file.read(),
@@ -124,17 +157,17 @@ def download_license_pdf(request, license_id):
         )
         response['Content-Disposition'] = f'attachment; filename="{pdf_file.name}"'
         response['Content-Length'] = len(pdf_file)
-        
+
         return response
-        
+
     except License.DoesNotExist:
         return Response(
-            {'error': 'Litsenziya topilmadi'}, 
+            {'error': 'Litsenziya topilmadi'},
             status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
         return Response(
-            {'error': f'PDF generatsiyada xatolik: {str(e)}'}, 
+            {'error': f'PDF generatsiyada xatolik: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -143,34 +176,39 @@ def download_license_pdf(request, license_id):
 @permission_classes([IsAdminUser])
 def bulk_generate_pdfs(request):
     """Generate PDFs for multiple licenses (Admin only)"""
+    if not SERVICES_AVAILABLE:
+        return Response(
+            {'error': 'PDF generatsiya xizmatlari o\'rnatilmagan'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
     try:
         license_ids = request.data.get('license_ids', [])
-        
+
         if not license_ids:
             return Response(
-                {'error': 'Litsenziya ID lari berilmagan'}, 
+                {'error': 'Litsenziya ID lari berilmagan'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Generate PDFs
         pdf_files = bulk_generate_licenses(license_ids)
-        
+
         if not pdf_files:
             return Response(
-                {'error': 'Hech qanday PDF generatsiya qilinmadi'}, 
+                {'error': 'Hech qanday PDF generatsiya qilinmadi'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Return success response with file count
         return Response({
             'success': True,
             'message': f'{len(pdf_files)} ta PDF muvaffaqiyatli generatsiya qilindi',
             'generated_files': len(pdf_files)
         })
-        
+
     except Exception as e:
         return Response(
-            {'error': f'Bulk PDF generatsiyada xatolik: {str(e)}'}, 
+            {'error': f'Bulk PDF generatsiyada xatolik: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
