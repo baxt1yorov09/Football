@@ -46,24 +46,43 @@ export default function AdminLoginPage() {
     setError('');
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (formData.email === 'admin@uff.uz' && formData.password === 'admin123') {
-        // Tokenlarni saqlash (cookie + localStorage)
-        saveAdminTokens(
-          'demo-access-token-12345',
-          'demo-refresh-token-67890',
-          { id: 1, email: formData.email, full_name: 'Admin User', role: 'SuperAdmin' }
-        );
-        setSuccess(true);
-        setTimeout(() => {
-          window.location.href = '/admin';
-        }, 1500);
-      } else {
-        setError('Email yoki parol noto\'g\'ri');
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.detail || 'Email yoki parol noto\'g\'ri');
+        setIsLoading(false);
+        return;
       }
+
+      // Real backend tokenlarni saqlash
+      saveAdminTokens(data.access, data.refresh, data.user);
+
+      // useAuth ham admin user bilan ishlashi uchun regular tokenni ham yangilash
+      localStorage.setItem('accessToken', data.access);
+      localStorage.setItem('refreshToken', data.refresh);
+      document.cookie = `accessToken=${data.access}; path=/; max-age=900`;
+      document.cookie = `refreshToken=${data.refresh}; path=/; max-age=2592000`;
+
+      setSuccess(true);
+      setTimeout(() => {
+        window.location.href = '/admin';
+      }, 1000);
+    } catch (err: any) {
+      console.error('Admin login error:', err);
+      setError('Server bilan bog\'lanishda xatolik');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

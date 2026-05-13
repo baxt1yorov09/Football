@@ -23,7 +23,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
     user_email = serializers.CharField(source='user.email', read_only=True)
     full_name = serializers.CharField(read_only=True)
     phone = serializers.CharField(read_only=True)
-    license_type_name = serializers.CharField(source='license_type.name', read_only=True)
+    license_type_name = serializers.CharField(source='license_type.name_uz', read_only=True)
     license_type_code = serializers.CharField(source='license_type.code', read_only=True)
     region_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -125,7 +125,8 @@ class ApplicationAdminSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.full_name', read_only=True)
     user_phone = serializers.CharField(source='user.phone', read_only=True)
     user_email = serializers.CharField(source='user.email', read_only=True)
-    license_type_name = serializers.CharField(source='license_type.name', read_only=True)
+    license_type_name = serializers.CharField(source='license_type.name_uz', read_only=True)
+    license_type_code = serializers.CharField(source='license_type.code', read_only=True)
     region_name = serializers.CharField(source='region.name_uz', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     reviewed_by_name = serializers.CharField(source='reviewed_by.full_name', read_only=True)
@@ -137,7 +138,7 @@ class ApplicationAdminSerializer(serializers.ModelSerializer):
         model = Application
         fields = [
             'id', 'user_name', 'user_phone', 'user_email',
-            'license_type', 'license_type_name', 'region', 'region_name',
+            'license_type', 'license_type_name', 'license_type_code', 'region', 'region_name',
             'status', 'status_display', 'workplace', 'job_title', 'coaching_years',
             'prev_license_date', 'license_validity_start', 'license_validity_end',
             'admin_note', 'rejection_reason', 'submitted_at', 'reviewed_at',

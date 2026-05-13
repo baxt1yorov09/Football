@@ -24,8 +24,9 @@ interface Application {
   user_phone: string;
   user_email: string;
   license_type_name: string;
+  license_type_code: string;
   region_name: string;
-  status: 'pending' | 'under_review' | 'additional_docs' | 'approved' | 'rejected';
+  status: 'pending' | 'under_review' | 'additional_docs' | 'approved' | 'rejected' | 'cancelled';
   status_display: string;
   workplace?: string;
   job_title?: string;
@@ -34,6 +35,17 @@ interface Application {
   reviewed_at?: string;
   reviewed_by_name?: string;
   documents_count: number;
+  documents?: Array<{
+    id: string;
+    doc_type: string;
+    doc_type_display: string;
+    file_url: string;
+    file_name: string;
+    file_size: number;
+    mime_type: string;
+    is_verified: boolean;
+    uploaded_at: string;
+  }>;
   rejection_reason?: string;
   admin_note?: string;
   timeline?: any[];
@@ -93,8 +105,18 @@ export default function AdminApplicationsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<{ url: string; name: string; mime: string } | null>(null);
+  const [regions, setRegions] = useState<Array<{ id: number; name_uz: string }>>([]);
   const router = useRouter();
   const itemsPerPage = 10;
+
+  // Load regions for filter
+  useEffect(() => {
+    fetch('/api/auth/regions')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setRegions(Array.isArray(data) ? data : (data.results || [])))
+      .catch(() => setRegions([]));
+  }, []);
 
   // Load applications
   const loadApplications = async () => {
@@ -142,6 +164,7 @@ export default function AdminApplicationsPage() {
       additional_docs: { label: 'Hujjat kerak', color: 'bg-orange-100 text-orange-800 border-orange-200', icon: FileWarning },
       approved: { label: 'Tasdiqlangan', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
       rejected: { label: 'Rad etilgan', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle },
+      cancelled: { label: 'Bekor qilingan', color: 'bg-gray-100 text-gray-700 border-gray-200', icon: Archive },
     };
     const statusConfig = config[status] || config.pending;
     const Icon = statusConfig.icon;
@@ -153,7 +176,10 @@ export default function AdminApplicationsPage() {
     );
   };
 
-  const getLicenseBadge = (type: string) => {
+  const getLicenseBadge = (code?: string, name?: string) => {
+    if (!code && !name) {
+      return <span className="text-gray-400 text-xs">—</span>;
+    }
     const colors: Record<string, string> = {
       PRO: 'bg-purple-100 text-purple-800',
       A: 'bg-blue-100 text-blue-800',
@@ -161,7 +187,8 @@ export default function AdminApplicationsPage() {
       C: 'bg-orange-100 text-orange-800',
       D: 'bg-red-100 text-red-800',
     };
-    return <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${colors[type] || 'bg-gray-100'}`}>{type}</span>;
+    const label = code || name || '';
+    return <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${colors[code || ''] || 'bg-gray-100 text-gray-800'}`} title={name || ''}>{label}</span>;
   };
 
   // Handle application actions
@@ -365,6 +392,7 @@ export default function AdminApplicationsPage() {
                   <option value="additional_docs">Hujjat kerak</option>
                   <option value="approved">Tasdiqlangan</option>
                   <option value="rejected">Rad etilgan</option>
+                  <option value="cancelled">Bekor qilingan</option>
                 </select>
                 
                 <select
@@ -373,11 +401,9 @@ export default function AdminApplicationsPage() {
                   className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
                 >
                   <option value="all">Barcha viloyatlar</option>
-                  <option value="1">Toshkent</option>
-                  <option value="2">Samarqand</option>
-                  <option value="3">Buxoro</option>
-                  <option value="4">Andijon</option>
-                  <option value="5">Farg'ona</option>
+                  {regions.map(r => (
+                    <option key={r.id} value={r.id}>{r.name_uz}</option>
+                  ))}
                 </select>
                 
                 <select
@@ -532,7 +558,7 @@ export default function AdminApplicationsPage() {
                             <p className="text-sm text-gray-500">{app.user_phone}</p>
                           </div>
                         </td>
-                        <td className="px-4 py-4">{getLicenseBadge(app.license_type_name)}</td>
+                        <td className="px-4 py-4">{getLicenseBadge(app.license_type_code, app.license_type_name)}</td>
                         <td className="px-4 py-4 text-gray-600">{app.region_name}</td>
                         <td className="px-4 py-4 text-gray-600 text-sm">
                           {new Date(app.submitted_at).toLocaleDateString('uz-UZ')}
@@ -731,7 +757,7 @@ export default function AdminApplicationsPage() {
                       <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-600">Litsenziya turi</span>
-                          {getLicenseBadge(selectedApplication.license_type_name)}
+                          {getLicenseBadge(selectedApplication.license_type_code, selectedApplication.license_type_name)}
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-gray-600">Holat</span>
@@ -751,17 +777,31 @@ export default function AdminApplicationsPage() {
                         Hujjatlar
                       </h3>
                       <div className="space-y-2">
-                        {['passport.pdf', 'rasm_3x4.jpg', 'c_litsenziya.pdf'].map((doc, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <FileText className="w-5 h-5 text-gray-400" />
-                              <span className="text-gray-700">{doc}</span>
+                        {selectedApplication.documents && selectedApplication.documents.length > 0 ? (
+                          selectedApplication.documents.map((doc) => (
+                            <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                {doc.is_verified ? (
+                                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                                ) : (
+                                  <FileText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                )}
+                                <div className="min-w-0">
+                                  <p className="text-gray-700 truncate">{doc.file_name || doc.doc_type_display}</p>
+                                  <p className="text-xs text-gray-400">{doc.doc_type_display}</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => setViewingDocument({ url: doc.file_url, name: doc.file_name, mime: doc.mime_type })}
+                                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex-shrink-0 ml-3"
+                              >
+                                Ko'rish
+                              </button>
                             </div>
-                            <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                              Ko'rish
-                            </button>
-                          </div>
-                        ))}
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500 text-center py-4">Hujjatlar topilmadi</p>
+                        )}
                       </div>
                     </div>
 
@@ -876,6 +916,81 @@ export default function AdminApplicationsPage() {
                     >
                       {actionLoading === selectedApplication?.id ? 'Ishlanmoqda...' : 'Rad etish'}
                     </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Document Viewer Modal */}
+          <AnimatePresence>
+            {viewingDocument && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4"
+                onClick={() => setViewingDocument(null)}
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-white rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      <h3 className="font-semibold text-gray-900 truncate">{viewingDocument.name}</h3>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <a
+                        href={viewingDocument.url}
+                        download={viewingDocument.name}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
+                        title="Yuklab olish"
+                      >
+                        <Download className="w-5 h-5" />
+                      </a>
+                      <button
+                        onClick={() => setViewingDocument(null)}
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-auto bg-gray-50 flex items-center justify-center">
+                    {viewingDocument.mime?.startsWith('image/') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(viewingDocument.url) ? (
+                      <img
+                        src={viewingDocument.url}
+                        alt={viewingDocument.name}
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    ) : viewingDocument.mime === 'application/pdf' || /\.pdf$/i.test(viewingDocument.url) ? (
+                      <iframe
+                        src={viewingDocument.url}
+                        title={viewingDocument.name}
+                        className="w-full h-full border-0"
+                      />
+                    ) : (
+                      <div className="text-center p-8">
+                        <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-600 mb-4">Bu hujjatni ko'rib bo'lmaydi</p>
+                        <a
+                          href={viewingDocument.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-[#1A56A0] text-white rounded-lg hover:bg-[#0D3B6E] transition-all"
+                        >
+                          <Download className="w-4 h-4" />
+                          Yuklab olish
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </motion.div>

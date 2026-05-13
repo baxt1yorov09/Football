@@ -410,12 +410,18 @@ class AdminApplicationActionView(APIView):
             timeline_note = note or 'Ariza tasdiqlandi'
 
         elif action == 'reject':
+            rejection_reason = request.data.get('rejection_reason', '').strip()
+            if not rejection_reason:
+                return Response(
+                    {'error': 'Rad etish sababi majburiy'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             application.status = 'rejected'
-            application.rejection_reason = request.data.get('rejection_reason', '')
+            application.rejection_reason = rejection_reason
             application.reviewed_at = timezone.now()
             application.reviewed_by = request.user
             timeline_action = 'rejected'
-            timeline_note = note or 'Ariza rad etildi'
+            timeline_note = note or f'Ariza rad etildi: {rejection_reason}'
 
         else:  # request_docs
             application.status = 'additional_docs'

@@ -26,7 +26,8 @@ import {
   RefreshCw,
   FileWarning,
   CheckCircle2,
-  History
+  History,
+  Archive
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ interface Application {
   user_email?: string;
   user_phone: string;
   license_type_name: string;
+  license_type_code?: string;
   license_type?: string;
   status: string;
   status_display: string;
@@ -61,6 +63,17 @@ interface Application {
     created_at: string;
     created_by_name: string;
   }>;
+  documents?: Array<{
+    id: string;
+    doc_type: string;
+    doc_type_display: string;
+    file_url: string;
+    file_name: string;
+    file_size: number;
+    mime_type: string;
+    is_verified: boolean;
+    uploaded_at: string;
+  }>;
 }
 
 interface ApplicationsTableProps {
@@ -73,11 +86,21 @@ const statusConfig = {
   additional_docs: { label: 'Qo\'shimcha hujjatlar', color: '#E67E22', bgColor: '#E67E22/10', icon: Clock },
   approved: { label: 'Tasdiqlangan', color: '#27AE60', bgColor: '#27AE60/10', icon: CheckCircle },
   rejected: { label: 'Rad etilgan', color: '#E74C3C', bgColor: '#E74C3C/10', icon: XCircle },
+  cancelled: { label: 'Bekor qilingan', color: '#7F8C8D', bgColor: '#7F8C8D/10', icon: Archive },
 };
 
 export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const [hasAdminToken, setHasAdminToken] = useState(false);
+
+  useEffect(() => {
+    setHasAdminToken(!!localStorage.getItem('adminAccessToken'));
+  }, []);
+
+  const isAdmin = hasAdminToken
+    || user?.role === 'super_admin'
+    || user?.role === 'region_admin'
+    || user?.role === 'admin';
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -161,17 +184,37 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
     setShowDrawer(true);
   };
 
+  const postAction = async (applicationId: string, body: any) => {
+    const adminToken = localStorage.getItem('adminAccessToken');
+    const regularToken = localStorage.getItem('accessToken');
+    const token = adminToken || regularToken;
+    const response = await fetch(`/api/applications/admin/${applicationId}/action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+  };
+
   const handleApprove = async (applicationId: string) => {
     try {
       setActionLoading(applicationId);
-      await apiClient.post(`/api/applications/admin/${applicationId}/action`, {
+      await postAction(applicationId, {
         action: 'approve',
         note: adminNote || 'Ariza tasdiqlandi'
       });
       await fetchApplications();
       setShowDrawer(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Tasdiqlashda xatolik:', err);
+      alert(`Tasdiqlashda xatolik: ${err.message || err}`);
     } finally {
       setActionLoading(null);
     }
@@ -181,7 +224,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
     if (!rejectionReason.trim()) return;
     try {
       setActionLoading(applicationId);
-      await apiClient.post(`/api/applications/admin/${applicationId}/action`, {
+      await postAction(applicationId, {
         action: 'reject',
         note: adminNote,
         rejection_reason: rejectionReason
@@ -190,8 +233,9 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
       setShowRejectModal(false);
       setShowDrawer(false);
       setRejectionReason('');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Rad etishda xatolik:', err);
+      alert(`Rad etishda xatolik: ${err.message || err}`);
     } finally {
       setActionLoading(null);
     }
@@ -200,14 +244,15 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
   const handleRequestDocs = async (applicationId: string) => {
     try {
       setActionLoading(applicationId);
-      await apiClient.post(`/api/applications/admin/${applicationId}/action`, {
+      await postAction(applicationId, {
         action: 'request_docs',
         note: adminNote || 'Qo\'shimcha hujjatlar talab qilindi'
       });
       await fetchApplications();
       setShowDrawer(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Hujjat so\'rashda xatolik:', err);
+      alert(`Hujjat so'rashda xatolik: ${err.message || err}`);
     } finally {
       setActionLoading(null);
     }
@@ -264,6 +309,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 <option value="additional_docs">Qo'shimcha hujjatlar</option>
                 <option value="approved">Tasdiqlangan</option>
                 <option value="rejected">Rad etilgan</option>
+                <option value="cancelled">Bekor qilingan</option>
               </select>
             </div>
           </div>
@@ -331,7 +377,9 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {app.license_type_name}
+                    <span title={app.license_type_name} className="font-medium">
+                      {app.license_type_code || app.license_type_name || '—'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Badge
@@ -349,25 +397,46 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     {new Date(app.submitted_at).toLocaleDateString('uz-UZ')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <Button 
                         variant="outline" 
                         size="sm"
                         onClick={() => openDrawer(app)}
+                        title="Ko'rish"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <select
-                        value={app.status}
-                        onChange={(e) => handleStatusChange(app.id, e.target.value)}
-                        className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="pending">Kutilmoqda</option>
-                        <option value="under_review">Ko'rib chiqilmoqda</option>
-                        <option value="additional_docs">Qo'shimcha hujjatlar</option>
-                        <option value="approved">Tasdiqlangan</option>
-                        <option value="rejected">Rad etilgan</option>
-                      </select>
+                      {isAdmin && (app.status === 'pending' || app.status === 'under_review' || app.status === 'additional_docs') && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApprove(app.id)}
+                            disabled={actionLoading === app.id}
+                            className="text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                            title="Tasdiqlash"
+                          >
+                            {actionLoading === app.id ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedAppDetails(app);
+                              setShowRejectModal(true);
+                            }}
+                            disabled={actionLoading === app.id}
+                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                            title="Rad etish"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -560,11 +629,12 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     <Badge 
                       className="px-3 py-1 text-sm font-semibold"
                       style={{ 
-                        backgroundColor: selectedAppDetails.license_type_name?.includes('PRO') ? '#E74C3C' : '#3498DB',
+                        backgroundColor: selectedAppDetails.license_type_code === 'PRO' ? '#E74C3C' : '#3498DB',
                         color: 'white'
                       }}
+                      title={selectedAppDetails.license_type_name}
                     >
-                      {selectedAppDetails.license_type_name || selectedAppDetails.license_type || 'Noma\'lum'}
+                      {selectedAppDetails.license_type_code || selectedAppDetails.license_type_name || selectedAppDetails.license_type || 'Noma\'lum'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-gray-200">
@@ -599,42 +669,35 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                   Hujjatlar
                 </h3>
                 <div className="space-y-2">
-                  {[
-                    { name: 'passport.pdf', size: '245 KB', type: 'pdf' },
-                    { name: 'rasm_3x4.jpg', size: '180 KB', type: 'image' },
-                    { name: 'c_litsenziya.pdf', size: '320 KB', type: 'pdf' }
-                  ].map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-blue-600" />
+                  {selectedAppDetails.documents && selectedAppDetails.documents.length > 0 ? (
+                    selectedAppDetails.documents.map((doc) => {
+                      const sizeKb = doc.file_size ? `${Math.round(doc.file_size / 1024)} KB` : '';
+                      return (
+                        <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <FileText className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{doc.file_name || doc.doc_type_display}</p>
+                              <p className="text-xs text-gray-500">{doc.doc_type_display}{sizeKb ? ` • ${sizeKb}` : ''}</p>
+                            </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-blue-600 hover:bg-blue-50 flex-shrink-0 ml-3"
+                            onClick={() => setPreviewDoc({ name: doc.file_name || doc.doc_type_display, url: doc.file_url })}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Ko'rish
+                          </Button>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{doc.name}</p>
-                          <p className="text-xs text-gray-500">{doc.size}</p>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-blue-600 hover:bg-blue-50"
-                        onClick={() => {
-                          // Hujjat URL'sini yaratish - backend dan kelgan haqiqiy URL bo'lishi kerak
-                          // Test uchun placeholder rasmlar:
-                          const placeholderUrls: Record<string, string> = {
-                            'rasm_3x4.jpg': 'https://placehold.co/400x500/1A56A0/white?text=3x4+Rasm',
-                            'passport.pdf': 'https://placehold.co/600x800/0D3B6E/white?text=Passport+PDF',
-                            'c_litsenziya.pdf': 'https://placehold.co/600x800/E74C3C/white?text=C+License+PDF'
-                          };
-                          const docUrl = placeholderUrls[doc.name] || `/api/applications/${selectedAppDetails?.id}/documents/${doc.name}`;
-                          setPreviewDoc({ name: doc.name, url: docUrl });
-                        }}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Ko'rish
-                      </Button>
-                    </div>
-                  ))}
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">Hujjatlar topilmadi</p>
+                  )}
                 </div>
               </div>
 

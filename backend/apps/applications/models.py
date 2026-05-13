@@ -10,6 +10,7 @@ class Application(models.Model):
         ('additional_docs', 'Qo\'shimcha hujjatlar kerak'),
         ('approved', 'Tasdiqlangan'),
         ('rejected', 'Rad etilgan'),
+        ('cancelled', 'Bekor qilingan'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
