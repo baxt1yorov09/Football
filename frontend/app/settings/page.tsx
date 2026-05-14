@@ -235,20 +235,21 @@ export default function SettingsPage() {
                             </div>
                             <div>
                               {item.type === 'toggle' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  aria-checked={!!item.value}
                                   onClick={() => (item.onChange as (value: boolean) => void)(!item.value)}
-                                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                    item.value ? 'bg-blue-600' : 'bg-gray-200'
+                                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors p-0 border-0 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                                    item.value ? 'bg-blue-600' : 'bg-gray-300'
                                   }`}
                                 >
                                   <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                      item.value ? 'translate-x-6' : 'translate-x-1'
+                                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${
+                                      item.value ? 'translate-x-[22px]' : 'translate-x-0.5'
                                     }`}
                                   />
-                                </Button>
+                                </button>
                               )}
                               {item.type === 'select' && (
                                 <select
