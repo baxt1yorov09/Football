@@ -209,6 +209,7 @@ SMS_SERVICE = os.getenv('SMS_SERVICE', 'mock')
 ESKIZ_EMAIL = os.getenv('ESKIZ_EMAIL', '')
 ESKIZ_PASSWORD = os.getenv('ESKIZ_PASSWORD', '')
 ESKIZ_FROM = os.getenv('ESKIZ_FROM', 'UFF')
+ESKIZ_TOKEN = os.getenv('ESKIZ_TOKEN', '')  # Pre-issued JWT — skips /auth/login
 
 # Playmobile settings
 PLAYMOBILE_USERNAME = os.getenv('PLAYMOBILE_USERNAME', '')

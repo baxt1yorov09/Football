@@ -26,20 +26,30 @@ class SMSService(ABC):
 
 class MockSMSService(SMSService):
     """Mock SMS service for development/testing"""
-    
+
     def send_sms(self, phone: str, message: str) -> Dict:
-        """Mock send SMS - just log to console"""
-        print(f"[MOCK SMS] To: {phone}, Message: {message}")
+        """Mock send SMS - print a highly visible block to console."""
+        bar = "=" * 60
+        print(f"\n{bar}\n[MOCK SMS]  →  {phone}\n{message}\n{bar}\n", flush=True)
         return {
             'success': True,
             'message_id': f'mock-{random.randint(10000, 99999)}',
             'status': 'sent'
         }
-    
+
     def send_otp(self, phone: str, code: str) -> Dict:
-        """Mock send OTP"""
-        message = f"UFF Litsenziya tizimi. Tasdiqlash kodi: {code}"
-        return self.send_sms(phone, message)
+        """Mock send OTP — show the code in big letters."""
+        bar = "=" * 60
+        print(
+            f"\n{bar}\n[MOCK SMS OTP]  →  {phone}\n"
+            f"   Kod / Код: >>>  {code}  <<<\n{bar}\n",
+            flush=True,
+        )
+        return {
+            'success': True,
+            'message_id': f'mock-{random.randint(10000, 99999)}',
+            'status': 'sent'
+        }
 
 
 class EskizSMSService(SMSService):
@@ -51,10 +61,15 @@ class EskizSMSService(SMSService):
         self.email = getattr(settings, 'ESKIZ_EMAIL', os.getenv('ESKIZ_EMAIL', ''))
         self.password = getattr(settings, 'ESKIZ_PASSWORD', os.getenv('ESKIZ_PASSWORD', ''))
         self.from_name = getattr(settings, 'ESKIZ_FROM', os.getenv('ESKIZ_FROM', 'UFF'))
+        # Pre-issued long-lived JWT (from Eskiz cabinet → API/Settings).
+        # If set, login step is skipped.
+        self.static_token = getattr(settings, 'ESKIZ_TOKEN', os.getenv('ESKIZ_TOKEN', ''))
         self.token = None
-    
+
     def _get_token(self) -> Optional[str]:
-        """Get auth token from Eskiz"""
+        """Get auth token from Eskiz (static token preferred)."""
+        if self.static_token:
+            return self.static_token
         try:
             response = requests.post(
                 f"{self.BASE_URL}/auth/login",
