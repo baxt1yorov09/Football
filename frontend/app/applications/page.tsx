@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ApplicationsTable } from '@/components/admin/ApplicationsTable';
@@ -11,6 +12,13 @@ export default function ApplicationsPage() {
   const { t } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search to avoid filtering on every keystroke
+  useEffect(() => {
+    const tm = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(tm);
+  }, [searchTerm]);
 
   return (
     <div className="min-h-screen bg-[#F4F6F9]">
@@ -40,23 +48,35 @@ export default function ApplicationsPage() {
             className="mb-6 bg-white rounded-xl shadow-lg p-6"
           >
             <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
+              <div className="flex-1 relative">
                 <input
                   type="text"
-                  placeholder={t('common.search')}
+                  placeholder={t('applications.search_placeholder') || t('common.search')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 pr-9 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                    aria-label="clear"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
               <div>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="all">{t('common.all')}</option>
                   <option value="pending">{t('applications.status.pending')}</option>
+                  <option value="under_review">{t('applications.status.under_review')}</option>
+                  <option value="additional_docs">{t('applications.status.additional_docs')}</option>
                   <option value="approved">{t('applications.status.approved')}</option>
                   <option value="rejected">{t('applications.status.rejected')}</option>
                 </select>
@@ -70,7 +90,12 @@ export default function ApplicationsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <ApplicationsTable showAll={true} />
+            <ApplicationsTable
+              showAll={true}
+              externalSearch={debouncedSearch}
+              externalStatusFilter={statusFilter}
+              hideFilters={true}
+            />
           </motion.div>
         </div>
       </main>

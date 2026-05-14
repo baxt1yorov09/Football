@@ -73,6 +73,9 @@ interface Application {
 
 interface ApplicationsTableProps {
   showAll?: boolean;
+  externalSearch?: string;
+  externalStatusFilter?: string;
+  hideFilters?: boolean;
 }
 
 const statusConfig = {
@@ -83,13 +86,24 @@ const statusConfig = {
   rejected:        { tKey: 'applications.status.rejected',        color: '#E74C3C', bgColor: '#E74C3C/10', icon: XCircle },
 };
 
-export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
+export function ApplicationsTable({
+  showAll = false,
+  externalSearch,
+  externalStatusFilter,
+  hideFilters = false,
+}: ApplicationsTableProps) {
   const { user } = useAuth();
   const { t, locale } = useI18n();
   const isAdmin = user?.role === 'admin';
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
+  const [internalStatusFilter, setInternalStatusFilter] = useState('all');
+
+  // External controls take precedence when provided
+  const searchTerm = externalSearch !== undefined ? externalSearch : internalSearchTerm;
+  const setSearchTerm = setInternalSearchTerm;
+  const statusFilter = externalStatusFilter !== undefined ? externalStatusFilter : internalStatusFilter;
+  const setStatusFilter = setInternalStatusFilter;
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedApplication, setSelectedApplication] = useState<string | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -267,35 +281,37 @@ export function ApplicationsTable({ showAll = false }: ApplicationsTableProps) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {/* Filters */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  placeholder={t('applications.search_placeholder')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 h-10"
-                />
+        {/* Filters (hidden when controlled externally) */}
+        {!hideFilters && (
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    placeholder={t('applications.search_placeholder')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-12 h-10"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-gray-400" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-10 px-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#F39C12]"
+                >
+                  <option value="all">{t('common.all')}</option>
+                  {Object.entries(statusConfig).map(([key, config]) => (
+                    <option key={key} value={key}>{t(config.tKey)}</option>
+                  ))}
+                </select>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-10 px-3 border border-gray-200 rounded-lg focus:outline-none focus:border-[#F39C12]"
-              >
-                <option value="all">{t('common.all')}</option>
-                {Object.entries(statusConfig).map(([key, config]) => (
-                  <option key={key} value={key}>{t(config.tKey)}</option>
-                ))}
-              </select>
-            </div>
           </div>
-        </div>
+        )}
 
         {/* Table */}
         <div className="overflow-x-auto">
