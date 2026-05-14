@@ -1,10 +1,51 @@
+import hashlib
+import hmac
+import json
+import logging
+
+from django.conf import settings
+from django.http import HttpResponse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Notification
+
+logger = logging.getLogger(__name__)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TelegramWebhookView(View):
+    """Telegram sends POST updates here. No auth — secured by secret_token."""
+
+    def post(self, request, *args, **kwargs):
+        token = getattr(settings, 'TELEGRAM_BOT_TOKEN', '')
+        if not token:
+            return HttpResponse(status=503)
+
+        secret = getattr(settings, 'TELEGRAM_WEBHOOK_SECRET', '')
+        if secret:
+            received = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
+            if received != secret:
+                return HttpResponse(status=403)
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return HttpResponse(status=400)
+
+        try:
+            from .bot import process_webhook_update
+            process_webhook_update(data)
+        except Exception as e:
+            logger.exception(f"Webhook error: {e}")
+
+        return HttpResponse('OK')
 
 
 def _notification_to_dict(n):

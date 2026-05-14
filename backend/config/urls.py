@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
 from apps.authentication.views import AdminLoginView
+from apps.notifications.urls import telegram_urlpatterns
 
 def api_info(request):
     return JsonResponse({
@@ -37,6 +38,7 @@ urlpatterns = [
     path('api/reports/', include('apps.reports.urls')),
     path('api/settings/', include('apps.system_settings.urls')),
     path('api/settings', include('apps.system_settings.urls')),
+    path('api/telegram/', include(telegram_urlpatterns)),
 ]
 
 # Always serve media files (remove DEBUG condition)

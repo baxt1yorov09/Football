@@ -7,18 +7,29 @@ User = get_user_model()
 
 class TelegramUser(models.Model):
     """Telegram user linked to Django user"""
+    LANG_CHOICES = [('uz', "O'zbek"), ('ru', 'Русский')]
+    AUTH_STATE_CHOICES = [
+        ('idle', 'Idle'),
+        ('awaiting_lang', 'Awaiting language'),
+        ('awaiting_phone', 'Awaiting phone'),
+        ('awaiting_otp', 'Awaiting OTP'),
+    ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     telegram_id = models.BigIntegerField(unique=True, help_text="Telegram user ID")
     username = models.CharField(max_length=100, blank=True, null=True, help_text="Telegram username")
     first_name = models.CharField(max_length=100, blank=True, null=True)
     last_name = models.CharField(max_length=100, blank=True, null=True)
     user = models.OneToOneField(
-        User, 
-        on_delete=models.CASCADE, 
-        null=True, 
+        User,
+        on_delete=models.CASCADE,
+        null=True,
         blank=True,
         related_name='telegram_user'
     )
+    language = models.CharField(max_length=2, choices=LANG_CHOICES, default='uz')
+    auth_state = models.CharField(max_length=20, choices=AUTH_STATE_CHOICES, default='idle')
+    auth_phone = models.CharField(max_length=20, blank=True, null=True)
+    notifications_enabled = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

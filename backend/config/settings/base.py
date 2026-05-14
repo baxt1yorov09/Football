@@ -215,6 +215,12 @@ PLAYMOBILE_USERNAME = os.getenv('PLAYMOBILE_USERNAME', '')
 PLAYMOBILE_PASSWORD = os.getenv('PLAYMOBILE_PASSWORD', '')
 PLAYMOBILE_ORIGINATOR = os.getenv('PLAYMOBILE_ORIGINATOR', 'UFF')
 
+# Telegram Bot
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_WEBHOOK_URL = os.getenv('TELEGRAM_WEBHOOK_URL', '')
+WEB_APP_URL = os.getenv('WEB_APP_URL', 'http://localhost:3000')
+SUPPORT_USERNAME = os.getenv('SUPPORT_USERNAME', '@UFFSupport')
+
 # File Storage (S3/R2)
 USE_S3 = os.getenv('USE_S3', 'False') == 'True'
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')

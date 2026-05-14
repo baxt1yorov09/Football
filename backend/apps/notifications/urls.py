@@ -6,7 +6,13 @@ from .views import (
     NotificationMarkAllReadView,
     NotificationMarkReadView,
     NotificationUnreadCountView,
+    TelegramWebhookView,
 )
+
+telegram_urlpatterns = [
+    path('webhook', TelegramWebhookView.as_view(), name='telegram-webhook'),
+    path('webhook/', TelegramWebhookView.as_view()),
+]
 
 urlpatterns = [
     path('', NotificationListView.as_view(), name='notifications-list'),
