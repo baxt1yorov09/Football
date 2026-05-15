@@ -73,6 +73,7 @@ def application_status_changed(sender, instance, created, **kwargs):
 
     # SMS + Telegram + Web Bell — Celery orqali
     def _dispatch():
+        """Dispatch async task after transaction commit"""
         try:
             from apps.notifications.tasks import (
                 task_application_under_review,
@@ -91,6 +92,19 @@ def application_status_changed(sender, instance, created, **kwargs):
                 task.delay(str(instance.id))
         except Exception as e:
             logger.exception(f"status_changed dispatch xato: {e}")
+            # Fallback: sync notification if Celery/Redis is down
+            try:
+                from apps.notifications.service import notification_service
+                if instance.status == 'approved':
+                    notification_service.application_approved(instance)
+                elif instance.status == 'rejected':
+                    notification_service.application_rejected(instance)
+                elif instance.status == 'under_review':
+                    notification_service.application_under_review(instance)
+                elif instance.status == 'additional_docs':
+                    notification_service.application_docs_required(instance, note="Status o'zgardi")
+            except Exception as fallback_error:
+                logger.error(f"Fallback notification xato: {fallback_error}")
 
     transaction.on_commit(_dispatch)
 
