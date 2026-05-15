@@ -18,6 +18,26 @@ except ImportError:
     SERVICES_AVAILABLE = False
 
 
+class LicenseTypeListView(APIView):
+    """Faol litsenziya turlari ro'yxati (admin formalari uchun)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = LicenseType.objects.filter(is_active=True).order_by('sort_order', 'code')
+        return Response({
+            'results': [
+                {
+                    'code': t.code,
+                    'name_uz': t.name_uz,
+                    'name_ru': t.name_ru,
+                    'category': t.category,
+                    'color_hex': t.color_hex or '#1A56A0',
+                }
+                for t in qs
+            ]
+        })
+
+
 class LicenseListView(APIView):
     """Get all licenses for current user (with rich data + summary stats)"""
     permission_classes = [IsAuthenticated]

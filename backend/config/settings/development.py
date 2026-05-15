@@ -29,3 +29,9 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
 
 # Disable trailing slash to avoid 301 redirects
 APPEND_SLASH = False
+
+# Celery — worker ishga tushirilmagan dev muhitda task.delay() ni
+# sinxron bajarish. Shu tufayli bildirishnomalar Celery worker bo'lmasa ham
+# darhol yaratiladi (web bell, SMS, Telegram).
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = False

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import LicenseListView
+from .views import LicenseListView, LicenseTypeListView
 from .admin_views import (
     AdminLicenseStatsView,
     AdminLicenseListView,
@@ -13,6 +13,10 @@ from .admin_views import (
 
 urlpatterns = [
     path('', LicenseListView.as_view(), name='license-list'),
+
+    # Faol turlar ro'yxati (form'lar uchun)
+    path('types/', LicenseTypeListView.as_view(), name='license-types'),
+    path('types',  LicenseTypeListView.as_view()),
 
     # ── Admin endpoints ────────────────────────
     # Trailing-slash bilan va u'siz ikkala variant (Next.js rewrite uchun)

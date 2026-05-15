@@ -967,29 +967,99 @@ function LicenseEditModal({ lic, onClose, onSuspend, onActivate, onExtend }: {
   );
 }
 
+type UserPick = { id: string; full_name: string; phone: string; email: string };
+
 function LicenseCreateModal({ open, onClose, onCreated }: {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
 }) {
   const [userId, setUserId] = useState('');
+  const [pickedUser, setPickedUser] = useState<UserPick | null>(null);
+  const [manualMode, setManualMode] = useState(false);
+
+  // Search state
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<UserPick[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+
   const [typeCode, setTypeCode] = useState('D');
+  const [licenseTypes, setLicenseTypes] = useState<{ code: string; name_uz: string }[]>([]);
   const [days, setDays] = useState(365);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Litsenziya turlarini yuklash (modal ochilganda)
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        const data = await licApi('/api/licenses/types');
+        const list = Array.isArray(data?.results) ? data.results : [];
+        setLicenseTypes(list);
+        if (list.length && !list.some((t: any) => t.code === typeCode)) {
+          setTypeCode(list[0].code);
+        }
+      } catch {
+        setLicenseTypes([]);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Debounced user search
+  useEffect(() => {
+    if (manualMode) return;
+    const q = search.trim();
+    if (q.length < 2) {
+      setResults([]);
+      setShowResults(false);
+      return;
+    }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const data = await licApi(`/api/users/admin/list?search=${encodeURIComponent(q)}&limit=10`);
+        setResults(Array.isArray(data?.results) ? data.results : []);
+        setShowResults(true);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, manualMode]);
+
+  const pickUser = (u: UserPick) => {
+    setPickedUser(u);
+    setUserId(u.id);
+    setSearch('');
+    setShowResults(false);
+  };
+
+  const clearUser = () => {
+    setPickedUser(null);
+    setUserId('');
+    setSearch('');
+  };
+
   const submit = async () => {
     setErr(null);
-    if (!userId.trim()) { setErr('Foydalanuvchi ID majburiy'); return; }
+    const id = (manualMode ? userId : pickedUser?.id || '').trim();
+    if (!id) { setErr('Foydalanuvchini tanlang yoki UUID kiriting'); return; }
     setLoading(true);
     try {
       await licApi('/api/licenses/admin/create/', 'POST', {
-        user_id: userId.trim(),
+        user_id: id,
         license_type_code: typeCode,
         expires_days: days,
       });
       onCreated();
       setUserId('');
+      setPickedUser(null);
+      setSearch('');
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -1011,14 +1081,73 @@ function LicenseCreateModal({ open, onClose, onCreated }: {
 
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Foydalanuvchi ID (UUID)</label>
-            <input
-              type="text"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="UUID..."
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Foydalanuvchi
+              </label>
+              <button
+                type="button"
+                onClick={() => { setManualMode(!manualMode); clearUser(); }}
+                className="text-xs text-[#1A56A0] hover:underline"
+              >
+                {manualMode ? '← Qidiruv rejimi' : 'UUID qo\'lda kiritish →'}
+              </button>
+            </div>
+
+            {manualMode ? (
+              <input
+                type="text"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                placeholder="UUID, masalan: a3b1c2d4-5e6f-..."
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+              />
+            ) : pickedUser ? (
+              <div className="flex items-center justify-between px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-xl">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{pickedUser.full_name || '—'}</p>
+                  <p className="text-xs text-gray-500 truncate">{pickedUser.phone} · {pickedUser.email || '—'}</p>
+                </div>
+                <button onClick={clearUser} className="ml-2 p-1 text-gray-400 hover:text-red-600">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Ism, telefon yoki email bo'yicha qidiring..."
+                  className="w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                />
+                {searching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />
+                )}
+
+                {showResults && results.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full max-h-64 overflow-auto bg-white border border-gray-200 rounded-xl shadow-lg">
+                    {results.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => pickUser(u)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                      >
+                        <p className="text-sm font-medium text-gray-900 truncate">{u.full_name || '—'}</p>
+                        <p className="text-xs text-gray-500 truncate">{u.phone} · {u.email || '—'}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {showResults && !searching && results.length === 0 && search.trim().length >= 2 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-3 text-sm text-gray-500 text-center">
+                    Foydalanuvchi topilmadi
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Litsenziya turi</label>
@@ -1027,12 +1156,15 @@ function LicenseCreateModal({ open, onClose, onCreated }: {
               onChange={(e) => setTypeCode(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
             >
-              {['D','C','B','A','PRO','GK_1','GK_2','GK_3',
-                'FITNESS_1','FITNESS_2','FITNESS_3',
-                'FUTSAL_1','FUTSAL_2','FUTSAL_3',
-                'BEACH','SELEK','PSYCH'].map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
+              {licenseTypes.length === 0 ? (
+                <option value="">Yuklanmoqda...</option>
+              ) : (
+                licenseTypes.map(t => (
+                  <option key={t.code} value={t.code}>
+                    {t.code} — {t.name_uz}
+                  </option>
+                ))
+              )}
             </select>
           </div>
           <div>
