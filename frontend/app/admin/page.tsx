@@ -6,8 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminStatsOverview } from '@/components/admin/AdminStatsOverview';
 import { ApplicationsTableNew } from '@/components/admin/ApplicationsTableNew';
-import { RecentActivity } from '@/components/admin/RecentActivity';
-import { QuickActions } from '@/components/admin/QuickActions';
+import { RealtimeStats } from '@/components/admin/RealtimeStats';
 import SettingsPanel from '@/components/admin/SettingsPanel';
 import { UsersPanel } from '@/components/admin/UsersPanel';
 import { ReportsPanel } from '@/components/admin/ReportsPanel';
@@ -21,7 +20,7 @@ import {
   AlertCircle, Info, X, ChevronLeft, ChevronRight, RefreshCw,
   Loader2
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 
 // ============ LICENSES MANAGEMENT PANEL (Real API) ============
@@ -1130,6 +1129,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Auth tekshiruvi
   useEffect(() => {
@@ -1144,6 +1144,15 @@ export default function AdminPage() {
     };
     checkAuth();
   }, [router]);
+
+  // Deep-link: ?tab=settings|applications|users|... orqali ochish
+  useEffect(() => {
+    const tab = searchParams?.get('tab');
+    const valid = ['overview', 'applications', 'licenses', 'users', 'reports', 'settings'];
+    if (tab && valid.includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Loading holatida
   if (isLoading) {
@@ -1183,15 +1192,7 @@ export default function AdminPage() {
           {activeTab === 'overview' && (
             <div className="space-y-8">
               <AdminStatsOverview />
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <ApplicationsTableNew />
-                </div>
-                <div className="space-y-6">
-                  <QuickActions />
-                  <RecentActivity />
-                </div>
-              </div>
+              <RealtimeStats />
             </div>
           )}
 

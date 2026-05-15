@@ -10,7 +10,7 @@ import {
   Loader2, X,
 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { SmartSidebar } from '@/components/layout/SmartSidebar';
 import Link from 'next/link';
 import { invalidateDashboard } from '@/hooks/useUserDashboard';
 import { useI18n } from '@/lib/i18n/I18nProvider';
@@ -210,7 +210,7 @@ export default function ApplicationDetailPage() {
     return (
       <div className="min-h-screen bg-[#F4F6F9]">
         <Header />
-        <Sidebar />
+        <SmartSidebar />
         <main className="ml-64 pt-16">
           <div className="p-8 max-w-5xl mx-auto space-y-6">
             <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
@@ -233,7 +233,7 @@ export default function ApplicationDetailPage() {
     return (
       <div className="min-h-screen bg-[#F4F6F9]">
         <Header />
-        <Sidebar />
+        <SmartSidebar />
         <main className="ml-64 pt-16">
           <div className="p-8 max-w-3xl mx-auto">
             <button
@@ -283,7 +283,7 @@ export default function ApplicationDetailPage() {
   return (
     <div className="min-h-screen bg-[#F4F6F9]">
       <Header />
-      <Sidebar />
+      <SmartSidebar />
 
       <main className="ml-64 pt-16">
         <div className="p-8 max-w-5xl mx-auto">

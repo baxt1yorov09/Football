@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -14,6 +15,17 @@ import {
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
+}
+
+interface SidebarStats {
+  today_apps: number;
+  pending: number;
+  active_licenses: number;
+}
+
 interface AdminSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -21,7 +33,35 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
   const pathname = usePathname();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const [stats, setStats] = useState<SidebarStats | null>(null);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const token = getToken();
+      const res = await fetch('/api/reports/dashboard/', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      setStats({
+        today_apps: json?.periods?.today?.applications ?? 0,
+        pending: (json?.overview?.pending_applications ?? 0) + (json?.overview?.under_review ?? 0),
+        active_licenses: json?.overview?.active_licenses ?? 0,
+      });
+    } catch {
+      // silent fail — sidebar shouldn't crash
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
+
+  const numLocale = locale === 'ru' ? 'ru-RU' : 'uz-UZ';
+  const fmt = (n: number | undefined) => (n ?? 0).toLocaleString(numLocale);
 
   const menuItems = [
     { icon: LayoutDashboard, label: t('admin.overview'), id: 'overview' },
@@ -81,15 +121,21 @@ export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="opacity-80">{t('admin.today_apps')}:</span>
-              <span className="font-bold">12</span>
+              <span className="font-bold">
+                {stats ? fmt(stats.today_apps) : <span className="opacity-50">…</span>}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="opacity-80">{t('admin.pending')}:</span>
-              <span className="font-bold">5</span>
+              <span className="font-bold">
+                {stats ? fmt(stats.pending) : <span className="opacity-50">…</span>}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="opacity-80">{t('admin.active_licenses')}:</span>
-              <span className="font-bold">1,247</span>
+              <span className="font-bold">
+                {stats ? fmt(stats.active_licenses) : <span className="opacity-50">…</span>}
+              </span>
             </div>
           </div>
         </div>

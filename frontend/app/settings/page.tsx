@@ -2,20 +2,37 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { SmartSidebar } from '@/components/layout/SmartSidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Bell, Shield, Database, Trash2 } from 'lucide-react';
+import { Settings, Bell, Shield, Database, Trash2, RefreshCw } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal';
 import { TwoFactorModal } from '@/components/settings/TwoFactorModal';
 import { ExportDataModal } from '@/components/settings/ExportDataModal';
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
+import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 
 export default function SettingsPage() {
   const { t, locale, setLocale } = useI18n();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [redirecting, setRedirecting] = useState(false);
+
+  // Admin'larni admin paneliga yo'naltirish
+  useEffect(() => {
+    const hasAdminToken =
+      typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
+    const roleAdmin = !!user?.role && /admin/i.test(user.role);
+    if (hasAdminToken || roleAdmin) {
+      setRedirecting(true);
+      router.replace('/admin?tab=settings');
+    }
+  }, [user, router]);
+
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState<'uz' | 'ru'>(locale);
@@ -185,7 +202,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-[#F4F6F9]">
       <Header />
-      <Sidebar />
+      <SmartSidebar />
       
       <main className="ml-64 pt-16">
         <div className="p-8">

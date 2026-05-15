@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { SmartSidebar } from '@/components/layout/SmartSidebar';
 import { StatsOverview } from '@/components/dashboard/StatsOverview';
 import { ActiveLicenses } from '@/components/dashboard/ActiveLicenses';
 import { RecentApplications } from '@/components/dashboard/RecentApplications';
@@ -17,7 +17,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#F4F6F9]">
       <Header />
-      <Sidebar />
+      <SmartSidebar />
       
       <main className="ml-64 pt-16">
         <div className="p-8">

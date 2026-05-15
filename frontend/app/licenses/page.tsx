@@ -7,8 +7,10 @@ import {
   AlertCircle, RefreshCw, FileText, Calendar, MapPin, X,
   ShieldCheck, QrCode, Plus, Sparkles,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { SmartSidebar } from '@/components/layout/SmartSidebar';
+import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 import Link from 'next/link';
 
@@ -70,6 +72,21 @@ function formatDate(iso: string, locale: string = 'uz'): string {
 // ============ MAIN ============
 export default function LicensesPage() {
   const { t, locale } = useI18n();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [redirecting, setRedirecting] = useState(false);
+
+  // Admin'larni admin paneliga yo'naltirish
+  useEffect(() => {
+    const hasAdminToken =
+      typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
+    const roleAdmin = !!user?.role && /admin/i.test(user.role);
+    if (hasAdminToken || roleAdmin) {
+      setRedirecting(true);
+      router.replace('/admin?tab=licenses');
+    }
+  }, [user, router]);
+
   const [data, setData] = useState<APIResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -142,10 +159,21 @@ export default function LicensesPage() {
     }
   };
 
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
+        <div className="text-center text-gray-500">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+          <p className="text-sm">Admin paneliga yo'naltirilmoqda...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F4F6F9]">
       <Header />
-      <Sidebar />
+      <SmartSidebar />
 
       <main className="ml-64 pt-16">
         <div className="p-8 max-w-7xl mx-auto">

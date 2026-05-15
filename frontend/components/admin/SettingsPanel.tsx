@@ -6,10 +6,12 @@ import {
   Settings, Lock, Bell, Database, Award,
   Save, RefreshCw, CheckCircle, AlertCircle, Eye, EyeOff,
   Shield, Globe, Clock, Mail, Phone,
-  Smartphone, Download, Trash2, HardDrive, X, Copy,
+  Smartphone, Download, Trash2, HardDrive, X, Copy, List,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 import { useTheme, type Theme } from '@/lib/theme/ThemeProvider';
+import { BackupListModal } from './BackupListModal';
+import { adminApi } from '@/lib/adminApi';
 
 // ============ Types ============
 interface SystemSettings {
@@ -63,22 +65,8 @@ async function api<T = any>(
   method: string = 'GET',
   body?: any
 ): Promise<T> {
-  const token = getToken();
-  const response = await fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const msg = data.detail || data.error
-      || (typeof data === 'object' ? JSON.stringify(data) : String(data));
-    throw new Error(msg);
-  }
-  return data as T;
+  // adminApi 401/403 paytida tokenni avtomatik yangilab qayta urinadi
+  return adminApi<T>(url, { method, body });
 }
 
 // ============ Toast ============
@@ -175,6 +163,7 @@ export default function SettingsPanel() {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [backupRunning, setBackupRunning] = useState(false);
   const [logsRunning, setLogsRunning] = useState(false);
+  const [showBackupList, setShowBackupList] = useState(false);
 
   // i18n & theme hooks
   const { locale, setLocale, t } = useI18n();
@@ -317,6 +306,11 @@ export default function SettingsPanel() {
       setSettings(updated);
       setSaveStatus('saved');
       showToast('Sozlamalar saqlandi', 'success');
+      // Banner darhol yangilanishi uchun
+      try {
+        window.dispatchEvent(new CustomEvent('maintenance:changed'));
+        sessionStorage.removeItem('maintenance:dismissedAt');
+      } catch {}
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err: any) {
       showToast(`Saqlashda xatolik: ${err.message}`, 'error');
@@ -771,9 +765,20 @@ export default function SettingsPanel() {
                     {systemStatus && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                          <div className="flex items-center gap-3 mb-2">
-                            <HardDrive className="w-5 h-5 text-blue-600" />
-                            <p className="font-medium text-blue-900">Backup statusi</p>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <HardDrive className="w-5 h-5 text-blue-600" />
+                              <p className="font-medium text-blue-900">Backup statusi</p>
+                            </div>
+                            {systemStatus.backup_count > 0 && (
+                              <button
+                                onClick={() => setShowBackupList(true)}
+                                className="text-xs font-medium text-blue-700 hover:text-blue-900 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors"
+                              >
+                                <List className="w-3.5 h-3.5" />
+                                Ko'rish
+                              </button>
+                            )}
                           </div>
                           <p className="text-sm text-blue-800">
                             Jami: <strong>{systemStatus.backup_count}</strong> ta backup
@@ -783,16 +788,27 @@ export default function SettingsPanel() {
                               Oxirgi: {new Date(systemStatus.last_backup).toLocaleString('uz-UZ')}
                             </p>
                           )}
-                          <button
-                            onClick={runBackupNow}
-                            disabled={backupRunning}
-                            className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            {backupRunning
-                              ? <RefreshCw className="w-4 h-4 animate-spin" />
-                              : <Download className="w-4 h-4" />}
-                            Hozir backup yaratish
-                          </button>
+                          <div className="flex items-center gap-2 mt-3 flex-wrap">
+                            <button
+                              onClick={runBackupNow}
+                              disabled={backupRunning}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              {backupRunning
+                                ? <RefreshCw className="w-4 h-4 animate-spin" />
+                                : <Download className="w-4 h-4" />}
+                              Hozir backup yaratish
+                            </button>
+                            {systemStatus.backup_count > 0 && (
+                              <button
+                                onClick={() => setShowBackupList(true)}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-300 text-blue-700 text-sm rounded-lg hover:bg-blue-100"
+                              >
+                                <List className="w-4 h-4" />
+                                Ro'yxatni ochish
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
@@ -1027,6 +1043,12 @@ export default function SettingsPanel() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <BackupListModal
+        open={showBackupList}
+        onClose={() => setShowBackupList(false)}
+        onChange={refreshStatus}
+      />
     </>
   );
 }

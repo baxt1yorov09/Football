@@ -8,6 +8,7 @@ class MaintenanceModeMiddleware:
         '/api/auth/',
         '/api/admin/login',
         '/api/settings/system',
+        '/api/settings/maintenance-status',
         '/admin/',
         '/static/',
         '/media/',

@@ -18,6 +18,23 @@ def _is_admin(user):
     return getattr(user, 'role', None) in ('super_admin', 'region_admin') or user.is_staff
 
 
+class MaintenanceStatusView(APIView):
+    """Texnik xizmat rejimi holati — auth talab qilmaydi (banner uchun)."""
+    permission_classes = []
+    authentication_classes = []
+
+    def get(self, request):
+        try:
+            settings_obj = SystemSettings.load()
+            return Response({
+                'maintenance_mode': bool(settings_obj.maintenance_mode),
+                'system_name': settings_obj.system_name,
+                'updated_at': settings_obj.updated_at.isoformat() if settings_obj.updated_at else None,
+            })
+        except Exception:
+            return Response({'maintenance_mode': False})
+
+
 class SystemSettingsView(APIView):
     """Tizim sozlamalarini olish va yangilash (faqat admin)"""
     permission_classes = [IsAuthenticated]
@@ -175,6 +192,85 @@ class CleanLogsView(APIView):
             })
         except Exception as e:
             return Response({'detail': f'Tozalashda xatolik: {str(e)}'}, status=500)
+
+
+class BackupListView(APIView):
+    """Mavjud backup'lar ro'yxati (faqat admin)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not _is_admin(request.user):
+            return Response({'detail': 'Faqat administratorlar uchun'}, status=403)
+
+        backup_dir = Path(django_settings.BASE_DIR) / 'backups'
+        if not backup_dir.exists():
+            return Response({'backups': [], 'total_size_mb': 0})
+
+        items = []
+        total_size = 0
+        for f in sorted(backup_dir.glob('backup_*.*'), key=lambda p: p.stat().st_mtime, reverse=True):
+            try:
+                stat = f.stat()
+                size = stat.st_size
+                total_size += size
+                items.append({
+                    'name': f.name,
+                    'size_mb': round(size / (1024 * 1024), 2),
+                    'created_at': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                })
+            except Exception:
+                continue
+
+        return Response({
+            'backups': items,
+            'total_size_mb': round(total_size / (1024 * 1024), 2),
+            'count': len(items),
+        })
+
+
+class BackupDownloadView(APIView):
+    """Backup faylini yuklab olish."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, name):
+        from django.http import FileResponse, Http404
+
+        if not _is_admin(request.user):
+            return Response({'detail': 'Faqat administratorlar uchun'}, status=403)
+
+        # Path traversal himoyasi
+        if '/' in name or '\\' in name or '..' in name or not name.startswith('backup_'):
+            return Response({'detail': 'Noto\'g\'ri fayl nomi'}, status=400)
+
+        backup_dir = Path(django_settings.BASE_DIR) / 'backups'
+        f = backup_dir / name
+        if not f.exists() or not f.is_file():
+            raise Http404('Backup topilmadi')
+
+        return FileResponse(open(f, 'rb'), as_attachment=True, filename=f.name)
+
+
+class BackupDeleteView(APIView):
+    """Backup faylini o'chirish."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, name):
+        if not _is_admin(request.user):
+            return Response({'detail': 'Faqat administratorlar uchun'}, status=403)
+
+        if '/' in name or '\\' in name or '..' in name or not name.startswith('backup_'):
+            return Response({'detail': 'Noto\'g\'ri fayl nomi'}, status=400)
+
+        backup_dir = Path(django_settings.BASE_DIR) / 'backups'
+        f = backup_dir / name
+        if not f.exists():
+            return Response({'detail': 'Topilmadi'}, status=404)
+
+        try:
+            f.unlink()
+            return Response({'detail': 'O\'chirildi', 'name': name})
+        except Exception as e:
+            return Response({'detail': f'Xatolik: {e}'}, status=500)
 
 
 class SystemStatusView(APIView):

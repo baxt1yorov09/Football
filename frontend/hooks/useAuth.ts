@@ -63,6 +63,15 @@ export function useAuth() {
       localStorage.setItem('accessToken', access);
       localStorage.setItem('refreshToken', refresh);
 
+      // Eski admin sessionidan qolgan tokenlarni tozalash (sidebar leakage'ni oldini olish)
+      localStorage.removeItem('adminAccessToken');
+      localStorage.removeItem('adminRefreshToken');
+      localStorage.removeItem('adminUser');
+      if (typeof document !== 'undefined') {
+        document.cookie = 'adminAccessToken=; path=/; max-age=0';
+        document.cookie = 'adminRefreshToken=; path=/; max-age=0';
+      }
+
       // Set cookies for middleware compatibility
       document.cookie = `accessToken=${access}; path=/; max-age=900`; // 15 min
       document.cookie = `refreshToken=${refresh}; path=/; max-age=2592000`; // 30 days
@@ -96,8 +105,18 @@ export function useAuth() {
     } catch (error) {
       // Ignore logout errors
     } finally {
+      // Oddiy tokenlar
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      // Admin tokenlari (agar bor bo'lsa) — sidebar leakage'ni oldini olish
+      localStorage.removeItem('adminAccessToken');
+      localStorage.removeItem('adminRefreshToken');
+      localStorage.removeItem('adminUser');
+      // Cookie'lar
+      if (typeof document !== 'undefined') {
+        document.cookie = 'adminAccessToken=; path=/; max-age=0';
+        document.cookie = 'adminRefreshToken=; path=/; max-age=0';
+      }
       setState({
         user: null,
         isLoading: false,

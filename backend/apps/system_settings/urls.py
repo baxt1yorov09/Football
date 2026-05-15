@@ -2,6 +2,8 @@ from django.urls import path
 from .views import (
     SystemSettingsView, NotificationPreferencesView,
     RunBackupNowView, CleanLogsView, SystemStatusView,
+    BackupListView, BackupDownloadView, BackupDeleteView,
+    MaintenanceStatusView,
 )
 
 urlpatterns = [
@@ -15,4 +17,14 @@ urlpatterns = [
     path('clean-logs/', CleanLogsView.as_view()),
     path('status', SystemStatusView.as_view(), name='system-status'),
     path('status/', SystemStatusView.as_view()),
+    # Backup management
+    path('backups', BackupListView.as_view(), name='backup-list'),
+    path('backups/', BackupListView.as_view()),
+    path('backups/<str:name>/download', BackupDownloadView.as_view(), name='backup-download'),
+    path('backups/<str:name>/download/', BackupDownloadView.as_view()),
+    path('backups/<str:name>', BackupDeleteView.as_view(), name='backup-delete'),
+    path('backups/<str:name>/', BackupDeleteView.as_view()),
+    # Public — banner uchun (auth talab qilmaydi)
+    path('maintenance-status', MaintenanceStatusView.as_view(), name='maintenance-status'),
+    path('maintenance-status/', MaintenanceStatusView.as_view()),
 ]

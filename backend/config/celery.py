@@ -33,6 +33,16 @@ app.conf.beat_schedule = {
         'task': 'apps.notifications.tasks.task_check_expiring_licenses',
         'schedule': crontab(hour=9, minute=0),
     },
+    # Har kuni 02:00 — backup_schedule asosida avtomatik backup
+    'auto-backup-daily-check': {
+        'task': 'apps.system_settings.tasks.task_auto_backup',
+        'schedule': crontab(hour=2, minute=0),
+    },
+    # Har kuni 03:00 — log_retention asosida eski loglarni tozalash
+    'auto-clean-logs-daily': {
+        'task': 'apps.system_settings.tasks.task_auto_clean_logs',
+        'schedule': crontab(hour=3, minute=0),
+    },
 }
 
 

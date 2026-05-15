@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/Header';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { SmartSidebar } from '@/components/layout/SmartSidebar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -75,7 +75,7 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen bg-[#F4F6F9]">
       <Header />
-      <Sidebar />
+      <SmartSidebar />
 
       <main className="ml-64 pt-16">
         <div className="p-8 max-w-5xl">
