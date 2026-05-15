@@ -1,30 +1,103 @@
 """
-Application Signals - Email Notifications
+Application Signals — Multi-channel bildirishnomalar.
+
+Channels:  Email (existing) + SMS + Telegram + Web Bell (yangi)
+Dispatch:  Celery tasks (asinxron). Celery yo'q bo'lsa — sinxron fallback.
 """
-import os
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.core.mail import send_mail
+import logging
+
 from django.conf import settings
+from django.core.mail import send_mail
+from django.db import transaction
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
+
 from .models import Application, ApplicationTimeline
 
+logger = logging.getLogger(__name__)
 
+
+# ═══════════════════════════════════════════════════════════════════
+# STATUS O'ZGARISHINI ANIQLASH — pre_save da
+# ═══════════════════════════════════════════════════════════════════
+@receiver(pre_save, sender=Application)
+def _capture_old_status(sender, instance, **kwargs):
+    """DB'dagi avvalgi status'ni saqlab qo'yish."""
+    if not instance.pk:
+        instance._old_status = None
+        return
+    try:
+        old = Application.objects.only('status').get(pk=instance.pk)
+        instance._old_status = old.status
+    except Application.DoesNotExist:
+        instance._old_status = None
+
+
+# ═══════════════════════════════════════════════════════════════════
+# YANGI ARIZA — qabul qilindi
+# ═══════════════════════════════════════════════════════════════════
+@receiver(post_save, sender=Application)
+def application_created(sender, instance, created, **kwargs):
+    """Yangi ariza yaratilganda — barcha kanallarga xabar."""
+    if not created:
+        return
+
+    def _dispatch():
+        try:
+            from apps.notifications.tasks import task_application_received
+            task_application_received.delay(str(instance.id))
+        except Exception as e:
+            logger.exception(f"application_received dispatch xato: {e}")
+
+    transaction.on_commit(_dispatch)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# STATUS O'ZGARDI — har bir holat uchun mos task
+# ═══════════════════════════════════════════════════════════════════
 @receiver(post_save, sender=Application)
 def application_status_changed(sender, instance, created, **kwargs):
-    """Send email when application status changes"""
-    if not created:  # Only for updates
-        # Check if status was actually changed
+    """Status o'zgarganda mos task'ni Celery'ga yuborish."""
+    if created:
+        return  # `application_created` allaqachon ishladi
+
+    old_status = getattr(instance, '_old_status', None)
+    if old_status is None or old_status == instance.status:
+        return
+
+    # Mavjud email yuborishni saqlab qolamiz
+    try:
+        send_status_update_email(instance)
+    except Exception as e:
+        logger.exception(f"email xato: {e}")
+
+    # SMS + Telegram + Web Bell — Celery orqali
+    def _dispatch():
         try:
-            old_instance = Application.objects.get(pk=instance.pk)
-            if old_instance.status != instance.status:
-                send_status_update_email(instance)
-        except Application.DoesNotExist:
-            pass
+            from apps.notifications.tasks import (
+                task_application_under_review,
+                task_application_docs_required,
+                task_application_approved,
+                task_application_rejected,
+            )
+            task_map = {
+                'under_review':    task_application_under_review,
+                'additional_docs': task_application_docs_required,
+                'approved':        task_application_approved,
+                'rejected':        task_application_rejected,
+            }
+            task = task_map.get(instance.status)
+            if task:
+                task.delay(str(instance.id))
+        except Exception as e:
+            logger.exception(f"status_changed dispatch xato: {e}")
+
+    transaction.on_commit(_dispatch)
 
 
 @receiver(post_save, sender=ApplicationTimeline)
 def timeline_action_created(sender, instance, created, **kwargs):
-    """Send email when new timeline action is created"""
+    """Timeline yangilanganda email yuborish (mavjud)."""
     if created:
         send_timeline_notification(instance)
 
