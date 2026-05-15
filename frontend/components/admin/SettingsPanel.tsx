@@ -168,6 +168,7 @@ export default function SettingsPanel() {
   // i18n & theme hooks
   const { locale, setLocale, t } = useI18n();
   const { theme, setTheme } = useTheme();
+  const tp = useCallback((key: string, vars?: Record<string, string | number>) => t(`admin.settings_panel.${key}`, vars), [t]);
 
   const tabs = [
     { id: 'general', label: t('admin.tabs.general'), icon: Settings },
@@ -199,7 +200,7 @@ export default function SettingsPanel() {
         });
         setSystemStatus(statusData);
       } catch (err: any) {
-        showToast(`Yuklashda xatolik: ${err.message}`, 'error');
+        showToast(tp('toasts.load_error', { msg: err.message }), 'error');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -224,7 +225,7 @@ export default function SettingsPanel() {
       setTwoFaCode('');
       setShow2faModal(true);
     } catch (err: any) {
-      showToast(`2FA setup xatolik: ${err.message}`, 'error');
+      showToast(tp('toasts.twofa_setup_error', { msg: err.message }), 'error');
     } finally {
       setTwoFaLoading(false);
     }
@@ -232,7 +233,7 @@ export default function SettingsPanel() {
 
   const verify2FACode = async () => {
     if (!twoFaCode || twoFaCode.length !== 6) {
-      showToast('6 raqamli kod kiriting', 'error');
+      showToast(tp('toasts.code_required'), 'error');
       return;
     }
     try {
@@ -244,11 +245,11 @@ export default function SettingsPanel() {
       setTwoFaCode('');
       setTwoFaSetup(null);
       showToast(
-        twoFaMode === 'enable' ? '2FA muvaffaqiyatli yoqildi' : '2FA o\'chirildi',
+        twoFaMode === 'enable' ? tp('toasts.twofa_enabled') : tp('toasts.twofa_disabled'),
         'success'
       );
     } catch (err: any) {
-      showToast(`Tasdiqlashda xatolik: ${err.message}`, 'error');
+      showToast(tp('toasts.confirm_error', { msg: err.message }), 'error');
     } finally {
       setTwoFaLoading(false);
     }
@@ -266,10 +267,10 @@ export default function SettingsPanel() {
     try {
       setBackupRunning(true);
       const result = await api<any>('/api/settings/backup-now', 'POST');
-      showToast(`${result.detail} (${result.size_mb} MB)`, 'success');
+      showToast(tp('toasts.backup_done', { size: result.size_mb }), 'success');
       await refreshStatus();
     } catch (err: any) {
-      showToast(`Backup xatolik: ${err.message}`, 'error');
+      showToast(tp('toasts.backup_error', { msg: err.message }), 'error');
     } finally {
       setBackupRunning(false);
     }
@@ -277,14 +278,14 @@ export default function SettingsPanel() {
 
   // Clean logs
   const cleanLogs = async () => {
-    if (!confirm("Eski log fayllarini tozalashni xohlaysizmi?")) return;
+    if (!confirm(tp('system.clean_logs_confirm'))) return;
     try {
       setLogsRunning(true);
       const result = await api<any>('/api/settings/clean-logs', 'POST');
       showToast(result.detail, 'success');
       await refreshStatus();
     } catch (err: any) {
-      showToast(`Tozalashda xatolik: ${err.message}`, 'error');
+      showToast(tp('toasts.clean_error', { msg: err.message }), 'error');
     } finally {
       setLogsRunning(false);
     }
@@ -293,7 +294,7 @@ export default function SettingsPanel() {
   const copySecret = () => {
     if (twoFaSetup?.secret) {
       navigator.clipboard.writeText(twoFaSetup.secret);
-      showToast('Maxfiy kod nusxa olindi', 'success');
+      showToast(tp('toasts.copy_secret'), 'success');
     }
   };
 
@@ -305,7 +306,7 @@ export default function SettingsPanel() {
       const updated = await api<SystemSettings>('/api/settings/system', 'PATCH', settings);
       setSettings(updated);
       setSaveStatus('saved');
-      showToast('Sozlamalar saqlandi', 'success');
+      showToast(tp('toasts.settings_saved'), 'success');
       // Banner darhol yangilanishi uchun
       try {
         window.dispatchEvent(new CustomEvent('maintenance:changed'));
@@ -313,7 +314,7 @@ export default function SettingsPanel() {
       } catch {}
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err: any) {
-      showToast(`Saqlashda xatolik: ${err.message}`, 'error');
+      showToast(tp('toasts.save_error', { msg: err.message }), 'error');
     } finally {
       setSaving(false);
     }
@@ -330,9 +331,9 @@ export default function SettingsPanel() {
         in_app_enabled: p.in_app_enabled,
       }));
       await api('/api/settings/notifications', 'PATCH', items);
-      showToast('Bildirishnoma sozlamalari yangilandi', 'success');
+      showToast(tp('toasts.notif_saved'), 'success');
     } catch (err: any) {
-      showToast(`Saqlashda xatolik: ${err.message}`, 'error');
+      showToast(tp('toasts.save_error', { msg: err.message }), 'error');
     }
   };
 
@@ -340,15 +341,15 @@ export default function SettingsPanel() {
   // Change password
   const changePassword = async () => {
     if (!passwordForm.current || !passwordForm.new) {
-      showToast("Joriy va yangi parol kiritilishi kerak", 'error');
+      showToast(tp('toasts.password_required'), 'error');
       return;
     }
     if (passwordForm.new !== passwordForm.confirm) {
-      showToast("Yangi parol va tasdiqlash mos emas", 'error');
+      showToast(tp('toasts.password_mismatch'), 'error');
       return;
     }
     if (passwordForm.new.length < 8) {
-      showToast("Yangi parol kamida 8 ta belgi bo'lishi kerak", 'error');
+      showToast(tp('toasts.password_short'), 'error');
       return;
     }
     try {
@@ -358,9 +359,9 @@ export default function SettingsPanel() {
         new_password: passwordForm.new,
       });
       setPasswordForm({ current: '', new: '', confirm: '' });
-      showToast("Parol muvaffaqiyatli o'zgartirildi", 'success');
+      showToast(tp('toasts.password_changed'), 'success');
     } catch (err: any) {
-      showToast(`Parol o'zgartirishda xatolik: ${err.message}`, 'error');
+      showToast(tp('toasts.password_error', { msg: err.message }), 'error');
     } finally {
       setPwSaving(false);
     }
@@ -378,7 +379,7 @@ export default function SettingsPanel() {
     return (
       <div className="text-center py-12">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-        <p className="text-gray-700">Sozlamalarni yuklab bo'lmadi</p>
+        <p className="text-gray-700">{tp('load_error')}</p>
       </div>
     );
   }
@@ -390,12 +391,12 @@ export default function SettingsPanel() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Sozlamalar</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{tp('title')}</h1>
             <p className="text-gray-500 mt-1">
-              Tizim sozlamalarini boshqarish
+              {tp('subtitle')}
               {settings.updated_at && (
                 <span className="ml-2 text-xs text-gray-400">
-                  • Oxirgi yangilanish: {new Date(settings.updated_at).toLocaleString('uz-UZ')}
+                  • {tp('last_update')}: {new Date(settings.updated_at).toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}
                   {settings.updated_by_name && ` • ${settings.updated_by_name}`}
                 </span>
               )}
@@ -414,7 +415,7 @@ export default function SettingsPanel() {
               {saving ? <RefreshCw className="w-5 h-5 animate-spin" />
                 : saveStatus === 'saved' ? <CheckCircle className="w-5 h-5" />
                 : <Save className="w-5 h-5" />}
-              {saving ? 'Saqlanmoqda...' : saveStatus === 'saved' ? 'Saqlandi!' : 'Saqlash'}
+              {saving ? tp('saving') : saveStatus === 'saved' ? tp('saved') : tp('save')}
             </button>
           )}
         </div>
@@ -462,15 +463,15 @@ export default function SettingsPanel() {
                         <Award className="w-8 h-8" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Tizim ma'lumotlari</h3>
-                        <p className="text-sm text-gray-500">Asosiy tizim sozlamalari</p>
+                        <h3 className="text-lg font-semibold text-gray-900">{tp('general.section_title')}</h3>
+                        <p className="text-sm text-gray-500">{tp('general.section_subtitle')}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                          <Award className="w-4 h-4" /> Tizim nomi
+                          <Award className="w-4 h-4" /> {tp('general.system_name')}
                         </label>
                         <input
                           type="text"
@@ -481,7 +482,7 @@ export default function SettingsPanel() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                          <Mail className="w-4 h-4" /> Admin email
+                          <Mail className="w-4 h-4" /> {tp('general.admin_email')}
                         </label>
                         <input
                           type="email"
@@ -492,7 +493,7 @@ export default function SettingsPanel() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                          <Phone className="w-4 h-4" /> Telefon
+                          <Phone className="w-4 h-4" /> {tp('general.phone')}
                         </label>
                         <input
                           type="tel"
@@ -503,7 +504,7 @@ export default function SettingsPanel() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                          <Clock className="w-4 h-4" /> Vaqt zonasi
+                          <Clock className="w-4 h-4" /> {tp('general.timezone')}
                         </label>
                         <select
                           value={settings.timezone}
@@ -519,7 +520,7 @@ export default function SettingsPanel() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Tizim tavsifi</label>
+                      <label className="text-sm font-medium text-gray-700">{tp('general.description')}</label>
                       <textarea
                         rows={3}
                         value={settings.description}
@@ -534,7 +535,7 @@ export default function SettingsPanel() {
                 {activeTab === 'security' && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 pb-4 border-b border-gray-100 flex items-center gap-2">
-                      <Shield className="w-5 h-5 text-[#1A56A0]" /> Xavfsizlik sozlamalari
+                      <Shield className="w-5 h-5 text-[#1A56A0]" /> {tp('security.title')}
                     </h3>
 
                     <div className="space-y-4">
@@ -546,13 +547,13 @@ export default function SettingsPanel() {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900">
-                              Ikki bosqichli autentifikatsiya (2FA)
+                              {tp('security.twofa_label')}
                               {userProfile.two_factor_enabled && (
-                                <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Yoqilgan</span>
+                                <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">{tp('security.twofa_enabled_badge')}</span>
                               )}
                             </p>
                             <p className="text-sm text-gray-500 mt-0.5">
-                              Authenticator ilovalari (Google Authenticator, Authy) orqali tasdiqlash
+                              {tp('security.twofa_desc')}
                             </p>
                           </div>
                         </div>
@@ -567,15 +568,15 @@ export default function SettingsPanel() {
                           }`}
                         >
                           {twoFaLoading ? <RefreshCw className="w-4 h-4 animate-spin" />
-                            : userProfile.two_factor_enabled ? "O'chirish" : "Yoqish"}
+                            : userProfile.two_factor_enabled ? tp('security.disable') : tp('security.enable')}
                         </button>
                       </div>
 
                       {/* Strong password (system-wide) */}
                       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                         <div>
-                          <p className="font-medium text-gray-900">Kuchli parol talabi</p>
-                          <p className="text-sm text-gray-500">Kamida 8 ta belgi, raqam va harf</p>
+                          <p className="font-medium text-gray-900">{tp('security.strong_password')}</p>
+                          <p className="text-sm text-gray-500">{tp('security.strong_password_desc')}</p>
                         </div>
                         <Toggle
                           enabled={settings.strong_password_required}
@@ -585,7 +586,7 @@ export default function SettingsPanel() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">Maks. login urinishlari</label>
+                          <label className="text-sm font-medium text-gray-700">{tp('security.max_login')}</label>
                           <input
                             type="number"
                             min={1}
@@ -594,10 +595,10 @@ export default function SettingsPanel() {
                             onChange={(e) => setSettings({ ...settings, max_login_attempts: parseInt(e.target.value) || 5 })}
                             className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
                           />
-                          <p className="text-xs text-gray-500">Bloklashdan oldingi ruxsat berilgan urinishlar</p>
+                          <p className="text-xs text-gray-500">{tp('security.max_login_desc')}</p>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">Seans vaqti (daqiqa)</label>
+                          <label className="text-sm font-medium text-gray-700">{tp('security.session_timeout')}</label>
                           <input
                             type="number"
                             min={5}
@@ -606,20 +607,20 @@ export default function SettingsPanel() {
                             onChange={(e) => setSettings({ ...settings, session_timeout_minutes: parseInt(e.target.value) || 30 })}
                             className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
                           />
-                          <p className="text-xs text-gray-500">Avtomatik chiqishdan oldingi vaqt</p>
+                          <p className="text-xs text-gray-500">{tp('security.session_timeout_desc')}</p>
                         </div>
                       </div>
                     </div>
 
                     <div className="pt-6 border-t border-gray-100">
                       <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                        <Lock className="w-4 h-4" /> Parolni o'zgartirish
+                        <Lock className="w-4 h-4" /> {tp('security.change_password')}
                       </h4>
                       <div className="space-y-4 max-w-md">
                         <div className="relative">
                           <input
                             type={showCurrent ? 'text' : 'password'}
-                            placeholder="Joriy parol"
+                            placeholder={tp('security.current_password')}
                             value={passwordForm.current}
                             onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
                             className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
@@ -635,7 +636,7 @@ export default function SettingsPanel() {
                         <div className="relative">
                           <input
                             type={showNew ? 'text' : 'password'}
-                            placeholder="Yangi parol (kamida 8 ta belgi)"
+                            placeholder={tp('security.new_password')}
                             value={passwordForm.new}
                             onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
                             className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
@@ -650,7 +651,7 @@ export default function SettingsPanel() {
                         </div>
                         <input
                           type={showNew ? 'text' : 'password'}
-                          placeholder="Yangi parolni tasdiqlash"
+                          placeholder={tp('security.confirm_password')}
                           value={passwordForm.confirm}
                           onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
                           className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
@@ -661,7 +662,7 @@ export default function SettingsPanel() {
                           className="px-6 py-2.5 bg-[#1A56A0] text-white rounded-lg hover:bg-[#0D3B6E] transition-all disabled:opacity-60 flex items-center gap-2"
                         >
                           {pwSaving && <RefreshCw className="w-4 h-4 animate-spin" />}
-                          Parolni yangilash
+                          {tp('security.update_password')}
                         </button>
                       </div>
                     </div>
@@ -672,10 +673,10 @@ export default function SettingsPanel() {
                 {activeTab === 'notifications' && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 pb-4 border-b border-gray-100 flex items-center gap-2">
-                      <Bell className="w-5 h-5 text-[#1A56A0]" /> Bildirishnoma sozlamalari
+                      <Bell className="w-5 h-5 text-[#1A56A0]" /> {tp('notifications.title')}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Har bir bildirishnoma turi uchun yetkazib berish kanallarini sozlang. O'zgarishlar avtomatik saqlanadi.
+                      {tp('notifications.subtitle')}
                     </p>
 
                     <div className="space-y-3">
@@ -686,9 +687,9 @@ export default function SettingsPanel() {
                           </div>
                           <div className="flex flex-wrap gap-3">
                             {[
-                              { key: 'in_app_enabled' as const, label: 'Tizim ichida' },
-                              { key: 'email_enabled' as const, label: 'Email' },
-                              { key: 'telegram_enabled' as const, label: 'Telegram' },
+                              { key: 'in_app_enabled' as const, label: tp('notifications.channel_in_app') },
+                              { key: 'email_enabled' as const, label: tp('notifications.channel_email') },
+                              { key: 'telegram_enabled' as const, label: tp('notifications.channel_telegram') },
                             ].map(channel => (
                               <label key={channel.key} className="flex items-center gap-2 cursor-pointer px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-[#1A56A0]">
                                 <input
@@ -716,43 +717,43 @@ export default function SettingsPanel() {
                 {activeTab === 'system' && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 pb-4 border-b border-gray-100 flex items-center gap-2">
-                      <Database className="w-5 h-5 text-[#1A56A0]" /> Tizim sozlamalari
+                      <Database className="w-5 h-5 text-[#1A56A0]" /> {tp('system.title')}
                     </h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Ma'lumotlar bazasi backup</label>
+                        <label className="text-sm font-medium text-gray-700">{tp('system.backup_schedule')}</label>
                         <select
                           value={settings.backup_schedule}
                           onChange={(e) => setSettings({ ...settings, backup_schedule: e.target.value })}
                           className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
                         >
-                          <option value="daily">Har kuni</option>
-                          <option value="weekly">Haftada bir marta</option>
-                          <option value="monthly">Oyda bir marta</option>
-                          <option value="disabled">O'chirilgan</option>
+                          <option value="daily">{tp('system.backup_daily')}</option>
+                          <option value="weekly">{tp('system.backup_weekly')}</option>
+                          <option value="monthly">{tp('system.backup_monthly')}</option>
+                          <option value="disabled">{tp('system.backup_disabled')}</option>
                         </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Log saqlash muddati</label>
+                        <label className="text-sm font-medium text-gray-700">{tp('system.log_retention')}</label>
                         <select
                           value={settings.log_retention}
                           onChange={(e) => setSettings({ ...settings, log_retention: e.target.value })}
                           className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
                         >
-                          <option value="30">30 kun</option>
-                          <option value="90">90 kun</option>
-                          <option value="365">1 yil</option>
-                          <option value="forever">Cheksiz</option>
+                          <option value="30">{tp('system.retention_30')}</option>
+                          <option value="90">{tp('system.retention_90')}</option>
+                          <option value="365">{tp('system.retention_365')}</option>
+                          <option value="forever">{tp('system.retention_forever')}</option>
                         </select>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-xl">
                       <div>
-                        <p className="font-medium text-orange-900">Texnik xizmat ko'rsatish rejimi</p>
+                        <p className="font-medium text-orange-900">{tp('system.maintenance_title')}</p>
                         <p className="text-sm text-orange-800 mt-1">
-                          Yoqilganda faqat administratorlar tizimga kira oladi
+                          {tp('system.maintenance_desc')}
                         </p>
                       </div>
                       <Toggle
@@ -768,7 +769,7 @@ export default function SettingsPanel() {
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
                               <HardDrive className="w-5 h-5 text-blue-600" />
-                              <p className="font-medium text-blue-900">Backup statusi</p>
+                              <p className="font-medium text-blue-900">{tp('system.backup_status')}</p>
                             </div>
                             {systemStatus.backup_count > 0 && (
                               <button
@@ -776,16 +777,16 @@ export default function SettingsPanel() {
                                 className="text-xs font-medium text-blue-700 hover:text-blue-900 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors"
                               >
                                 <List className="w-3.5 h-3.5" />
-                                Ko'rish
+                                {tp('system.backup_view')}
                               </button>
                             )}
                           </div>
                           <p className="text-sm text-blue-800">
-                            Jami: <strong>{systemStatus.backup_count}</strong> ta backup
+                            {tp('system.backup_total', { n: systemStatus.backup_count })}
                           </p>
                           {systemStatus.last_backup && (
                             <p className="text-xs text-blue-700 mt-1">
-                              Oxirgi: {new Date(systemStatus.last_backup).toLocaleString('uz-UZ')}
+                              {tp('system.backup_last', { date: new Date(systemStatus.last_backup).toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ') })}
                             </p>
                           )}
                           <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -797,7 +798,7 @@ export default function SettingsPanel() {
                               {backupRunning
                                 ? <RefreshCw className="w-4 h-4 animate-spin" />
                                 : <Download className="w-4 h-4" />}
-                              Hozir backup yaratish
+                              {tp('system.backup_run_now')}
                             </button>
                             {systemStatus.backup_count > 0 && (
                               <button
@@ -805,7 +806,7 @@ export default function SettingsPanel() {
                                 className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-300 text-blue-700 text-sm rounded-lg hover:bg-blue-100"
                               >
                                 <List className="w-4 h-4" />
-                                Ro'yxatni ochish
+                                {tp('system.backup_open_list')}
                               </button>
                             )}
                           </div>
@@ -814,10 +815,10 @@ export default function SettingsPanel() {
                         <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
                           <div className="flex items-center gap-3 mb-2">
                             <Database className="w-5 h-5 text-purple-600" />
-                            <p className="font-medium text-purple-900">Loglar</p>
+                            <p className="font-medium text-purple-900">{tp('system.logs')}</p>
                           </div>
                           <p className="text-sm text-purple-800">
-                            Jami: <strong>{systemStatus.log_count}</strong> ta fayl ({systemStatus.log_size_mb} MB)
+                            {tp('system.logs_total', { n: systemStatus.log_count, size: systemStatus.log_size_mb })}
                           </p>
                           <button
                             onClick={cleanLogs}
@@ -827,7 +828,7 @@ export default function SettingsPanel() {
                             {logsRunning
                               ? <RefreshCw className="w-4 h-4 animate-spin" />
                               : <Trash2 className="w-4 h-4" />}
-                            Eski loglarni tozalash
+                            {tp('system.clean_logs')}
                           </button>
                         </div>
                       </div>
@@ -837,10 +838,9 @@ export default function SettingsPanel() {
                       <div className="flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
                         <div>
-                          <p className="font-medium text-yellow-900">E'tibor!</p>
+                          <p className="font-medium text-yellow-900">{tp('system.warning_title')}</p>
                           <p className="text-sm text-yellow-800 mt-1">
-                            Texnik xizmat rejimini yoqishdan oldin barcha foydalanuvchilarga ogohlantirish yuboring.
-                            Rejim faqat siz uni o'chirgandan keyin tugaydi.
+                            {tp('system.warning_text')}
                           </p>
                         </div>
                       </div>
@@ -852,14 +852,14 @@ export default function SettingsPanel() {
                 {activeTab === 'appearance' && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 pb-4 border-b border-gray-100 flex items-center gap-2">
-                      <Globe className="w-5 h-5 text-[#1A56A0]" /> Ko'rinish sozlamalari
+                      <Globe className="w-5 h-5 text-[#1A56A0]" /> {tp('appearance.title')}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Bu sozlamalar shaxsiy va avtomatik saqlanadi.
+                      {tp('appearance.subtitle')}
                     </p>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Til (darhol qo'llaniladi)</label>
+                      <label className="text-sm font-medium text-gray-700">{tp('appearance.language')}</label>
                       <div className="flex gap-3 flex-wrap">
                         {[
                           { code: 'uz' as const, label: "O'zbek", flag: '🇺🇿' },
@@ -869,7 +869,7 @@ export default function SettingsPanel() {
                             key={lang.code}
                             onClick={async () => {
                               await setLocale(lang.code);
-                              showToast(`Til o'zgartirildi: ${lang.label}`, 'success');
+                              showToast(tp('toasts.language_changed', { lang: lang.label }), 'success');
                             }}
                             className={`px-4 py-2 rounded-lg border transition-all flex items-center gap-2 ${
                               locale === lang.code
@@ -882,22 +882,22 @@ export default function SettingsPanel() {
                           </button>
                         ))}
                       </div>
-                      <p className="text-xs text-gray-500">Tanlangan til hozir va keyingi seanslarda saqlanadi</p>
+                      <p className="text-xs text-gray-500">{tp('appearance.language_hint')}</p>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Mavzu (darhol qo'llaniladi)</label>
+                      <label className="text-sm font-medium text-gray-700">{tp('appearance.theme')}</label>
                       <div className="flex gap-3 flex-wrap">
                         {[
-                          { code: 'light' as Theme, label: "Yorug'", icon: '☀️' },
-                          { code: 'dark' as Theme, label: "Qorong'i", icon: '🌙' },
-                          { code: 'auto' as Theme, label: 'Avtomatik', icon: '🖥️' },
+                          { code: 'light' as Theme, label: tp('appearance.light'), icon: '☀️' },
+                          { code: 'dark' as Theme, label: tp('appearance.dark'), icon: '🌙' },
+                          { code: 'auto' as Theme, label: tp('appearance.auto'), icon: '🖥️' },
                         ].map((th) => (
                           <button
                             key={th.code}
                             onClick={() => {
                               setTheme(th.code);
-                              showToast(`Mavzu: ${th.label}`, 'success');
+                              showToast(tp('toasts.theme_changed', { theme: th.label }), 'success');
                             }}
                             className={`px-4 py-2 rounded-lg border transition-all flex items-center gap-2 ${
                               theme === th.code
@@ -911,7 +911,7 @@ export default function SettingsPanel() {
                         ))}
                       </div>
                       <p className="text-xs text-gray-500">
-                        Avtomatik rejimda mavzu sizning operatsion tizim sozlamalariga moslashadi
+                        {tp('appearance.theme_hint')}
                       </p>
                     </div>
                   </div>
@@ -942,7 +942,7 @@ export default function SettingsPanel() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <Smartphone className="w-6 h-6 text-[#1A56A0]" />
-                  {twoFaMode === 'enable' ? '2FA sozlash' : '2FA o\'chirish'}
+                  {twoFaMode === 'enable' ? tp('twofa_modal.setup_title') : tp('twofa_modal.disable_title')}
                 </h3>
                 <button
                   onClick={() => setShow2faModal(false)}
@@ -956,9 +956,9 @@ export default function SettingsPanel() {
               {twoFaMode === 'enable' && twoFaSetup ? (
                 <div className="space-y-4">
                   <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                    <li>Telefoningizda <strong>Google Authenticator</strong> yoki <strong>Authy</strong> o'rnating</li>
-                    <li>QR kodni ilovada skanerlang yoki maxfiy kodni qo'lda kiriting</li>
-                    <li>Ilova ko'rsatgan 6 raqamli kodni quyida kiriting</li>
+                    <li>{tp('twofa_modal.step1')}</li>
+                    <li>{tp('twofa_modal.step2')}</li>
+                    <li>{tp('twofa_modal.step3')}</li>
                   </ol>
 
                   <div className="flex flex-col items-center gap-3 p-4 bg-gray-50 rounded-xl">
@@ -968,7 +968,7 @@ export default function SettingsPanel() {
                       className="w-48 h-48 bg-white p-2 rounded-lg shadow"
                     />
                     <div className="w-full">
-                      <p className="text-xs text-gray-500 text-center mb-1">Yoki maxfiy kodni qo'lda kiriting:</p>
+                      <p className="text-xs text-gray-500 text-center mb-1">{tp('twofa_modal.secret_label')}</p>
                       <div className="flex items-center gap-2">
                         <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-mono text-center break-all">
                           {twoFaSetup.secret}
@@ -976,7 +976,7 @@ export default function SettingsPanel() {
                         <button
                           onClick={copySecret}
                           className="p-2 text-gray-500 hover:text-[#1A56A0] hover:bg-blue-50 rounded-lg transition-all"
-                          title="Nusxalash"
+                          title={tp('twofa_modal.copy')}
                         >
                           <Copy className="w-4 h-4" />
                         </button>
@@ -986,7 +986,7 @@ export default function SettingsPanel() {
 
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-1 block">
-                      6 raqamli kod
+                      {tp('twofa_modal.code_label')}
                     </label>
                     <input
                       type="text"
@@ -1004,7 +1004,7 @@ export default function SettingsPanel() {
                 <div className="space-y-4">
                   <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-sm text-red-800">
-                      2FA'ni o'chirish uchun authenticator ilovangizdan joriy 6 raqamli kodni kiriting.
+                      {tp('twofa_modal.disable_warning')}
                     </p>
                   </div>
                   <input
@@ -1026,7 +1026,7 @@ export default function SettingsPanel() {
                   disabled={twoFaLoading}
                   className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Bekor qilish
+                  {tp('twofa_modal.cancel')}
                 </button>
                 <button
                   onClick={verify2FACode}
@@ -1036,7 +1036,7 @@ export default function SettingsPanel() {
                   }`}
                 >
                   {twoFaLoading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                  {twoFaMode === 'enable' ? 'Yoqish' : "O'chirish"}
+                  {twoFaMode === 'enable' ? tp('security.enable') : tp('security.disable')}
                 </button>
               </div>
             </motion.div>

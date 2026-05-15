@@ -24,6 +24,57 @@ logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────
+# PREFERENCE LOOKUP — foydalanuvchi qaysi kanallarni yoqtirganini aniqlash
+# ─────────────────────────────────────────────────────────────────────
+# Hodisa turi → NotificationPreference kategoriyasi mapping
+_EVENT_TO_PREF_CATEGORY = {
+    # Application events (foydalanuvchi o'z arizasi haqida)
+    'app_received': 'new_application',
+    'app_under_review': 'new_application',
+    'app_approved': 'new_application',
+    'app_rejected': 'new_application',
+    'docs_required': 'new_application',
+    # License expiry
+    'expiry_30': 'license_expiring',
+    'expiry_14': 'license_expiring',
+    'expiry_7': 'license_expiring',
+    'expiry': 'license_expiring',
+    'lic_expired': 'license_expiring',
+    # Security / suspension / revoke
+    'lic_suspended': 'security_alerts',
+    'lic_revoked': 'security_alerts',
+    # Admin-side
+    'admin_new_application': 'new_application',
+    'admin_license_expiring': 'license_expiring',
+    # System / monthly
+    'system': 'system_updates',
+    'monthly_report': 'monthly_reports',
+}
+
+
+def _get_user_pref(user, category: str):
+    """Foydalanuvchining ushbu kategoriyadagi preferens'ini qaytaradi.
+
+    Mavjud bo'lmasa default (hammasi yoqilgan) qaytaradi.
+    """
+    try:
+        from apps.system_settings.models import NotificationPreference
+        pref = NotificationPreference.objects.filter(
+            user=user, notification_type=category
+        ).first()
+        if pref:
+            return {
+                'in_app': bool(pref.in_app_enabled),
+                'email': bool(pref.email_enabled),
+                'telegram': bool(pref.telegram_enabled),
+            }
+    except Exception as e:
+        logger.warning(f"NotificationPreference o'qishda xato: {e}")
+    # Default — hammasi yoqilgan (preference yaratilmagan bo'lsa)
+    return {'in_app': True, 'email': True, 'telegram': True}
+
+
+# ─────────────────────────────────────────────────────────────────────
 # LOW-LEVEL CHANNEL HELPERS
 # ─────────────────────────────────────────────────────────────────────
 def _send_sms(phone: str, message: str) -> dict:
@@ -84,28 +135,46 @@ class NotificationService:
         web_title: Optional[str] = None,
         web_message: Optional[str] = None,
     ):
-        """Barcha kanallarga yuborib, har birini DB ga log qiladi."""
+        """Barcha kanallarga yuborib, har birini DB ga log qiladi.
+
+        Foydalanuvchining NotificationPreference sozlamalariga rioya qiladi:
+        - email_enabled → SMS / Email kanali
+        - telegram_enabled → Telegram kanali
+        - in_app_enabled → Web bell (DB notification)
+        """
         if not user or not getattr(user, 'notifications_enabled', True):
             return
 
-        # 1. SMS
-        if sms_text and getattr(user, 'phone', None):
+        # User'ning ushbu kategoriya uchun preferens'ini olish
+        category = _EVENT_TO_PREF_CATEGORY.get(notif_type)
+        prefs = _get_user_pref(user, category) if category else {
+            'in_app': True, 'email': True, 'telegram': True,
+        }
+
+        # 1. SMS (email_enabled bayrog'i SMS/email kanaliga mos)
+        if sms_text and getattr(user, 'phone', None) and prefs.get('email', True):
             res = _send_sms(user.phone, sms_text)
             if not res.get('success'):
                 logger.warning(f"SMS muvaffaqiyatsiz [{notif_type}]: {res.get('error')}")
+        elif sms_text and not prefs.get('email', True):
+            logger.debug(f"SMS skipped (pref off) [{notif_type}] user={user.id}")
 
         # 2. Telegram
-        if telegram_text:
+        if telegram_text and prefs.get('telegram', True):
             res = _send_telegram(user, telegram_text, telegram_keyboard)
             if not res.get('success'):
                 logger.info(f"Telegram skip/xato [{notif_type}]: {res.get('error')}")
+        elif telegram_text and not prefs.get('telegram', True):
+            logger.debug(f"Telegram skipped (pref off) [{notif_type}] user={user.id}")
 
         # 3. Web Bell
-        if web_title and web_message:
+        if web_title and web_message and prefs.get('in_app', True):
             try:
                 _create_web_notification(user, notif_type, web_title, web_message)
             except Exception as e:
                 logger.exception(f"Web notification xato [{notif_type}]: {e}")
+        elif web_title and not prefs.get('in_app', True):
+            logger.debug(f"Web bell skipped (pref off) [{notif_type}] user={user.id}")
 
     # ─── APPLICATION EVENTS ───────────────────────────────────────────
     def application_received(self, application):
@@ -393,26 +462,30 @@ class NotificationService:
             message = f"#{app_id} — {applicant}, {lic_name}"
 
             for admin in self._get_admins(region=getattr(application, 'region', None)):
+                prefs = _get_user_pref(admin, 'new_application')
+
                 # admin user'iga web bell yozamiz
-                try:
-                    _create_web_notification(admin, 'system', title, message)
-                except Exception as e:
-                    logger.warning(f"admin web notif xato: {e}")
+                if prefs.get('in_app', True):
+                    try:
+                        _create_web_notification(admin, 'system', title, message)
+                    except Exception as e:
+                        logger.warning(f"admin web notif xato: {e}")
 
                 # Super_admin'larga Telegram ham
-                tg_text = (
-                    f"📥 *Yangi ariza keldi*\n\n"
-                    f"🆔 ID: `#{app_id}`\n"
-                    f"👤 Murabbiy: *{applicant}*\n"
-                    f"📄 Litsenziya: *{lic_name}*\n"
-                )
-                tg_kb = {
-                    'inline_keyboard': [[{
-                        'text': "🛠 Admin panel",
-                        'url': f"{self.WEB_URL}/admin/applications",
-                    }]]
-                }
-                _send_telegram(admin, tg_text, tg_kb)
+                if prefs.get('telegram', True):
+                    tg_text = (
+                        f"📥 *Yangi ariza keldi*\n\n"
+                        f"🆔 ID: `#{app_id}`\n"
+                        f"👤 Murabbiy: *{applicant}*\n"
+                        f"📄 Litsenziya: *{lic_name}*\n"
+                    )
+                    tg_kb = {
+                        'inline_keyboard': [[{
+                            'text': "🛠 Admin panel",
+                            'url': f"{self.WEB_URL}/admin/applications",
+                        }]]
+                    }
+                    _send_telegram(admin, tg_text, tg_kb)
         except Exception as e:
             logger.exception(f"notify_admins_new_application xato: {e}")
 
@@ -425,6 +498,9 @@ class NotificationService:
             message = f"{user_name}: {lic_name} ({license_obj.license_number})"
 
             for admin in self._get_admins(region=getattr(license_obj, 'region', None)):
+                prefs = _get_user_pref(admin, 'license_expiring')
+                if not prefs.get('in_app', True):
+                    continue
                 try:
                     _create_web_notification(admin, 'system', title, message)
                 except Exception as e:
