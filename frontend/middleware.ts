@@ -14,8 +14,14 @@ export function middleware(request: NextRequest) {
 
   if (!isAdminPath) return NextResponse.next();
 
-  // Login sahifasiga ruxsat — token bo'lmasa ham kiradi
-  if (pathname === ADMIN_LOGIN_PATH) return NextResponse.next();
+  // Login, forgot-password va reset-password sahifalariga ruxsat
+  if (
+    pathname === ADMIN_LOGIN_PATH ||
+    pathname === '/admin/forgot-password' ||
+    pathname.startsWith('/admin/reset-password')
+  ) {
+    return NextResponse.next();
+  }
 
   // Cookie dan token tekshiramiz (localStorage server da o'qilmaydi)
   const adminToken = request.cookies.get('adminAccessToken')?.value;

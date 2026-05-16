@@ -349,3 +349,153 @@ class AdminLoginView(APIView):
                 'region': user_obj.region.name_uz if user_obj.region else None,
             }
         })
+
+
+# ══════════════════════════════════════════════════════════════════
+# ADMIN PASSWORD RESET (Forgot Password)
+# ══════════════════════════════════════════════════════════════════
+ADMIN_ROLES = ('super_admin', 'region_admin', 'viewer')
+
+
+class AdminForgotPasswordView(APIView):
+    """Admin parolini tiklash uchun emailga xavfsiz havola yuboradi.
+
+    Xavfsizlik: foydalanuvchi mavjudligini oshkor qilmaslik uchun
+    email topilmasa ham 200 qaytaradi.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+        from django.core.mail import send_mail
+        import logging
+        logger = logging.getLogger(__name__)
+
+        email = str(request.data.get('email', '')).strip().lower()
+        if not email or '@' not in email:
+            return Response(
+                {'detail': "Yaroqli email kiriting"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Generic success javobi — foydalanuvchi bor-yo'qligini oshkor qilmaymiz
+        generic_ok = Response(
+            {'detail': "Agar ushbu email tizimda ro'yxatdan o'tgan bo'lsa, "
+                       "parolni tiklash havolasi yuborildi."},
+            status=status.HTTP_200_OK,
+        )
+
+        user = User.objects.filter(
+            email__iexact=email,
+            is_active=True,
+            deleted_at__isnull=True,
+        ).first()
+
+        if not user or user.role not in ADMIN_ROLES:
+            return generic_ok
+
+        # Token + uid yaratamiz
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        # Frontend URL
+        frontend_url = (
+            getattr(settings, 'FRONTEND_URL', None)
+            or request.META.get('HTTP_ORIGIN')
+            or 'http://localhost:3000'
+        )
+        reset_link = f"{frontend_url.rstrip('/')}/admin/reset-password/{uid}/{token}"
+
+        subject = "UFF Admin — Parolni tiklash"
+        body = (
+            f"Assalomu alaykum, {user.full_name or user.email}!\n\n"
+            f"Sizning UFF admin hisobingiz uchun parolni tiklash so'rovi qabul qilindi.\n"
+            f"Quyidagi havolaga bosib yangi parol o'rnatishingiz mumkin (24 soat amal qiladi):\n\n"
+            f"{reset_link}\n\n"
+            f"Agar siz bu so'rovni yubormagan bo'lsangiz, ushbu xatni e'tiborsiz qoldiring.\n"
+        )
+
+        try:
+            send_mail(
+                subject=subject,
+                message=body,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@uff.local'),
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            logger.error(f"Forgot-password email yuborilmadi ({user.email}): {e}")
+            # Baribir generic_ok qaytaramiz
+
+        return generic_ok
+
+
+class AdminResetPasswordView(APIView):
+    """uid + token + new_password orqali admin parolini almashtiradi."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_decode
+        from django.utils.encoding import force_str
+
+        uid_b64 = request.data.get('uid', '')
+        token = request.data.get('token', '')
+        new_password = str(request.data.get('new_password', ''))
+
+        # Parolni tekshirish (frontend bilan bir xil qoidalar)
+        if len(new_password) < 8:
+            return Response(
+                {'new_password': ['Kamida 8 ta belgi']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not any(c.isupper() for c in new_password):
+            return Response(
+                {'new_password': ['Kamida 1 ta katta harf kerak']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not any(c.isdigit() for c in new_password):
+            return Response(
+                {'new_password': ['Kamida 1 ta raqam kerak']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # uid → user
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid_b64))
+            user = User.objects.get(pk=user_id, is_active=True, deleted_at__isnull=True)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response(
+                {'detail': "Havola yaroqsiz yoki muddati o'tgan"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user.role not in ADMIN_ROLES:
+            return Response(
+                {'detail': "Bu havola admin foydalanuvchi uchun emas"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not default_token_generator.check_token(user, token):
+            return Response(
+                {'detail': "Havola yaroqsiz yoki muddati o'tgan"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+
+        # Eski JWT tokenlarni blacklist qilish
+        try:
+            from rest_framework_simplejwt.token_blacklist.models import (
+                BlacklistedToken,
+                OutstandingToken,
+            )
+            for t in OutstandingToken.objects.filter(user=user):
+                BlacklistedToken.objects.get_or_create(token=t)
+        except Exception:
+            pass
+
+        return Response({'detail': "Parol muvaffaqiyatli yangilandi"})

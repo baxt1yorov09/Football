@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     SendOTPView, VerifyOTPView, UserProfileView, LogoutView,
     RegionsListView, AdminLoginView, TwoFactorLoginView,
+    AdminForgotPasswordView, AdminResetPasswordView,
 )
 
 urlpatterns = [
@@ -30,4 +31,10 @@ urlpatterns = [
 
     # Admin Authentication
     path('admin/login', AdminLoginView.as_view(), name='admin-login'),
+
+    # Admin password reset (forgot password)
+    path('admin/forgot-password', AdminForgotPasswordView.as_view(), name='admin-forgot-password'),
+    path('admin/forgot-password/', AdminForgotPasswordView.as_view()),
+    path('admin/reset-password', AdminResetPasswordView.as_view(), name='admin-reset-password'),
+    path('admin/reset-password/', AdminResetPasswordView.as_view()),
 ]
