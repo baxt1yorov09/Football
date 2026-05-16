@@ -141,6 +141,18 @@ class VerifyOTPView(APIView):
             )
             is_new_user = True
 
+        # ── 2FA gate ─────────────────────────────────────────────
+        # Agar foydalanuvchi 2FA yoqgan bo'lsa, JWT tokenlar BERILMAYDI.
+        # Buning o'rniga vaqtinchalik `two_factor_token` qaytariladi va
+        # frontend foydalanuvchidan TOTP yoki recovery kod so'raydi.
+        if user.two_factor_enabled and user.totp_secret:
+            from apps.users.two_factor import issue_two_factor_token, TWO_FACTOR_TOKEN_TTL
+            return Response({
+                'requires_2fa': True,
+                'two_factor_token': issue_two_factor_token(user),
+                'expires_in': TWO_FACTOR_TOKEN_TTL,
+            }, status=status.HTTP_200_OK)
+
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
 
@@ -152,6 +164,57 @@ class VerifyOTPView(APIView):
             'refresh': str(refresh),
             'user': user_serializer.data,
             'is_new_user': is_new_user
+        }, status=status.HTTP_200_OK)
+
+
+class TwoFactorLoginView(APIView):
+    """OTP'dan keyingi 2FA bosqichi — TOTP yoki recovery kod bilan kirish."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from apps.users.two_factor import (
+            consume_two_factor_token,
+            verify_totp_code,
+            verify_and_consume_recovery_code,
+        )
+
+        token = str(request.data.get('two_factor_token', '')).strip()
+        code = str(request.data.get('code', '')).strip()
+
+        if not token or not code:
+            return Response(
+                {'detail': 'Token va kod kiritilishi shart'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = consume_two_factor_token(token)
+        if not user:
+            return Response(
+                {'detail': "2FA tokeni yaroqsiz yoki muddati tugagan. Qayta kiring."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not user.two_factor_enabled:
+            # Holatni mos kelmasligi — JWT berib qo'yaylik
+            pass
+        else:
+            used_recovery = False
+            if not verify_totp_code(user, code):
+                if not verify_and_consume_recovery_code(user, code):
+                    return Response(
+                        {'detail': "Noto'g'ri kod"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                used_recovery = True
+
+        refresh = RefreshToken.for_user(user)
+        user_serializer = UserProfileSerializer(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': user_serializer.data,
+            'is_new_user': not user.is_onboarded,
+            'used_recovery_code': bool(locals().get('used_recovery')),
         }, status=status.HTTP_200_OK)
 
 

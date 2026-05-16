@@ -69,6 +69,8 @@ class User(AbstractUser):
     notifications_enabled = models.BooleanField(default=True, verbose_name="Bildirishnomalar yoqilgan")
     two_factor_enabled = models.BooleanField(default=False, verbose_name="2FA yoqilgan")
     totp_secret = models.CharField(max_length=64, blank=True, null=True, verbose_name="TOTP secret")
+    # 2FA zaxira (recovery) kodlari — har biri {"hash": "...", "used_at": null|"isodate"}
+    recovery_codes = models.JSONField(default=list, blank=True, verbose_name="Zaxira kodlari")
     deleted_at = models.DateTimeField(blank=True, null=True, verbose_name="O'chirilgan sana")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan sana")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Yangilangan sana")

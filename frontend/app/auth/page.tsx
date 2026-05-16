@@ -5,12 +5,14 @@ import { motion } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PhoneInput } from '@/components/auth/PhoneInput';
 import { OTPInput } from '@/components/auth/OTPInput';
+import { TwoFactorChallenge } from '@/components/auth/TwoFactorChallenge';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function AuthPage() {
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<'phone' | 'otp' | '2fa'>('phone');
   const [phone, setPhone] = useState('');
-  const { login, isAuthenticated } = useAuth();
+  const [twoFactorToken, setTwoFactorToken] = useState('');
+  const { login, verify2FA, isAuthenticated } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
@@ -28,19 +30,35 @@ export default function AuthPage() {
   };
 
   const handleOTPSubmit = async (code: string) => {
-    // Verify OTP and login
-    const result = await login(phone, code);
+    const result: any = await login(phone, code);
     console.log('Login result:', result);
-    
+
+    if (!result?.success) return;
+
+    // 2FA bosqichi kerak — TOTP/recovery kod so'raymiz
+    if (result.requires2FA) {
+      setTwoFactorToken(result.twoFactorToken);
+      setStep('2fa');
+      return;
+    }
+
     if (result.isNewUser) {
-      console.log('Redirecting to onboarding');
-      // New user - redirect to onboarding page
       router.push('/onboarding');
     } else {
-      console.log('Redirecting to dashboard');
-      // Existing user - redirect to target or dashboard
       router.push(redirectUrl || '/dashboard');
     }
+  };
+
+  const handle2FASubmit = async (code: string) => {
+    const result = await verify2FA(twoFactorToken, code);
+    if (result.success) {
+      if (result.isNewUser) {
+        router.push('/onboarding');
+      } else {
+        router.push(redirectUrl || '/dashboard');
+      }
+    }
+    return result;
   };
 
   const handleResendOTP = () => {
@@ -72,11 +90,11 @@ export default function AuthPage() {
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Progress indicator */}
           <div className="flex">
-            {['phone', 'otp'].map((s, i) => (
+            {['phone', 'otp', '2fa'].map((s, i) => (
               <div
                 key={s}
                 className={`flex-1 h-1 transition-colors duration-300 ${
-                  ['phone', 'otp'].indexOf(step) >= i
+                  ['phone', 'otp', '2fa'].indexOf(step) >= i
                     ? 'bg-[#F39C12]'
                     : 'bg-gray-200'
                 }`}
@@ -95,6 +113,13 @@ export default function AuthPage() {
                 onSubmit={handleOTPSubmit}
                 onResend={handleResendOTP}
                 onBack={() => setStep('phone')}
+              />
+            )}
+
+            {step === '2fa' && (
+              <TwoFactorChallenge
+                onSubmit={handle2FASubmit}
+                onBack={() => setStep('otp')}
               />
             )}
           </div>

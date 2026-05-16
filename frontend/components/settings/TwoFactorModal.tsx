@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, X, CheckCircle } from 'lucide-react';
+import { Shield, X, CheckCircle, Copy, Download, AlertTriangle } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 
 interface Props {
@@ -13,10 +13,13 @@ interface Props {
 }
 
 export function TwoFactorModal({ isOpen, isEnabled, onClose, onSuccess }: Props) {
-  const [step, setStep] = useState<'info' | 'qr' | 'verify' | 'success'>('info');
+  const [step, setStep] = useState<'info' | 'qr' | 'verify' | 'recovery' | 'success'>('info');
   const [qrCode, setQrCode] = useState('');
   const [secretKey, setSecretKey] = useState('');
   const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
+  const [recoveryAck, setRecoveryAck] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -25,9 +28,47 @@ export function TwoFactorModal({ isOpen, isEnabled, onClose, onSuccess }: Props)
     if (isOpen) {
       setStep(isEnabled ? 'verify' : 'info');
       setCode(['', '', '', '', '', '']);
+      setRecoveryCodes([]);
+      setRecoveryAck(false);
+      setCopied(false);
       setError('');
     }
   }, [isOpen, isEnabled]);
+
+  const copyRecoveryCodes = () => {
+    const text = recoveryCodes.join('\n');
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const downloadRecoveryCodes = () => {
+    const text = [
+      "UFF Murabbiy Tizimi — 2FA zaxira kodlari",
+      "Bu kodlar maxfiy! Telefoningiz yo'qolsa kirish uchun ishlatiladi.",
+      "Har bir kod faqat BIR MARTA ishlatiladi.",
+      "",
+      ...recoveryCodes,
+    ].join('\n');
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `uff-2fa-recovery-codes-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const finishWithRecoveryCodes = () => {
+    setStep('success');
+    setTimeout(() => {
+      onSuccess(true);
+      onClose();
+    }, 1500);
+  };
 
   const loadQR = async () => {
     setLoading(true);
@@ -61,16 +102,31 @@ export function TwoFactorModal({ isOpen, isEnabled, onClose, onSuccess }: Props)
     try {
       if (isEnabled) {
         await apiClient.post('/users/2fa/disable/', { code: full });
+        setStep('success');
+        setTimeout(() => {
+          onSuccess(false);
+          onClose();
+        }, 1500);
       } else {
-        await apiClient.post('/users/2fa/verify/', { code: full });
+        const res = await apiClient.post('/users/2fa/verify/', { code: full });
+        const codes: string[] = res.data?.recovery_codes || [];
+        if (codes.length > 0) {
+          setRecoveryCodes(codes);
+          setStep('recovery');
+        } else {
+          // Recovery kodlar allaqachon yaratilgan — to'g'ridan-to'g'ri yakunlash
+          setStep('success');
+          setTimeout(() => {
+            onSuccess(true);
+            onClose();
+          }, 1500);
+        }
       }
-      setStep('success');
-      setTimeout(() => {
-        onSuccess(!isEnabled);
-        onClose();
-      }, 1800);
-    } catch {
-      setError("Noto'g'ri kod. Qayta urinib ko'ring.");
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.detail ||
+        "Noto'g'ri kod. Qayta urinib ko'ring.";
+      setError(msg);
       setCode(['', '', '', '', '', '']);
       inputs.current[0]?.focus();
     } finally {
@@ -203,6 +259,69 @@ export function TwoFactorModal({ isOpen, isEnabled, onClose, onSuccess }: Props)
                   {loading && (
                     <p className="text-sm text-gray-500 text-center">Tekshirilmoqda...</p>
                   )}
+                </div>
+              )}
+
+              {step === 'recovery' && (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-900">
+                      <p className="font-semibold mb-1">Bu kodlarni hozir saqlang!</p>
+                      <p className="text-amber-800">
+                        Telefoningiz yo'qolsa, bu kodlardan biri bilan kirishingiz mumkin.
+                        Har bir kod faqat <strong>BIR MARTA</strong> ishlatiladi. Bu kodlar
+                        bu yerda boshqa <strong>ko'rsatilmaydi</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl p-4 font-mono text-sm">
+                    {recoveryCodes.map((c, i) => (
+                      <div
+                        key={c}
+                        className="px-3 py-2 bg-white rounded-lg border border-gray-200 text-center select-all"
+                      >
+                        <span className="text-gray-400 mr-1.5 text-xs">{i + 1}.</span>
+                        <span className="text-gray-900 font-semibold tracking-wider">{c}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={copyRecoveryCodes}
+                      className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+                    >
+                      <Copy className="w-4 h-4" />
+                      {copied ? 'Nusxa olindi' : 'Nusxa olish'}
+                    </button>
+                    <button
+                      onClick={downloadRecoveryCodes}
+                      className="flex-1 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Yuklab olish
+                    </button>
+                  </div>
+
+                  <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={recoveryAck}
+                      onChange={(e) => setRecoveryAck(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-[#1A56A0]"
+                    />
+                    <span>Men kodlarni xavfsiz joyda saqladim va tushundim</span>
+                  </label>
+
+                  <button
+                    onClick={finishWithRecoveryCodes}
+                    disabled={!recoveryAck}
+                    className="w-full py-3 bg-[#1A56A0] text-white rounded-lg hover:bg-[#0D3B6E] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Tugallash
+                  </button>
                 </div>
               )}
 

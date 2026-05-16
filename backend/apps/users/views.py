@@ -256,56 +256,119 @@ class TwoFactorSetupView(APIView):
 
 
 class TwoFactorVerifyView(APIView):
-    """Verify TOTP code and enable 2FA"""
+    """TOTP kodni tekshirib 2FA ni yoqadi va recovery kodlarni qaytaradi.
+
+    Recovery kodlar foydalanuvchiga AYNAN BIR MARTA ko'rsatiladi va keyin
+    DB'da faqat hash ko'rinishida saqlanadi.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        try:
-            import pyotp
-        except ImportError:
-            return Response({'detail': 'pyotp o\'rnatilmagan'}, status=500)
+        from .two_factor import (
+            verify_totp_code,
+            generate_recovery_codes,
+            make_recovery_code_records,
+        )
 
         code = str(request.data.get('code', '')).strip()
-        if not request.user.totp_secret:
+        user = request.user
+
+        if not user.totp_secret:
             return Response(
-                {'detail': 'Setup qilinmagan'},
+                {'detail': 'Avval QR kodni skanerlang'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        totp = pyotp.TOTP(request.user.totp_secret)
-        if not totp.verify(code, valid_window=1):
+        if not verify_totp_code(user, code):
             return Response(
-                {'detail': "Noto'g'ri kod"},
+                {
+                    'detail': "Noto'g'ri kod. Server vaqti va telefon vaqti "
+                              "to'g'ri sinxronlanganini tekshiring va keyingi "
+                              "kodni kiriting."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        request.user.two_factor_enabled = True
-        request.user.save(update_fields=['two_factor_enabled'])
-        return Response({'detail': '2FA yoqildi'})
+        # Recovery kodlarni yaratish (faqat 2FA endigina yoqilayotganda)
+        plain_codes: list[str] = []
+        if not user.two_factor_enabled or not user.recovery_codes:
+            plain_codes = generate_recovery_codes()
+            user.recovery_codes = make_recovery_code_records(plain_codes)
+
+        user.two_factor_enabled = True
+        user.save(update_fields=['two_factor_enabled', 'recovery_codes'])
+
+        return Response({
+            'detail': '2FA yoqildi',
+            'recovery_codes': plain_codes,  # bo'sh bo'lishi mumkin (qayta verify)
+        })
 
 
 class TwoFactorDisableView(APIView):
-    """Disable 2FA (requires valid TOTP code)"""
+    """2FA ni o'chiradi (TOTP yoki recovery kod talab qilinadi)."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        try:
-            import pyotp
-        except ImportError:
-            return Response({'detail': 'pyotp o\'rnatilmagan'}, status=500)
+        from .two_factor import verify_totp_code, verify_and_consume_recovery_code
 
         code = str(request.data.get('code', '')).strip()
-        if not request.user.totp_secret:
+        user = request.user
+
+        if not user.totp_secret:
             return Response({'detail': 'Setup qilinmagan'}, status=400)
 
-        totp = pyotp.TOTP(request.user.totp_secret)
-        if not totp.verify(code, valid_window=1):
+        ok = verify_totp_code(user, code) or verify_and_consume_recovery_code(user, code)
+        if not ok:
             return Response({'detail': "Noto'g'ri kod"}, status=400)
 
-        request.user.two_factor_enabled = False
-        request.user.totp_secret = None
-        request.user.save(update_fields=['two_factor_enabled', 'totp_secret'])
+        user.two_factor_enabled = False
+        user.totp_secret = None
+        user.recovery_codes = []
+        user.save(update_fields=['two_factor_enabled', 'totp_secret', 'recovery_codes'])
         return Response({'detail': "2FA o'chirildi"})
+
+
+class TwoFactorRecoveryCodesView(APIView):
+    """Recovery kodlarni boshqarish.
+
+    GET  — qancha kod qolganini qaytaradi (kodlarning o'zi ko'rsatilmaydi).
+    POST — TOTP kod bilan tasdiqlab, yangi 10 ta kod yaratadi (eski hammasi bekor).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .two_factor import remaining_recovery_codes
+
+        user = request.user
+        return Response({
+            'two_factor_enabled': user.two_factor_enabled,
+            'remaining': remaining_recovery_codes(user),
+            'total': len(user.recovery_codes or []),
+        })
+
+    def post(self, request):
+        from .two_factor import (
+            verify_totp_code,
+            generate_recovery_codes,
+            make_recovery_code_records,
+        )
+
+        user = request.user
+        if not user.two_factor_enabled:
+            return Response({'detail': '2FA yoqilmagan'}, status=400)
+
+        code = str(request.data.get('code', '')).strip()
+        if not verify_totp_code(user, code):
+            return Response({'detail': "Noto'g'ri TOTP kod"}, status=400)
+
+        plain_codes = generate_recovery_codes()
+        user.recovery_codes = make_recovery_code_records(plain_codes)
+        user.save(update_fields=['recovery_codes'])
+
+        return Response({
+            'detail': 'Yangi recovery kodlar yaratildi',
+            'recovery_codes': plain_codes,
+        })
 
 
 class ExportUserDataView(APIView):

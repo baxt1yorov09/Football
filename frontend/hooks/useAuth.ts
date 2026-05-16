@@ -48,6 +48,25 @@ export function useAuth() {
     }
   };
 
+  // Tokenlarni saqlash + cookie'larga yozish (login va 2FA login uchun umumiy)
+  const persistSession = (access: string, refresh: string, user: any) => {
+    localStorage.setItem('accessToken', access);
+    localStorage.setItem('refreshToken', refresh);
+
+    // Eski admin sessionidan qolgan tokenlarni tozalash (sidebar leakage)
+    localStorage.removeItem('adminAccessToken');
+    localStorage.removeItem('adminRefreshToken');
+    localStorage.removeItem('adminUser');
+    if (typeof document !== 'undefined') {
+      document.cookie = 'adminAccessToken=; path=/; max-age=0';
+      document.cookie = 'adminRefreshToken=; path=/; max-age=0';
+      document.cookie = `accessToken=${access}; path=/; max-age=900`;
+      document.cookie = `refreshToken=${refresh}; path=/; max-age=2592000`;
+    }
+
+    setState({ user, isLoading: false, isAuthenticated: true });
+  };
+
   const login = useCallback(async (phone: string, code: string) => {
     try {
       console.log('Sending OTP verification:', { phone, code });
@@ -57,31 +76,27 @@ export function useAuth() {
       });
       console.log('OTP verification response:', response.data);
 
-      const { access, refresh, user, is_new_user } = response.data;
-
-      // Store tokens
-      localStorage.setItem('accessToken', access);
-      localStorage.setItem('refreshToken', refresh);
-
-      // Eski admin sessionidan qolgan tokenlarni tozalash (sidebar leakage'ni oldini olish)
-      localStorage.removeItem('adminAccessToken');
-      localStorage.removeItem('adminRefreshToken');
-      localStorage.removeItem('adminUser');
-      if (typeof document !== 'undefined') {
-        document.cookie = 'adminAccessToken=; path=/; max-age=0';
-        document.cookie = 'adminRefreshToken=; path=/; max-age=0';
+      // 2FA gate: foydalanuvchi 2FA yoqgan bo'lsa, JWT yo'q — 2FA bosqichi kerak
+      if (response.data?.requires_2fa) {
+        return {
+          success: true,
+          requires2FA: true,
+          twoFactorToken: response.data.two_factor_token as string,
+          expiresIn: response.data.expires_in as number,
+        };
       }
 
-      // Set cookies for middleware compatibility
-      document.cookie = `accessToken=${access}; path=/; max-age=900`; // 15 min
-      document.cookie = `refreshToken=${refresh}; path=/; max-age=2592000`; // 30 days
-
+      const { access, refresh, user, is_new_user } = response.data;
       if (!is_new_user) {
-        setState({
-          user,
-          isLoading: false,
-          isAuthenticated: true,
-        });
+        persistSession(access, refresh, user);
+      } else {
+        // Yangi user uchun ham tokenlarni saqlaymiz, lekin state'ni keyin to'ldiramiz
+        localStorage.setItem('accessToken', access);
+        localStorage.setItem('refreshToken', refresh);
+        if (typeof document !== 'undefined') {
+          document.cookie = `accessToken=${access}; path=/; max-age=900`;
+          document.cookie = `refreshToken=${refresh}; path=/; max-age=2592000`;
+        }
       }
 
       return { success: true, isNewUser: is_new_user, user };
@@ -90,6 +105,29 @@ export function useAuth() {
       return {
         success: false,
         error: error.response?.data?.error || error.response?.data?.phone?.[0] || error.response?.data?.code?.[0] || "Autentifikatsiya xatosi",
+      };
+    }
+  }, []);
+
+  // 2FA kirish bosqichi — TOTP yoki recovery kod bilan
+  const verify2FA = useCallback(async (twoFactorToken: string, code: string) => {
+    try {
+      const response = await apiClient.post('/auth/2fa-login', {
+        two_factor_token: twoFactorToken,
+        code,
+      });
+      const { access, refresh, user, is_new_user, used_recovery_code } = response.data;
+      persistSession(access, refresh, user);
+      return {
+        success: true,
+        isNewUser: is_new_user,
+        usedRecoveryCode: !!used_recovery_code,
+        user,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || "Noto'g'ri kod",
       };
     }
   }, []);
@@ -146,6 +184,7 @@ export function useAuth() {
   return {
     ...state,
     login,
+    verify2FA,
     logout,
     updateProfile,
   };
