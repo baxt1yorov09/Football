@@ -27,6 +27,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
     license_type_code = serializers.CharField(source='license_type.code', read_only=True)
     region_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    reviewed_by_name = serializers.CharField(source='reviewed_by.full_name', read_only=True)
     documents_count = serializers.SerializerMethodField()
     documents = serializers.SerializerMethodField()
     timeline = serializers.SerializerMethodField()
@@ -37,8 +38,8 @@ class ApplicationSerializer(serializers.ModelSerializer):
             'id', 'user_name', 'user_phone', 'user_email', 'full_name', 'phone',
             'license_type', 'license_type_name', 'license_type_code', 'region', 'region_name',
             'status', 'status_display', 'workplace', 'job_title', 'coaching_years',
-            'prev_license_date', 'submitted_at', 'reviewed_at', 'admin_note',
-            'rejection_reason', 'documents_count', 'documents', 'timeline'
+            'prev_license_date', 'submitted_at', 'reviewed_at', 'reviewed_by_name',
+            'admin_note', 'rejection_reason', 'documents_count', 'documents', 'timeline'
         ]
         read_only_fields = ['id', 'submitted_at', 'reviewed_at', 'reviewed_by']
     

@@ -244,6 +244,46 @@ export function ApplicationsTable({
     }
   };
 
+  // CSV download — joriy filtered applications ro'yxatini eksport qiladi
+  const handleDownloadCSV = () => {
+    if (filteredApplications.length === 0) return;
+    const headers = [
+      'ID',
+      t('applications.fields.full_name'),
+      t('applications.fields.phone'),
+      t('applications.fields.license_type'),
+      t('applications.fields.region'),
+      t('applications.filter_status'),
+      t('applications.submitted_at'),
+      t('applications.reviewed_at'),
+    ];
+    const escape = (v: any) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v).replace(/"/g, '""');
+      return /[",\n;]/.test(s) ? `"${s}"` : s;
+    };
+    const rows = filteredApplications.map(app => [
+      app.id,
+      app.user_name || '',
+      app.user_phone || '',
+      app.license_type_code || app.license_type_name || '',
+      app.region_name || app.region || '',
+      app.status_display || app.status || '',
+      app.submitted_at ? new Date(app.submitted_at).toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ') : '',
+      (app as any).reviewed_at ? new Date((app as any).reviewed_at).toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ') : '',
+    ].map(escape).join(','));
+    const csv = '\uFEFF' + [headers.map(escape).join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `applications-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Filter out cancelled applications and apply search/status filters
   const filteredApplications = applications.filter(app => {
     // Don't show cancelled applications
@@ -274,7 +314,13 @@ export function ApplicationsTable({
           {showAll ? t('applications.title') : t('dashboard.recent_applications')}
         </CardTitle>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadCSV}
+            disabled={loading || filteredApplications.length === 0}
+            title={t('common.download')}
+          >
             <Download className="w-4 h-4 mr-2" />
             {t('common.download')}
           </Button>
@@ -471,10 +517,17 @@ export function ApplicationsTable({
                       )}
                     </td>
                     <td className="p-4">
-                      {application.reviewed_by_name ? (
-                        <span className="text-sm text-gray-600">{application.reviewed_by_name}</span>
+                      {(application as any).reviewed_at ? (
+                        <div className="text-sm">
+                          <p className="text-gray-900">
+                            {new Date((application as any).reviewed_at).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}
+                          </p>
+                          {application.reviewed_by_name && (
+                            <p className="text-xs text-gray-500">{application.reviewed_by_name}</p>
+                          )}
+                        </div>
                       ) : (
-                        <span className="text-sm text-gray-400">-</span>
+                        <span className="text-sm text-gray-400">—</span>
                       )}
                     </td>
                     <td className="p-4">

@@ -75,6 +75,7 @@ function LicensesPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [licenseTypeOptions, setLicenseTypeOptions] = useState<{ code: string; name_uz: string }[]>([]);
   const [selectedLicenses, setSelectedLicenses] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -147,6 +148,18 @@ function LicensesPanel() {
 
   useEffect(() => { loadData(true); }, []); // eslint-disable-line
   useEffect(() => { loadData(false); }, [loadData]); // eslint-disable-line
+
+  // Litsenziya turlarini yuklash (filtr uchun)
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await licApi('/api/licenses/types');
+        setLicenseTypeOptions(Array.isArray(data?.results) ? data.results : []);
+      } catch {
+        setLicenseTypeOptions([]);
+      }
+    })();
+  }, []);
 
   // Reset selection on page/filter change
   useEffect(() => { setSelectedLicenses([]); }, [currentPage, filterStatus, filterType, debouncedSearch]);
@@ -419,11 +432,10 @@ function LicensesPanel() {
               className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
             >
               <option value="">{t('licenses.filter_all')}</option>
-              {['D','C','B','A','PRO','GK_1','GK_2','GK_3',
-                'FITNESS_1','FITNESS_2','FITNESS_3',
-                'FUTSAL_1','FUTSAL_2','FUTSAL_3',
-                'BEACH','SELEK','PSYCH'].map(t => (
-                <option key={t} value={t}>{t}</option>
+              {licenseTypeOptions.map(opt => (
+                <option key={opt.code} value={opt.code}>
+                  {opt.code} — {opt.name_uz}
+                </option>
               ))}
             </select>
           </div>
