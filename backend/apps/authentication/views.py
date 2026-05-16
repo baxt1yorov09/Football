@@ -156,6 +156,11 @@ class VerifyOTPView(APIView):
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
 
+        # last_login ni yangilash (Django auto-update faqat login() chaqirilganda ishlaydi,
+        # biz esa to'g'ridan-to'g'ri JWT bermoqdamiz — qo'lda yangilaymiz)
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
         # Serialize user data
         user_serializer = UserProfileSerializer(user)
 
@@ -208,6 +213,10 @@ class TwoFactorLoginView(APIView):
                 used_recovery = True
 
         refresh = RefreshToken.for_user(user)
+        # last_login ni yangilash — 2FA muvaffaqiyatli o'tdi
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
         user_serializer = UserProfileSerializer(user)
         return Response({
             'access': str(refresh.access_token),
@@ -324,6 +333,10 @@ class AdminLoginView(APIView):
 
         # JWT token yaratish
         refresh = RefreshToken.for_user(user_obj)
+
+        # last_login ni yangilash (admin paneldagi "Oxirgi kirish" ustuni uchun)
+        user_obj.last_login = timezone.now()
+        user_obj.save(update_fields=['last_login'])
 
         return Response({
             'access': str(refresh.access_token),
