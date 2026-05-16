@@ -155,44 +155,51 @@ def license_detail(request, license_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def license_verification(request, verification_code):
-    """Verify license by verification code"""
+@permission_classes([permissions.AllowAny])
+def license_verification(request, license_id):
+    """Verify license by ID (UUID). Ochiq endpoint — QR skanerlash uchun.
+
+    QR kod foydalanuvchining litsenziya UUID'iga ishora qiladi. Bu yerda
+    statusi tekshirilib, qisqa ma'lumot qaytariladi.
+    """
     try:
-        license_obj = get_object_or_404(License, verification_code=verification_code)
-        
-        # Check if license is active and not expired
-        if not license_obj.is_active:
-            return Response({
-                'valid': False,
-                'reason': 'Litsenziya nofaol'
-            })
-        
-        if license_obj.expires_at < timezone.now():
-            return Response({
-                'valid': False,
-                'reason': 'Litsenziya muddati tugagan'
-            })
-        
-        data = {
-            'valid': True,
-            'license': {
-                'license_number': license_obj.license_number,
-                'license_type': license_obj.license_type.name,
-                'holder_name': license_obj.user.get_full_name(),
-                'issued_at': license_obj.issued_at,
-                'expires_at': license_obj.expires_at,
-                'current_club': license_obj.current_club,
-            }
-        }
-        
-        return Response(data)
-        
-    except License.DoesNotExist:
-        return Response({
-            'valid': False,
-            'reason': 'Litsenziya topilmadi'
-        }, status=status.HTTP_404_NOT_FOUND)
+        license_obj = License.objects.select_related(
+            'user', 'license_type'
+        ).get(id=license_id)
+    except (License.DoesNotExist, ValueError):
+        return Response(
+            {'valid': False, 'reason': 'Litsenziya topilmadi'},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Status tekshiruvlari
+    if not license_obj.is_active:
+        return Response({'valid': False, 'reason': 'Litsenziya nofaol'})
+    if license_obj.status == 'revoked':
+        return Response({'valid': False, 'reason': 'Litsenziya bekor qilingan'})
+    if license_obj.status == 'suspended':
+        return Response({'valid': False, 'reason': "Litsenziya to'xtatilgan"})
+    if license_obj.expires_at and license_obj.expires_at < timezone.now():
+        return Response({'valid': False, 'reason': 'Litsenziya muddati tugagan'})
+
+    user = license_obj.user
+    holder_name = getattr(user, 'full_name', None) or (
+        f"{getattr(user, 'first_name', '') or ''} {getattr(user, 'last_name', '') or ''}".strip()
+    ) or '—'
+
+    lic_type = license_obj.license_type
+    return Response({
+        'valid': True,
+        'license': {
+            'license_number': license_obj.license_number,
+            'license_type': getattr(lic_type, 'name_uz', None) or getattr(lic_type, 'code', '—'),
+            'license_type_code': getattr(lic_type, 'code', ''),
+            'holder_name': holder_name,
+            'issued_at': license_obj.issued_at,
+            'expires_at': license_obj.expires_at,
+            'current_club': getattr(license_obj, 'current_club', '') or '',
+        },
+    })
 
 
 @api_view(['GET'])
