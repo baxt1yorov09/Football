@@ -352,6 +352,14 @@ export default function SettingsPanel() {
       showToast(tp('toasts.password_short'), 'error');
       return;
     }
+    if (!/[A-Z]/.test(passwordForm.new)) {
+      showToast('Kamida 1 ta katta harf kerak', 'error');
+      return;
+    }
+    if (!/[0-9]/.test(passwordForm.new)) {
+      showToast('Kamida 1 ta raqam kerak', 'error');
+      return;
+    }
     try {
       setPwSaving(true);
       await api('/api/users/change-password', 'POST', {
@@ -656,6 +664,20 @@ export default function SettingsPanel() {
                           onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
                           className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
                         />
+                        {passwordForm.new && (
+                          <div className="space-y-1 -mt-1">
+                            {[
+                              { ok: passwordForm.new.length >= 8, text: 'Kamida 8 ta belgi' },
+                              { ok: /[A-Z]/.test(passwordForm.new), text: 'Kamida 1 ta katta harf' },
+                              { ok: /[0-9]/.test(passwordForm.new), text: 'Kamida 1 ta raqam' },
+                              { ok: !!passwordForm.confirm && passwordForm.new === passwordForm.confirm, text: 'Parollar mos' },
+                            ].map(({ ok, text }) => (
+                              <p key={text} className={`text-xs flex items-center gap-1.5 ${ok ? 'text-green-600' : 'text-gray-400'}`}>
+                                <span>{ok ? '✓' : '○'}</span> {text}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                         <button
                           onClick={changePassword}
                           disabled={pwSaving}

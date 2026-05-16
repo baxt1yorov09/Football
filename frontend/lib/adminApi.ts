@@ -120,10 +120,24 @@ export async function adminApi<T = any>(
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // Field-level xatoliklarni o'qish: { new_password: ["..."], ... }
+    let fieldErr: string | undefined;
+    if (data && typeof data === 'object') {
+      for (const v of Object.values(data as Record<string, unknown>)) {
+        if (Array.isArray(v) && v.length && typeof v[0] === 'string') {
+          fieldErr = v[0] as string;
+          break;
+        }
+        if (typeof v === 'string') {
+          fieldErr = v;
+          break;
+        }
+      }
+    }
     const msg =
       (data as any)?.detail ||
       (data as any)?.error ||
-      (typeof data === 'object' ? JSON.stringify(data) : String(data)) ||
+      fieldErr ||
       `HTTP ${res.status}`;
     throw new Error(msg);
   }
