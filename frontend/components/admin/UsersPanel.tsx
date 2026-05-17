@@ -192,6 +192,18 @@ export function UsersPanel() {
   useEffect(() => { loadData(true); }, []); // eslint-disable-line
   useEffect(() => { loadData(false); }, [loadData]); // eslint-disable-line
 
+  // Listen for custom events from child modals (e.g. promote-from-existing flow)
+  useEffect(() => {
+    const onRefresh = () => { loadData(false); showToast(t('common.success')); };
+    const onToast = (e: any) => showToast(e.detail?.msg || '', e.detail?.type || 'error');
+    window.addEventListener('admin-users-refresh', onRefresh as EventListener);
+    window.addEventListener('admin-users-toast', onToast as EventListener);
+    return () => {
+      window.removeEventListener('admin-users-refresh', onRefresh as EventListener);
+      window.removeEventListener('admin-users-toast', onToast as EventListener);
+    };
+  }, [loadData, t]);
+
   // Reset to page 1 when filters change
   useEffect(() => { setCurrentPage(1); }, [debouncedSearch, filterRole, filterStatus, filterRegion]);
 
@@ -1186,6 +1198,7 @@ function UserEditModal({ user, regions, canEditRole, onClose, onSave, t, locale 
 // MODAL: Create
 // ════════════════════════════════════════════════════════════════════
 function UserCreateModal({ open, regions, canCreateAdmin, onClose, onCreate, t, locale }: any) {
+  const [mode, setMode] = useState<'new' | 'promote'>('new');
   const [form, setForm] = useState({
     phone: '',
     full_name: '',
@@ -1198,11 +1211,42 @@ function UserCreateModal({ open, regions, canCreateAdmin, onClose, onCreate, t, 
   });
   const [saving, setSaving] = useState(false);
 
+  // ── Promote mode state ──
+  const [searchQ, setSearchQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
+  const [searchResults, setSearchResults] = useState<AdminUser[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [promoteRole, setPromoteRole] = useState<string>('region_admin');
+  const [promoteRegionId, setPromoteRegionId] = useState<string>('');
+
   useEffect(() => {
     if (open) {
+      setMode('new');
       setForm({ phone: '', full_name: '', email: '', role: 'coach', region_id: '', workplace: '', job_title: '', password: '' });
+      setSearchQ(''); setDebouncedQ(''); setSearchResults([]); setSelectedUser(null);
+      setPromoteRole('region_admin'); setPromoteRegionId('');
     }
   }, [open]);
+
+  // Debounce search input
+  useEffect(() => {
+    const tm = setTimeout(() => setDebouncedQ(searchQ.trim()), 350);
+    return () => clearTimeout(tm);
+  }, [searchQ]);
+
+  // Fetch users when debounced query changes (promote mode only)
+  useEffect(() => {
+    if (mode !== 'promote' || !debouncedQ || debouncedQ.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    userApi(`/api/users/admin/list/?search=${encodeURIComponent(debouncedQ)}&limit=10`)
+      .then((r) => setSearchResults(r.results || []))
+      .catch(() => setSearchResults([]))
+      .finally(() => setSearching(false));
+  }, [debouncedQ, mode]);
 
   const submit = async () => {
     if (!form.phone.trim()) return;
@@ -1213,6 +1257,25 @@ function UserCreateModal({ open, regions, canCreateAdmin, onClose, onCreate, t, 
       if (!form.password) delete payload.password;
       await onCreate(payload);
     } catch {} finally { setSaving(false); }
+  };
+
+  const submitPromote = async () => {
+    if (!selectedUser || !promoteRole) return;
+    setSaving(true);
+    try {
+      const payload: any = { role: promoteRole };
+      if (promoteRole === 'region_admin') {
+        payload.region_id = promoteRegionId === '' ? null : Number(promoteRegionId);
+      }
+      await userApi(`/api/users/admin/${selectedUser.id}/update/`, 'PATCH', payload);
+      // Use parent's success path: reuse onCreate's flow not appropriate; signal close+refresh manually
+      onClose();
+      // Trigger a soft reload by dispatching a custom event the parent can listen to
+      window.dispatchEvent(new CustomEvent('admin-users-refresh'));
+    } catch (e: any) {
+      // toast handled by parent? Show inline error fallback
+      window.dispatchEvent(new CustomEvent('admin-users-toast', { detail: { msg: e.message || 'Xato', type: 'error' } }));
+    } finally { setSaving(false); }
   };
 
   return (
@@ -1238,6 +1301,157 @@ function UserCreateModal({ open, regions, canCreateAdmin, onClose, onCreate, t, 
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
+
+            {/* Mode tabs */}
+            {canCreateAdmin && (
+              <div className="px-5 pt-4">
+                <div className="flex bg-gray-100 rounded-xl p-1">
+                  <button
+                    type="button"
+                    onClick={() => setMode('new')}
+                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                      mode === 'new' ? 'bg-white text-[#1A56A0] shadow-sm' : 'text-gray-500'
+                    }`}
+                  >
+                    Yangi yaratish
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode('promote')}
+                    className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                      mode === 'promote' ? 'bg-white text-[#1A56A0] shadow-sm' : 'text-gray-500'
+                    }`}
+                  >
+                    Mavjuddan tayinlash
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {mode === 'promote' ? (
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">
+                    Foydalanuvchini qidirish (telefon, ism, email)
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="+998... yoki ism"
+                      value={searchQ}
+                      onChange={(e) => { setSearchQ(e.target.value); setSelectedUser(null); }}
+                      className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                    />
+                  </div>
+                </div>
+
+                {/* Search results */}
+                {!selectedUser && debouncedQ.length >= 2 && (
+                  <div className="border border-gray-100 rounded-xl max-h-56 overflow-y-auto">
+                    {searching ? (
+                      <div className="p-4 flex justify-center">
+                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                      </div>
+                    ) : searchResults.length === 0 ? (
+                      <div className="p-4 text-sm text-center text-gray-500">
+                        Foydalanuvchi topilmadi
+                      </div>
+                    ) : (
+                      <ul className="divide-y divide-gray-100">
+                        {searchResults.map((u) => (
+                          <li
+                            key={u.id}
+                            onClick={() => setSelectedUser(u)}
+                            className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer flex items-center gap-3"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-[#1A56A0]/10 flex items-center justify-center text-sm font-medium text-[#1A56A0] flex-shrink-0">
+                              {u.initials || (u.full_name?.[0] || u.phone[0] || '?').toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {u.full_name || u.phone}
+                              </p>
+                              <p className="text-xs text-gray-500 truncate">
+                                {u.phone} · {u.role_display || u.role}
+                              </p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {/* Selected user preview */}
+                {selectedUser && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#1A56A0]/15 flex items-center justify-center text-sm font-semibold text-[#1A56A0] flex-shrink-0">
+                      {selectedUser.initials || (selectedUser.full_name?.[0] || selectedUser.phone[0] || '?').toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {selectedUser.full_name || selectedUser.phone}
+                      </p>
+                      <p className="text-xs text-gray-600 truncate">
+                        {selectedUser.phone} · Hozirgi rol: <strong>{selectedUser.role_display || selectedUser.role}</strong>
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { setSelectedUser(null); setSearchQ(''); }}
+                      className="p-1 hover:bg-white rounded"
+                      title="O'zgartirish"
+                    >
+                      <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Role + region for promote */}
+                {selectedUser && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">
+                        Yangi rol <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={promoteRole}
+                        onChange={(e) => setPromoteRole(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                      >
+                        <option value="region_admin">{t('admin.users_panel.roles.region_admin')}</option>
+                        <option value="super_admin">{t('admin.users_panel.roles.super_admin')}</option>
+                        <option value="staff">{t('admin.users_panel.roles.staff')}</option>
+                        <option value="viewer">{t('admin.users_panel.roles.viewer')}</option>
+                      </select>
+                    </div>
+                    {promoteRole === 'region_admin' && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">
+                          {t('applications.fields.region')}
+                        </label>
+                        <select
+                          value={promoteRegionId}
+                          onChange={(e) => setPromoteRegionId(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                        >
+                          <option value="">—</option>
+                          {regions.map((r: RegionItem) => (
+                            <option key={r.id} value={r.id}>
+                              {locale === 'ru' ? r.name_ru : r.name_uz}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {searchQ.length > 0 && searchQ.length < 2 && (
+                  <p className="text-xs text-gray-400">Kamida 2 belgi kiriting…</p>
+                )}
+              </div>
+            ) : (
             <div className="p-5 space-y-3">
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">
@@ -1316,6 +1530,8 @@ function UserCreateModal({ open, regions, canCreateAdmin, onClose, onCreate, t, 
                 />
               </div>
             </div>
+            )}
+
             <div className="p-5 border-t border-gray-100 flex gap-2 justify-end">
               <button
                 onClick={onClose}
@@ -1324,14 +1540,25 @@ function UserCreateModal({ open, regions, canCreateAdmin, onClose, onCreate, t, 
               >
                 {t('common.cancel')}
               </button>
-              <button
-                onClick={submit}
-                disabled={saving || !form.phone.trim()}
-                className="px-4 py-2 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
-              >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {t('common.save')}
-              </button>
+              {mode === 'promote' ? (
+                <button
+                  onClick={submitPromote}
+                  disabled={saving || !selectedUser || !promoteRole}
+                  className="px-4 py-2 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Tayinlash
+                </button>
+              ) : (
+                <button
+                  onClick={submit}
+                  disabled={saving || !form.phone.trim()}
+                  className="px-4 py-2 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-60"
+                >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {t('common.save')}
+                </button>
+              )}
             </div>
           </motion.div>
         </motion.div>
