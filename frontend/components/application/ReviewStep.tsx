@@ -200,7 +200,7 @@ export function ReviewStep({ data, licenseType, onSubmit, onBack, isSubmitting }
             />
             <span className="text-sm text-gray-700">
               Men yuqoridagi barcha ma'lumotlarning to'g'ri ekanligini tasdiqlayman va 
-              O'zbekiston Futbol Federatsiyasining qoidalariga rioya qilishga roziman.
+              O'zbekiston Murabbiylar ta'limi qoidalariga rioya qilishga roziman.
             </span>
           </label>
         </div>

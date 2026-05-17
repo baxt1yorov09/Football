@@ -68,17 +68,17 @@ export default function ContactPage() {
     {
       icon: Phone,
       label: 'Telefon',
-      value: '+998 71 200 00 00'
+      value: '+998 93 998 10 29 / +998 99 452 17 77'
     },
     {
       icon: Mail,
       label: 'Email',
-      value: 'info@uff.uz'
+      value: 'fmtmufa@gmail.com'
     },
     {
       icon: MapPin,
       label: 'Manzil',
-      value: 'Toshkent sh., Chilonzor tumani'
+      value: "Toshkent shahar, Chilonzor tumani, Bunyodkor shoh ko'chasi 47"
     },
     {
       icon: Clock,

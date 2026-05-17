@@ -76,12 +76,16 @@ export default function AuthPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-14 h-14 bg-[#F39C12] rounded-2xl flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">UFF</span>
+            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center p-1.5">
+              <img
+                src="/Uzbekistan_Football_Association_Logo.svg"
+                alt="UFA"
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-white">
-            O&apos;zbekiston Futbol Federatsiyasi
+            O&apos;zbekiston Murabbiylar ta&apos;limi
           </h1>
           <p className="text-white/70 mt-2">Murabbiy litsenziya tizimi</p>
         </div>
@@ -127,7 +131,7 @@ export default function AuthPage() {
 
         {/* Footer */}
         <p className="text-center text-white/50 text-sm mt-8">
-          © 2026 O&apos;zbekiston Futbol Federatsiyasi
+          © 2026 O&apos;zbekiston Murabbiylar ta&apos;limi
         </p>
       </motion.div>
     </div>

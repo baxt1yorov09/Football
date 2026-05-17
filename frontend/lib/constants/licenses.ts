@@ -1,6 +1,6 @@
 /**
  * Litsenziya turlari va konfiguratsiya
- * O'zbekiston Futbol Federatsiyasi - 26 ta litsenziya turi
+ * O'zbekiston Murabbiylar ta'limi - 26 ta litsenziya turi
  */
 
 export const LICENSE_COLORS = {

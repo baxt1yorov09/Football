@@ -91,7 +91,7 @@ export function HeroSection() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-6"
             >
               <span className="w-2 h-2 bg-[#27AE60] rounded-full animate-pulse" />
-              <span className="text-sm font-medium">O&apos;zbekiston Futbol Federatsiyasi</span>
+              <span className="text-sm font-medium">O&apos;zbekiston Murabbiylar ta&apos;limi</span>
             </motion.div>
 
             <motion.h1

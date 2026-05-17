@@ -27,7 +27,7 @@ export function LicenseTypes() {
   });
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <section id="licenses" className="scroll-mt-20 py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -38,7 +38,7 @@ export function LicenseTypes() {
           Litsenziya turlari
         </h2>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          O&apos;zbekiston Futbol Federatsiyasi tomonidan tasdiqlangan 26 ta litsenziya turi
+          O&apos;zbekiston Murabbiylar ta&apos;limi tomonidan tasdiqlangan 26 ta litsenziya turi
         </p>
       </motion.div>
 

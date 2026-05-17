@@ -112,7 +112,7 @@ export default function OnboardingPage() {
           <div className="inline-flex items-center gap-2 text-white">
             <span className="text-3xl">⚽</span>
             <div className="text-left">
-              <p className="text-xs opacity-70">O'zbekiston Futbol Federatsiyasi</p>
+              <p className="text-xs opacity-70">O'zbekiston Murabbiylar ta'limi</p>
               <p className="font-semibold">Murabbiy Litsenziya Tizimi</p>
             </div>
           </div>

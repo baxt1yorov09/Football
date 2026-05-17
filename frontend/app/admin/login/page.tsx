@@ -181,7 +181,7 @@ export default function AdminLoginPage() {
             transition={{ delay: 0.3, duration: 0.6 }}
             className="text-4xl lg:text-5xl font-bold mb-6 leading-tight"
           >
-            O'zbekiston Futbol Federatsiyasi
+            O'zbekiston Murabbiylar ta'limi
           </motion.h1>
 
           <motion.p
@@ -397,7 +397,7 @@ export default function AdminLoginPage() {
                 </Link>
               </div>
               <p className="text-xs text-center text-gray-400 mt-4">
-                © 2026 O'zbekiston Futbol Federatsiyasi. Barcha huquqlar himoyalangan.
+                © 2026 O'zbekiston Murabbiylar ta'limi. Barcha huquqlar himoyalangan.
               </p>
             </div>
           </div>

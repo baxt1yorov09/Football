@@ -13,7 +13,7 @@ export default function TermsPage() {
       title: '1. Umumiy qoidalar',
       icon: FileText,
       content: [
-        'Ushbu litsenziya berish tizimi ("Tizim") O\'zbekiston Futbol Federatsiyasi ("Federatsiya") tomonidan boshqariladi.',
+        'Ushbu litsenziya berish tizimi ("Tizim") O\'zbekiston Murabbiylar ta\'limi ("Markaz") tomonidan boshqariladi.',
         'Tizimdan foydalanish orqali Federatsiyaning rasmiy roziligiga ega bo\'lishini talab qiladi.',
         'Litsenziya olish uchun ariza berishda to\'g\'ri va to\'liq ma\'lumotlarni taqdim etish majburiyati foydalanuvchi zimmasiga yuklanadi.',
         'Federatsiya ma\'lumotlarni tekshirish va tasdiqlash huquqini o\'zida saqlab qoladi.'
@@ -92,7 +92,7 @@ export default function TermsPage() {
               Foydalanish shartlari
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              O\'zbekiston Futbol Federatsiyasi litsenziya berish tizimining rasmiy shartlari
+              O&apos;zbekiston Murabbiylar ta&apos;limi litsenziya berish tizimining rasmiy shartlari
             </p>
           </motion.div>
 

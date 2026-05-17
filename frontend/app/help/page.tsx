@@ -120,8 +120,8 @@ const helpContent = [
       title: 'Qo\'llab-quvvatlash xizmati',
       description: 'Qo\'llab-quvvatlash xizmati bilan bog\'lanish',
       content: [
-        'Telefon raqami: +998 71 200 00 00',
-        'Email manzili: support@uff.uz',
+        'Telefon raqami: +998 93 998 10 29 / +998 99 452 17 77',
+        'Email manzili: fmtmufa@gmail.com',
         'Ish vaqti: Dushanba-Juma: 9:00 - 18:00'
       ]
     }

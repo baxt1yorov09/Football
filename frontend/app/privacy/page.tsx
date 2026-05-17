@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       title: 'Ma\'lumotlarni yig\'ish',
       icon: Shield,
       content: [
-        'Biz O\'zbekiston Futbol Federatsiyasi litsenziya berish tizimi orqali foydalanuvchilardan quyidagilarni yig\'itamiz:',
+        'Biz O\'zbekiston Murabbiylar ta\'limi litsenziya berish tizimi orqali foydalanuvchilardan quyidagilarni yig\'itamiz:',
         '• Shaxsiy ma\'lumotlar: F.I.O., ism, familiya, tug\'ilgan sana, telefon raqami, elektron pochta manzili',
         '• Litsenziya ma\'lumotlari: Litsenziya turi, raqami, berilgan sana, muddati, tasdiqlash kodi',
         '• Malaka ma\'lumotlari: Olingan malakalar, sertifikatlar, diplomlar',
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
               Maxfiylik siyosati
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              O\'zbekiston Futbol Federatsiyasi litsenziya berish tizimidagi foydalanuvchilarning ma\'lumotlarini himoya qilish siyosati
+              O&apos;zbekiston Murabbiylar ta&apos;limi litsenziya berish tizimidagi foydalanuvchilarning ma&apos;lumotlarini himoya qilish siyosati
             </p>
           </motion.div>
 

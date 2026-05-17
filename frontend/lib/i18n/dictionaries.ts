@@ -56,7 +56,7 @@ export const dictionaries = {
     },
     admin: {
       panel: 'Admin Panel',
-      subtitle: "O'zbekiston Futbol Federatsiyasi - Boshqaruv tizimi",
+      subtitle: "O'zbekiston Murabbiylar ta'limi - Boshqaruv tizimi",
       overview: 'Dashboard',
       applications: 'Arizalar',
       licenses: 'Litsenziyalar',

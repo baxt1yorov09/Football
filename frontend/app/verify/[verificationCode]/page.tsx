@@ -91,12 +91,16 @@ export default function VerificationPage() {
             {/* Header */}
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-3 mb-4">
-                <div className="w-16 h-16 bg-[#F39C12] rounded-2xl flex items-center justify-center">
-                  <span className="text-2xl font-bold text-white">UFF</span>
+                <div className="w-16 h-16 bg-white border border-gray-200 rounded-2xl flex items-center justify-center p-2">
+                  <img
+                    src="/Uzbekistan_Football_Association_Logo.svg"
+                    alt="UFA"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-[#0D3B6E]">
-                    O'zbekiston Futbol Federatsiyasi
+                    O'zbekiston Murabbiylar ta'limi
                   </h1>
                   <p className="text-gray-600">Litsenziya tekshirish tizimi</p>
                 </div>
@@ -286,7 +290,7 @@ export default function VerificationPage() {
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-4">
-                © 2026 O'zbekiston Futbol Federatsiyasi. Barcha huquqlar himoyalangan.
+                © 2026 O'zbekiston Murabbiylar ta'limi. Barcha huquqlar himoyalangan.
               </p>
             </div>
           </CardContent>

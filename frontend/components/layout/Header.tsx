@@ -140,8 +140,12 @@ export function Header() {
       <div className="flex items-center justify-between h-full px-4 lg:px-8">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-[#F39C12] rounded-lg flex items-center justify-center transition-transform group-hover:scale-105">
-            <span className="text-lg font-bold text-white">UFF</span>
+          <div className="w-10 h-10 bg-white border border-gray-200 rounded-lg flex items-center justify-center p-1 transition-transform group-hover:scale-105">
+            <img
+              src="/Uzbekistan_Football_Association_Logo.svg"
+              alt="UFA"
+              className="w-full h-full object-contain"
+            />
           </div>
           <span className="hidden md:block font-semibold text-[#0D3B6E]">
             {t('nav.portal')}

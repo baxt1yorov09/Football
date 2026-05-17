@@ -34,12 +34,16 @@ export function Footer() {
             viewport={{ once: true }}
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-[#F39C12] rounded-xl flex items-center justify-center">
-                <span className="text-xl font-bold text-white">UFF</span>
+              <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center p-1.5">
+                <img
+                  src="/Uzbekistan_Football_Association_Logo.svg"
+                  alt="UFA"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <h3 className="font-bold text-lg">O&apos;zbekiston</h3>
-                <p className="text-sm text-white/70">Futbol Federatsiyasi</p>
+                <p className="text-sm text-white/70">Murabbiylar ta&apos;limi</p>
               </div>
             </div>
             <p className="text-white/70 text-sm leading-relaxed mb-6">
@@ -48,7 +52,7 @@ export function Footer() {
             </p>
             <div className="flex gap-4">
               <a 
-                href="https://t.me/UFF_license" 
+                href="https://t.me/Murabbiylarmarkazi" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#F39C12] transition-colors"
@@ -58,7 +62,7 @@ export function Footer() {
                 </svg>
               </a>
               <a 
-                href="https://instagram.com/uff.uz" 
+                href="https://www.instagram.com/fmtm.uz?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#F39C12] transition-colors"
@@ -136,19 +140,24 @@ export function Footer() {
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-[#F39C12] flex-shrink-0 mt-0.5" />
                 <span className="text-white/70 text-sm">
-                  Toshkent shahri, Mustaqillik shox ko'chasi, 79
+                  Toshkent shahar, Chilonzor tumani, Bunyodkor shoh ko&apos;chasi 47
                 </span>
               </li>
-              <li className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-[#F39C12] flex-shrink-0" />
-                <a href="tel:+998712341234" className="text-white/70 text-sm hover:text-[#F39C12]">
-                  +998 (71) 234-12-34
-                </a>
+              <li className="flex items-start gap-3">
+                <Phone className="w-5 h-5 text-[#F39C12] flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  <a href="tel:+998939981029" className="text-white/70 text-sm hover:text-[#F39C12]">
+                    +998 93 998 10 29
+                  </a>
+                  <a href="tel:+998994521777" className="text-white/70 text-sm hover:text-[#F39C12]">
+                    +998 99 452 17 77
+                  </a>
+                </div>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-[#F39C12] flex-shrink-0" />
-                <a href="mailto:license@uff.uz" className="text-white/70 text-sm hover:text-[#F39C12]">
-                  license@uff.uz
+                <a href="mailto:fmtmufa@gmail.com" className="text-white/70 text-sm hover:text-[#F39C12]">
+                  fmtmufa@gmail.com
                 </a>
               </li>
             </ul>
@@ -158,7 +167,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-white/50 text-sm">
-            © 2026 O&apos;zbekiston Futbol Federatsiyasi. Barcha huquqlar himoyalangan.
+            © 2026 O&apos;zbekiston Murabbiylar ta&apos;limi. Barcha huquqlar himoyalangan.
           </p>
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-white/50 text-sm hover:text-[#F39C12]">
