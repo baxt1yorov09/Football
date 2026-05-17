@@ -18,6 +18,103 @@ def _is_admin(user):
     return getattr(user, 'role', None) in ('super_admin', 'region_admin') or user.is_staff
 
 
+class ContactMessageView(APIView):
+    """Ochiq murojaat formasi — /contact sahifasidan kelgan xabarlarni
+    sozlangan email manziliga jo'natadi.
+
+    Auth talab qilmaydi. IP-based oddiy rate-limit qo'llaniladi
+    (1 soatda 5 ta xabar).
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, request):
+        from django.core.mail import EmailMessage
+        from django.core.cache import cache
+        import logging
+        import re
+        logger = logging.getLogger(__name__)
+
+        # ── 1. Rate limit (IP boshiga 1 soatda 5 ta) ──────────────
+        ip = (
+            request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+            or request.META.get('REMOTE_ADDR')
+            or 'unknown'
+        )
+        rate_key = f'contact_rl:{ip}'
+        attempts = cache.get(rate_key, 0)
+        if attempts >= 5:
+            return Response(
+                {'detail': "Juda ko'p so'rov yuborildi. Iltimos, keyinroq urinib ko'ring."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        # ── 2. Ma'lumotlarni o'qish va tekshirish ─────────────────
+        data = request.data if isinstance(request.data, dict) else {}
+        name = str(data.get('name', '')).strip()
+        email = str(data.get('email', '')).strip()
+        phone = str(data.get('phone', '')).strip()
+        subject = str(data.get('subject', '')).strip() or "Yangi murojaat (kontakt formasi)"
+        message = str(data.get('message', '')).strip()
+
+        if not name or not email or not message:
+            return Response(
+                {'detail': "Ism, email va xabar matni majburiy"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(name) > 150 or len(subject) > 200 or len(message) > 5000:
+            return Response(
+                {'detail': "Maydon uzunligi chegaradan oshib ketdi"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            return Response(
+                {'detail': "Yaroqli email kiriting"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # ── 3. Email tayyorlash ───────────────────────────────────
+        recipient = getattr(django_settings, 'CONTACT_RECIPIENT_EMAIL', 'fmtmufa@gmail.com')
+        from_email = getattr(django_settings, 'DEFAULT_FROM_EMAIL', None) or 'no-reply@uff.local'
+
+        body = (
+            f"Yangi murojaat — UFF Litsenziya Tizimi\n"
+            f"{'=' * 50}\n\n"
+            f"Ism:     {name}\n"
+            f"Email:   {email}\n"
+            f"Telefon: {phone or '—'}\n"
+            f"Mavzu:   {subject}\n"
+            f"IP:      {ip}\n"
+            f"Vaqt:    {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            f"{'-' * 50}\n"
+            f"Xabar:\n\n{message}\n"
+        )
+
+        try:
+            mail = EmailMessage(
+                subject=f"[UFF Contact] {subject}",
+                body=body,
+                from_email=from_email,
+                to=[recipient],
+                reply_to=[email],  # Admin javob bersa, to'g'ridan-to'g'ri foydalanuvchiga ketadi
+            )
+            mail.send(fail_silently=False)
+        except Exception as e:
+            logger.error(f"Contact email yuborilmadi: {e}")
+            return Response(
+                {'detail': "Xabar yuborishda xatolik yuz berdi. Keyinroq urinib ko'ring."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # Rate limit'ni yangilash
+        cache.set(rate_key, attempts + 1, timeout=3600)
+
+        return Response(
+            {'detail': "Xabaringiz muvaffaqiyatli yuborildi. Tez orada siz bilan bog'lanamiz."},
+            status=status.HTTP_200_OK,
+        )
+
+
 class MaintenanceStatusView(APIView):
     """Texnik xizmat rejimi holati — auth talab qilmaydi (banner uchun)."""
     permission_classes = []

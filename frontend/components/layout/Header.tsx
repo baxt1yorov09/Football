@@ -49,7 +49,7 @@ function getInitials(name?: string): string {
 
 export function Header() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const {
     unreadCount,
     notifications,
@@ -128,6 +128,12 @@ export function Header() {
   };
 
   const recentNotifications = notifications.slice(0, 6);
+
+  // Header faqat tizimga kirgan foydalanuvchilar uchun ko'rinadi.
+  // /help, /contact, /privacy, /terms kabi ochiq sahifalarda yashiriladi.
+  if (isLoading || !isAuthenticated) {
+    return null;
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50">

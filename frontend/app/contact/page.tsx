@@ -19,6 +19,7 @@ export default function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -30,21 +31,33 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      setErrorMessage('Ism, email va xabar matni majburiy');
       setSubmitStatus('error');
       return;
     }
 
     setIsSubmitting(true);
     setSubmitStatus('idle');
+    setErrorMessage('');
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const res = await fetch('/api/settings/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErrorMessage(data?.detail || data?.error || 'Xabar yuborilmadi');
+        setSubmitStatus('error');
+        return;
+      }
       setSubmitStatus('success');
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch (error) {
+      setErrorMessage("Server bilan bog'lanishda xatolik");
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
@@ -235,7 +248,7 @@ export default function ContactPage() {
                     {submitStatus === 'error' && (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                         <p className="text-red-700 text-sm">
-                          Xatolik yuz berdi. Iltimos, barcha maydonlarni to\'ldiring va qayta urinib ko\'ring.
+                          {errorMessage || "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."}
                         </p>
                       </div>
                     )}

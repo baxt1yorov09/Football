@@ -3,7 +3,7 @@ from .views import (
     SystemSettingsView, NotificationPreferencesView,
     RunBackupNowView, CleanLogsView, SystemStatusView,
     BackupListView, BackupDownloadView, BackupDeleteView,
-    MaintenanceStatusView,
+    MaintenanceStatusView, ContactMessageView,
 )
 
 urlpatterns = [
@@ -27,4 +27,7 @@ urlpatterns = [
     # Public — banner uchun (auth talab qilmaydi)
     path('maintenance-status', MaintenanceStatusView.as_view(), name='maintenance-status'),
     path('maintenance-status/', MaintenanceStatusView.as_view()),
+    # Public — kontakt formasi
+    path('contact', ContactMessageView.as_view(), name='contact-message'),
+    path('contact/', ContactMessageView.as_view()),
 ]
