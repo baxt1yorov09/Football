@@ -328,6 +328,10 @@ class AdminUserUpdateView(APIView):
                     setattr(u, field, value)
                 changed[field] = value
 
+        # Role o'zgargan bo'lsa, is_staff'ni ham mos qilamiz
+        if 'role' in changed:
+            u.is_staff = u.role in {'super_admin', 'region_admin', 'staff'}
+
         u.save()
         _write_audit(request.user, 'update_user', u.id, changed)
         return Response(_serialize_user(u, request=request))
@@ -412,6 +416,11 @@ class AdminUserCreateView(APIView):
         elif request.user.role == 'region_admin' and request.user.region_id:
             region = request.user.region
 
+        # Admin rollarda Django'ning is_staff=True bo'lishi kerak —
+        # bu Django admin paneliga kirishga va is_staff'ga tayanadigan
+        # permissionlarga ham ruxsat beradi.
+        is_staff_flag = role in {'super_admin', 'region_admin', 'staff'}
+
         u = User.objects.create(
             phone=phone,
             username=phone,
@@ -422,6 +431,7 @@ class AdminUserCreateView(APIView):
             workplace=request.data.get('workplace') or '',
             job_title=request.data.get('job_title') or '',
             is_active=True,
+            is_staff=is_staff_flag,
             is_onboarded=False,
         )
         # password — agar berilgan bo'lsa, set qil; aks holda usable_password emas

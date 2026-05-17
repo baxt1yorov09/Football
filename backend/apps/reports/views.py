@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -17,9 +17,23 @@ from apps.users.models import User, Region
 from apps.licenses.models import LicenseType
 
 
+# Admin rollarini tekshiruvchi permission (Django'ning `is_staff`
+# o'rniga maxsus `role` maydoniga tayanadi — chunki yangi yaratilgan
+# super_admin'larda is_staff=False bo'lishi mumkin).
+ADMIN_ROLES = {'super_admin', 'region_admin', 'staff', 'viewer'}
+
+
+class IsAdminRole(BasePermission):
+    def has_permission(self, request, view):
+        u = request.user
+        if not (u and u.is_authenticated):
+            return False
+        return getattr(u, 'role', None) in ADMIN_ROLES or u.is_staff or u.is_superuser
+
+
 class DashboardStatsView(APIView):
     """Get dashboard statistics"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminRole]
     
     @swagger_auto_schema(
         operation_description="Get dashboard statistics for admin panel",
@@ -182,7 +196,7 @@ class DashboardStatsView(APIView):
 
 class ApplicationReportView(APIView):
     """Generate application reports with filters"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminRole]
     
     @swagger_auto_schema(
         operation_description="Generate application report with date range and filters",
@@ -273,7 +287,7 @@ class ApplicationReportView(APIView):
 
 class UserActivityReportView(APIView):
     """Get user activity report"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminRole]
     
     @swagger_auto_schema(
         operation_description="Get user registration and activity statistics",
@@ -336,7 +350,7 @@ class UserActivityReportView(APIView):
 
 class LicenseStatisticsView(APIView):
     """Get license statistics"""
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminRole]
     
     @swagger_auto_schema(
         operation_description="Get detailed license type statistics",

@@ -140,11 +140,11 @@ export default function PrivacyPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-semibold mb-2">Elektron pochta</h4>
-                    <p className="text-gray-600">privacy@uff.uz</p>
+                    <p className="text-gray-600">fmtmufa@gmail.com</p>
                   </div>
                   <div>
                     <h4 className="font-semibold mb-2">Telefon</h4>
-                    <p className="text-gray-600">+998 71 200 00 00</p>
+                    <p className="text-gray-600">+998 93 998 10 29 / +998 99 452 17 77</p>
                   </div>
                   <div>
                     <h4 className="font-semibold mb-2">Ish vaqti</h4>

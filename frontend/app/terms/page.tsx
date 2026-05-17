@@ -197,15 +197,15 @@ export default function TermsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <h4 className="font-medium mb-2">Telefon</h4>
-                    <p className="text-gray-700">+998 71 200 00 00</p>
+                    <p className="text-gray-700">+998 93 998 10 29 / +998 99 452 17 77</p>
                   </div>
                   <div>
                     <h4 className="font-medium mb-2">Email</h4>
-                    <p className="text-gray-700">info@uff.uz</p>
+                    <p className="text-gray-700">fmtmufa@gmail.com</p>
                   </div>
                   <div>
                     <h4 className="font-medium mb-2">Manzil</h4>
-                    <p className="text-gray-700">Toshkent sh., Chilonzor tumani</p>
+                    <p className="text-gray-700">Toshkent shahar, Chilonzor tumani, Bunyodkor shoh ko&apos;chasi 47</p>
                   </div>
                 </div>
               </CardContent>

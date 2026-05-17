@@ -369,7 +369,7 @@ class AdminForgotPasswordView(APIView):
         from django.contrib.auth.tokens import default_token_generator
         from django.utils.http import urlsafe_base64_encode
         from django.utils.encoding import force_bytes
-        from django.core.mail import send_mail
+        from django.core.mail import EmailMultiAlternatives
         import logging
         logger = logging.getLogger(__name__)
 
@@ -387,13 +387,16 @@ class AdminForgotPasswordView(APIView):
             status=status.HTTP_200_OK,
         )
 
-        user = User.objects.filter(
-            email__iexact=email,
-            is_active=True,
-            deleted_at__isnull=True,
-        ).first()
+        # User model'da `deleted_at` mavjudligini tekshiramiz (soft-delete)
+        qs = User.objects.filter(email__iexact=email, is_active=True)
+        try:
+            qs = qs.filter(deleted_at__isnull=True)
+        except Exception:
+            pass
+        user = qs.first()
 
         if not user or user.role not in ADMIN_ROLES:
+            logger.info(f"Forgot-password: admin email topilmadi — {email}")
             return generic_ok
 
         # Token + uid yaratamiz
@@ -409,22 +412,84 @@ class AdminForgotPasswordView(APIView):
         reset_link = f"{frontend_url.rstrip('/')}/admin/reset-password/{uid}/{token}"
 
         subject = "UFF Admin — Parolni tiklash"
-        body = (
-            f"Assalomu alaykum, {user.full_name or user.email}!\n\n"
+        display_name = user.full_name or user.email
+        text_body = (
+            f"Assalomu alaykum, {display_name}!\n\n"
             f"Sizning UFF admin hisobingiz uchun parolni tiklash so'rovi qabul qilindi.\n"
             f"Quyidagi havolaga bosib yangi parol o'rnatishingiz mumkin (24 soat amal qiladi):\n\n"
             f"{reset_link}\n\n"
-            f"Agar siz bu so'rovni yubormagan bo'lsangiz, ushbu xatni e'tiborsiz qoldiring.\n"
+            f"Agar siz bu so'rovni yubormagan bo'lsangiz, ushbu xatni e'tiborsiz qoldiring.\n\n"
+            f"— O'zbekiston Murabbiylar ta'limi tizimi\n"
         )
+        html_body = f"""\
+<!DOCTYPE html>
+<html lang="uz">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,Helvetica,sans-serif;color:#333;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+             style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;
+                    box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#0D3B6E 0%,#1A56A0 100%);padding:32px;text-align:center;">
+            <h1 style="margin:0;color:#fff;font-size:22px;">O'zbekiston Murabbiylar ta'limi</h1>
+            <p style="margin:6px 0 0;color:#cfe0f5;font-size:14px;">Admin paneli</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;">
+            <h2 style="margin:0 0 12px;color:#0D3B6E;font-size:20px;">Parolni tiklash</h2>
+            <p style="margin:0 0 16px;line-height:1.6;">
+              Assalomu alaykum, <strong>{display_name}</strong>!
+            </p>
+            <p style="margin:0 0 16px;line-height:1.6;">
+              Sizning UFF admin hisobingiz uchun parolni tiklash so'rovi qabul qilindi.
+              Quyidagi tugmani bosib yangi parol o'rnatishingiz mumkin
+              (havola <strong>24 soat</strong> amal qiladi):
+            </p>
+            <p style="text-align:center;margin:28px 0;">
+              <a href="{reset_link}"
+                 style="display:inline-block;background:#1A56A0;color:#fff;text-decoration:none;
+                        font-weight:600;padding:14px 28px;border-radius:8px;">
+                Parolni tiklash
+              </a>
+            </p>
+            <p style="margin:0 0 8px;font-size:13px;color:#666;">
+              Yoki ushbu havolani brauzerga nusxalang:
+            </p>
+            <p style="margin:0 0 24px;word-break:break-all;font-size:12px;
+                      background:#f4f6f9;padding:10px;border-radius:6px;color:#1A56A0;">
+              {reset_link}
+            </p>
+            <p style="margin:0;font-size:13px;color:#888;line-height:1.6;">
+              Agar siz bu so'rovni yubormagan bo'lsangiz, ushbu xatni e'tiborsiz qoldirishingiz mumkin —
+              parolingiz o'zgarmaydi.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f9fafb;padding:16px 32px;text-align:center;
+                     border-top:1px solid #eee;font-size:12px;color:#888;">
+            © 2026 O'zbekiston Murabbiylar ta'limi · Avtomatik xabar, javob bermang.
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
 
         try:
-            send_mail(
+            msg = EmailMultiAlternatives(
                 subject=subject,
-                message=body,
+                body=text_body,
                 from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@uff.local'),
-                recipient_list=[user.email],
-                fail_silently=False,
+                to=[user.email],
             )
+            msg.attach_alternative(html_body, "text/html")
+            msg.send(fail_silently=False)
+            logger.info(f"Forgot-password email yuborildi: {user.email}")
         except Exception as e:
             logger.error(f"Forgot-password email yuborilmadi ({user.email}): {e}")
             # Baribir generic_ok qaytaramiz
