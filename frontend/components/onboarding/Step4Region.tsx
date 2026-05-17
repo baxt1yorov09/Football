@@ -32,14 +32,6 @@ export function Step4Region({ data, onSubmit, onBack, isSubmitting }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Toshkent highlight */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2">
-        <span className="text-amber-500 flex-shrink-0">⭐</span>
-        <p className="text-xs text-amber-800">
-          <strong>Toshkent shahri</strong> foydalanuvchilari PRO, GK va Fitness
-          litsenziyalarini olish imkoniga ega
-        </p>
-      </div>
 
       {/* Viloyatlar */}
       {loading ? (
@@ -57,7 +49,6 @@ export function Step4Region({ data, onSubmit, onBack, isSubmitting }: Props) {
                   : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
               <MapPin className={`w-3 h-3 flex-shrink-0 ${selected === region.id ? 'text-[#1A56A0]' : 'text-gray-300'}`} />
               <span>{region.name_uz}</span>
-              {region.is_tashkent && <span className="ml-auto text-amber-500">⭐</span>}
             </button>
           ))}
         </div>

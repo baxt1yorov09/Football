@@ -34,7 +34,7 @@ export function UzbekistanMap() {
             O&apos;zbekiston viloyatlari
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            13 viloyat bo&apos;ylab murabbiylar tarqalishi
+            12 ta viloyat, Qoraqalpog&apos;iston Respublikasi va Toshkent shahri bo&apos;ylab murabbiylar tarqalishi
           </p>
         </motion.div>
 
