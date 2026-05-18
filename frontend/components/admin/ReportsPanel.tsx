@@ -8,6 +8,7 @@ import {
   X, Loader2, ChevronLeft, ChevronRight, Activity, Sparkles,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/I18nProvider';
+import { adminApi, adminApiDownload } from '@/lib/adminApi';
 
 // ════════════════════════════════════════════════════════════════════
 // Types
@@ -52,25 +53,9 @@ interface Template {
 // ════════════════════════════════════════════════════════════════════
 // API helper
 // ════════════════════════════════════════════════════════════════════
+// adminApi wrapper: 401 paytida avtomatik refresh + login sahifasiga yo'naltirish
 function reportApi(path: string, method: string = 'GET', body?: any): Promise<any> {
-  const token =
-    (typeof window !== 'undefined' &&
-      (localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken'))) || '';
-  const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  return fetch(path, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  }).then(async (r) => {
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      throw new Error(err.detail || err.error || `HTTP ${r.status}`);
-    }
-    const ct = r.headers.get('content-type') || '';
-    return ct.includes('application/json') ? r.json() : r;
-  });
+  return adminApi(path, { method, body });
 }
 
 const ICONS: Record<string, any> = {
@@ -195,12 +180,7 @@ export function ReportsPanel() {
 
   const handleDownload = async (r: ReportRow) => {
     try {
-      const token = localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken') || '';
-      const res = await fetch(`/api/reports/admin/${r.id}/download/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
+      const blob = await adminApiDownload(`/api/reports/admin/${r.id}/download/`);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
