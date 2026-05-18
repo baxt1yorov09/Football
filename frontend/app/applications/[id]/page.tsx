@@ -211,8 +211,8 @@ export default function ApplicationDetailPage() {
       <div className="min-h-screen bg-[#F4F6F9]">
         <Header />
         <SmartSidebar />
-        <main className="ml-64 pt-16">
-          <div className="p-8 max-w-5xl mx-auto space-y-6">
+        <main className="lg:ml-64 pt-16">
+          <div className="p-4 lg:p-8 max-w-5xl mx-auto space-y-6">
             <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
             <div className="h-32 bg-gray-100 rounded-2xl animate-pulse" />
             <div className="grid grid-cols-3 gap-6">
@@ -234,8 +234,8 @@ export default function ApplicationDetailPage() {
       <div className="min-h-screen bg-[#F4F6F9]">
         <Header />
         <SmartSidebar />
-        <main className="ml-64 pt-16">
-          <div className="p-8 max-w-3xl mx-auto">
+        <main className="lg:ml-64 pt-16">
+          <div className="p-4 lg:p-8 max-w-3xl mx-auto">
             <button
               onClick={() => router.push('/applications')}
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#1A56A0] mb-6"
@@ -285,8 +285,8 @@ export default function ApplicationDetailPage() {
       <Header />
       <SmartSidebar />
 
-      <main className="ml-64 pt-16">
-        <div className="p-8 max-w-5xl mx-auto">
+      <main className="lg:ml-64 pt-16">
+        <div className="p-4 lg:p-8 max-w-5xl mx-auto">
           {/* Toast */}
           <AnimatePresence>
             {toast && (

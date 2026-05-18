@@ -52,8 +52,8 @@ export default function ApplicationsPage() {
       <Header />
       <SmartSidebar />
       
-      <main className="ml-64 pt-16">
-        <div className="p-8">
+      <main className="lg:ml-64 pt-16">
+        <div className="p-4 lg:p-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

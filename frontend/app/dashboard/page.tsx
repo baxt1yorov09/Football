@@ -19,8 +19,8 @@ export default function DashboardPage() {
       <Header />
       <SmartSidebar />
       
-      <main className="ml-64 pt-16">
-        <div className="p-8">
+      <main className="lg:ml-64 pt-16">
+        <div className="p-4 lg:p-8">
           {/* Welcome Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

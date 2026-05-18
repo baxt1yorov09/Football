@@ -2,17 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Award, 
-  Users, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  FileText,
+  Award,
+  Users,
+  BarChart3,
   Settings,
   Shield,
-  ChevronRight
+  ChevronRight,
+  X,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 
 function getToken(): string | null {
@@ -35,6 +36,22 @@ export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
   const pathname = usePathname();
   const { t, locale } = useI18n();
   const [stats, setStats] = useState<SidebarStats | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Mobile drawer toggle from header hamburger
+  useEffect(() => {
+    const onToggle = () => setMobileOpen((v) => !v);
+    const onClose = () => setMobileOpen(false);
+    window.addEventListener('toggle-sidebar', onToggle as EventListener);
+    window.addEventListener('close-sidebar', onClose as EventListener);
+    return () => {
+      window.removeEventListener('toggle-sidebar', onToggle as EventListener);
+      window.removeEventListener('close-sidebar', onClose as EventListener);
+    };
+  }, []);
+
+  // Close drawer on route change
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -72,14 +89,26 @@ export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
     { icon: Settings, label: t('admin.settings'), id: 'settings' },
   ];
 
-  return (
-    <aside className="fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 overflow-y-auto">
+  const handleNavClick = (id: string) => {
+    setActiveTab(id);
+    setMobileOpen(false);
+  };
+
+  const sidebarBody = (
+    <>
       {/* Admin Badge */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#F39C12]/10 to-[#E67E22]/10 rounded-lg">
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#F39C12]/10 to-[#E67E22]/10 rounded-lg flex-1">
           <Shield className="w-5 h-5 text-[#F39C12]" />
           <span className="text-sm font-semibold text-[#F39C12]">{t('admin.panel')}</span>
         </div>
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="lg:hidden ml-2 p-1.5 rounded-lg hover:bg-gray-100"
+          aria-label="Close menu"
+        >
+          <X className="w-5 h-5 text-gray-500" />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -87,16 +116,15 @@ export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
         {menuItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-
           return (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
               <button
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleNavClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   isActive
                     ? 'bg-[#F39C12]/10 text-[#F39C12] font-medium'
@@ -105,9 +133,7 @@ export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
               >
                 <Icon className="w-5 h-5" />
                 <span>{item.label}</span>
-                {isActive && (
-                  <ChevronRight className="w-4 h-4 ml-auto" />
-                )}
+                {isActive && <ChevronRight className="w-4 h-4 ml-auto" />}
               </button>
             </motion.div>
           );
@@ -140,7 +166,40 @@ export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
           </div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:block fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 overflow-y-auto">
+        {sidebarBody}
+      </aside>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
+              className="lg:hidden fixed inset-0 bg-black/40 z-40"
+            />
+            <motion.aside
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              transition={{ type: 'tween', duration: 0.2 }}
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 overflow-y-auto z-50"
+            >
+              {sidebarBody}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 

@@ -92,7 +92,7 @@ const statusConfig = {
 
 export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps) {
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [hasAdminToken, setHasAdminToken] = useState(false);
 
   useEffect(() => {
@@ -150,9 +150,9 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
     } catch (err: any) {
       console.error('Error fetching applications:', err);
       if (err.response?.status === 403) {
-        setError('Ruxsat yo\'q: Admin huquqlari talab qilinadi');
+        setError(t('admin.apps_table.permission_error'));
       } else {
-        setError('Arizalarni yuklashda xatolik yuz berdi');
+        setError(t('admin.apps_table.load_error'));
       }
     } finally {
       setLoading(false);
@@ -271,16 +271,62 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
     }
   };
 
+  const handleExport = () => {
+    if (filteredApplications.length === 0) return;
+    const headers = [
+      t('admin.apps_table.app_id'),
+      t('admin.apps_table.applicant'),
+      t('applications.fields.phone'),
+      t('admin.table.license'),
+      t('admin.table.status'),
+      t('applications.submitted_at'),
+      t('applications.fields.region'),
+      t('applications.fields.workplace'),
+      t('applications.fields.job_title'),
+      t('applications.fields.coaching_years'),
+    ];
+    const rows = filteredApplications.map((app: Application) => [
+      app.id,
+      app.user_name || '',
+      app.user_phone || '',
+      app.license_type_code || app.license_type_name || '',
+      (() => { const sc = statusConfig[app.status as keyof typeof statusConfig]; return sc ? t(sc.tKey) : app.status; })(),
+      new Date(app.submitted_at).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ'),
+      app.region_name || app.region || '',
+      app.workplace || '',
+      app.job_title || '',
+      app.coaching_years !== undefined ? app.coaching_years : '',
+    ]);
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `arizalar_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold text-[#0D3B6E]">
-          {showAll ? 'Barcha arizalar' : 'So\'nggi arizalar'}
+          {showAll ? t('admin.apps_table.all_applications') : t('admin.recent_apps')}
         </CardTitle>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={filteredApplications.length === 0}
+            title={t('admin.lic_panel.export')}
+          >
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {t('admin.lic_panel.export')}
           </Button>
         </div>
       </CardHeader>
@@ -323,22 +369,22 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ariza ID
+                  {t('admin.apps_table.app_id')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Arizachi
+                  {t('admin.apps_table.applicant')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Litsenziya
+                  {t('admin.table.license')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('admin.table.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sana
+                  {t('applications.submitted_at')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amallar
+                  {t('admin.apps_table.actions')}
                 </th>
               </tr>
             </thead>
@@ -351,20 +397,20 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                       onClick={fetchApplications}
                       className="text-blue-500 hover:text-blue-700 underline"
                     >
-                      Qayta urinish
+                      {t('common.retry')}
                     </button>
                   </td>
                 </tr>
               ) : loading ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-gray-500">
-                    Yuklanmoqda...
+                    {t('common.loading')}
                   </td>
                 </tr>
               ) : paginatedApplications.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-gray-500">
-                    Arizalar topilmadi
+                    {t('admin.apps_table.no_applications')}
                   </td>
                 </tr>
               ) : paginatedApplications.map((app: Application, index: number) => (
@@ -396,7 +442,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(app.submitted_at).toLocaleDateString('uz-UZ')}
+                    {new Date(app.submitted_at).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-1.5">
@@ -452,7 +498,9 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                {(currentPage - 1) * 10 + 1} dan {Math.min(currentPage * 10, filteredApplications.length)} gacha {filteredApplications.length} ta
+                {locale === 'ru'
+                  ? `${(currentPage - 1) * 10 + 1}–${Math.min(currentPage * 10, filteredApplications.length)} из ${filteredApplications.length}`
+                  : `${(currentPage - 1) * 10 + 1} dan ${Math.min(currentPage * 10, filteredApplications.length)} gacha ${filteredApplications.length} ta`}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -498,11 +546,11 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
             <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#0D3B6E] to-[#1A56A0] text-white">
               <div>
                 <h2 className="text-xl font-bold">
-                  Ariza #{selectedAppDetails.id.slice(-6)}
+                  {t('admin.apps_table.app_id')} #{selectedAppDetails.id.slice(-6)}
                 </h2>
                 <p className="text-sm text-white/70 flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  {new Date(selectedAppDetails.submitted_at).toLocaleString('uz-UZ')}
+                  {new Date(selectedAppDetails.submitted_at).toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}
                 </p>
               </div>
               <button 
@@ -537,11 +585,11 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     {selectedAppDetails.status_display}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {selectedAppDetails.status === 'pending' && 'Yangi ariza, ko\'rib chiqish talab etiladi'}
-                    {selectedAppDetails.status === 'under_review' && 'Admin tomonidan ko\'rib chiqilmoqda'}
-                    {selectedAppDetails.status === 'approved' && 'Ariza tasdiqlandi, litsenziya berildi'}
-                    {selectedAppDetails.status === 'rejected' && `Rad etildi: ${selectedAppDetails.rejection_reason || 'Sabab ko\'rsatilmagan'}`}
-                    {selectedAppDetails.status === 'additional_docs' && 'Qo\'shimcha hujjatlar talab qilinmoqda'}
+                    {selectedAppDetails.status === 'pending' && t('admin.apps_table.status_pending_desc')}
+                    {selectedAppDetails.status === 'under_review' && t('admin.apps_table.status_review_desc')}
+                    {selectedAppDetails.status === 'approved' && t('admin.apps_table.status_approved_desc')}
+                    {selectedAppDetails.status === 'rejected' && `${t('admin.apps_table.status_rejected_prefix')}${selectedAppDetails.rejection_reason || t('common.empty')}`}
+                    {selectedAppDetails.status === 'additional_docs' && t('admin.apps_table.status_docs_desc')}
                   </p>
                 </div>
               </div>
@@ -550,7 +598,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-[#1A56A0]" />
-                  Murabbiy ma'lumotlari
+                  {t('admin.apps_table.coach_info')}
                 </h3>
                 <div className="bg-gray-50 rounded-xl p-4 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -560,7 +608,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">F.I.O</p>
-                        <p className="font-medium text-gray-900">{selectedAppDetails.user_name || 'Noma\'lum'}</p>
+                        <p className="font-medium text-gray-900">{selectedAppDetails.user_name || t('admin.apps_table.unknown')}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -569,7 +617,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">Telefon</p>
-                        <p className="font-medium text-gray-900">{selectedAppDetails.user_phone || 'Noma\'lum'}</p>
+                        <p className="font-medium text-gray-900">{selectedAppDetails.user_phone || t('admin.apps_table.unknown')}</p>
                       </div>
                     </div>
                     {selectedAppDetails.user_email && (
@@ -607,13 +655,13 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                   {selectedAppDetails.job_title && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <Briefcase className="w-4 h-4" />
-                      <span className="text-sm"><strong>Lavozim:</strong> {selectedAppDetails.job_title}</span>
+                      <span className="text-sm"><strong>{t('applications.fields.job_title')}:</strong> {selectedAppDetails.job_title}</span>
                     </div>
                   )}
                   {selectedAppDetails.coaching_years !== undefined && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <Award className="w-4 h-4" />
-                      <span className="text-sm"><strong>Tajriba:</strong> {selectedAppDetails.coaching_years} yil</span>
+                      <span className="text-sm"><strong>{t('applications.fields.coaching_years')}:</strong> {selectedAppDetails.coaching_years} {t('applications.fields.years')}</span>
                     </div>
                   )}
                 </div>
@@ -623,7 +671,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Award className="w-5 h-5 text-[#1A56A0]" />
-                  Ariza ma'lumotlari
+                  {t('applications.info_title')}
                 </h3>
                 <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-gray-200">
@@ -636,7 +684,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                       }}
                       title={selectedAppDetails.license_type_name}
                     >
-                      {selectedAppDetails.license_type_code || selectedAppDetails.license_type_name || selectedAppDetails.license_type || 'Noma\'lum'}
+                      {selectedAppDetails.license_type_code || selectedAppDetails.license_type_name || selectedAppDetails.license_type || t('admin.apps_table.unknown')}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-gray-200">
@@ -644,7 +692,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     <span className="font-medium text-gray-900">{selectedAppDetails.documents_count || 0}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Holat</span>
+                    <span className="text-gray-600">{t('admin.table.status')}</span>
                     <Badge 
                       className="px-3 py-1"
                       style={{ 
@@ -657,7 +705,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                   </div>
                   {selectedAppDetails.reviewed_by_name && (
                     <div className="flex items-center justify-between py-2">
-                      <span className="text-gray-600">Ko'rib chiqqan</span>
+                      <span className="text-gray-600">{t('admin.apps_table.reviewed_by')}</span>
                       <span className="font-medium text-gray-900">{selectedAppDetails.reviewed_by_name}</span>
                     </div>
                   )}
@@ -668,7 +716,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-[#1A56A0]" />
-                  Hujjatlar
+                  {t('applications.docs_title')}
                 </h3>
                 <div className="space-y-2">
                   {selectedAppDetails.documents && selectedAppDetails.documents.length > 0 ? (
@@ -692,7 +740,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                             onClick={() => setPreviewDoc({ name: doc.file_name || doc.doc_type_display, url: doc.file_url })}
                           >
                             <Eye className="w-4 h-4 mr-1" />
-                            Ko'rish
+                            {t('common.view')}
                           </Button>
                         </div>
                       );
@@ -707,7 +755,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <History className="w-5 h-5 text-[#1A56A0]" />
-                  Admin izohi
+                  {t('applications.admin_note')}
                 </h3>
                 <textarea
                   value={adminNote}
@@ -722,7 +770,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <History className="w-5 h-5 text-[#1A56A0]" />
-                    Faoliyat tarixi
+                    {t('applications.timeline_title')}
                   </h3>
                   <div className="space-y-3">
                     {selectedAppDetails.timeline.map((item, index) => (
@@ -732,7 +780,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                           <p className="font-medium text-gray-900">{item.action}</p>
                           <p className="text-sm text-gray-600">{item.note}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            {new Date(item.created_at).toLocaleString('uz-UZ')} • {item.created_by_name}
+                            {new Date(item.created_at).toLocaleString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')} • {item.created_by_name}
                           </p>
                         </div>
                       </div>
@@ -755,14 +803,14 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                       ) : (
                         <CheckCircle2 className="w-5 h-5" />
                       )}
-                      Tasdiqlash
+                      {t('admin.apps_table.approve')}
                     </button>
                     <button
                       onClick={() => setShowRejectModal(true)}
                       className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all font-medium"
                     >
                       <XCircle className="w-5 h-5" />
-                      Rad etish
+                      {t('admin.apps_table.reject')}
                     </button>
                   </div>
                   <button
@@ -775,7 +823,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     ) : (
                       <FileWarning className="w-5 h-5" />
                     )}
-                    Qo'&apos;shimcha hujjat so'rash
+                    {t('admin.apps_table.request_docs')}
                   </button>
                 </div>
               )}
@@ -784,10 +832,10 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               {isAdmin && (selectedAppDetails.status === 'approved' || selectedAppDetails.status === 'rejected') && (
                 <div className="p-4 bg-gray-50 rounded-xl text-center">
                   <p className="text-gray-600">
-                    Ariza <span className="font-semibold">{selectedAppDetails.status_display}</span>
+                    {t('applications.title')} <span className="font-semibold">{selectedAppDetails.status_display}</span>
                   </p>
                   {selectedAppDetails.rejection_reason && (
-                    <p className="text-sm text-red-600 mt-1">Sabab: {selectedAppDetails.rejection_reason}</p>
+                    <p className="text-sm text-red-600 mt-1">{t('admin.apps_table.rejection_reason_prefix')}{selectedAppDetails.rejection_reason}</p>
                   )}
                 </div>
               )}
@@ -829,14 +877,14 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 onClick={() => setShowRejectModal(false)}
                 className="flex-1 px-6 py-3 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all font-medium"
               >
-                Bekor qilish
+                {t('common.cancel')}
               </button>
               <button
                 onClick={() => selectedAppDetails && handleReject(selectedAppDetails.id)}
                 disabled={!rejectionReason.trim() || actionLoading === selectedAppDetails?.id}
                 className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all disabled:opacity-50 font-medium"
               >
-                {actionLoading === selectedAppDetails?.id ? 'Ishlanmoqda...' : 'Rad etish'}
+                {actionLoading === selectedAppDetails?.id ? t('admin.apps_table.processing') : t('admin.apps_table.reject')}
               </button>
             </div>
           </motion.div>
@@ -869,7 +917,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                   onClick={() => window.open(previewDoc.url, '_blank')}
                 >
                   <Download className="w-4 h-4 mr-1" />
-                  Yuklab olish
+                  {t('common.download')}
                 </Button>
                 <button 
                   onClick={() => setPreviewDoc(null)}

@@ -15,6 +15,7 @@ import {
   Award,
   ChevronDown,
   Inbox,
+  Menu,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -138,6 +139,15 @@ export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50">
       <div className="flex items-center justify-between h-full px-4 lg:px-8">
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+          className="lg:hidden p-2 -ml-2 mr-1 rounded-lg hover:bg-gray-100"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5 text-gray-700" />
+        </button>
+
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <div className="w-10 h-10 bg-white border border-gray-200 rounded-lg flex items-center justify-center p-1 transition-transform group-hover:scale-105">

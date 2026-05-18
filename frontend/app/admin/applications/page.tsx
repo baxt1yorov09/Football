@@ -294,8 +294,8 @@ export default function AdminApplicationsPage() {
       <Header />
       <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
-      <main className="ml-64 pt-16">
-        <div className="p-8">
+      <main className="lg:ml-64 pt-16">
+        <div className="p-4 lg:p-8">
           {/* Error Message */}
           {error && (
             <motion.div
