@@ -63,9 +63,9 @@ const ICONS: Record<string, any> = {
 };
 
 const STATUS_CFG: Record<string, { bg: string; text: string; icon: any; tKey: string }> = {
-  generating: { bg: 'bg-blue-50',  text: 'text-blue-700',  icon: Loader2,      tKey: 'reports_panel.generating' },
-  completed:  { bg: 'bg-green-50', text: 'text-green-700', icon: CheckCircle,  tKey: 'reports_panel.completed' },
-  failed:     { bg: 'bg-red-50',   text: 'text-red-700',   icon: XCircle,      tKey: 'reports_panel.failed' },
+  generating: { bg: 'bg-blue-50',  text: 'text-blue-700',  icon: Loader2,      tKey: 'admin.reports_panel.generating' },
+  completed:  { bg: 'bg-green-50', text: 'text-green-700', icon: CheckCircle,  tKey: 'admin.reports_panel.completed' },
+  failed:     { bg: 'bg-red-50',   text: 'text-red-700',   icon: XCircle,      tKey: 'admin.reports_panel.failed' },
 };
 
 // ════════════════════════════════════════════════════════════════════
@@ -425,6 +425,18 @@ export function ReportsPanel() {
           {reports.map((r, idx) => {
             const sc = STATUS_CFG[r.status] || STATUS_CFG.generating;
             const StatusIcon = sc.icon;
+            // Dinamik tarjima: agar hisobot template asosida yaratilgan bo'lsa
+            // va sarlavhasi standart bo'lsa, joriy locale'ga qarab ko'rsatamiz.
+            const tplKey = r.parameters?.template as string | undefined;
+            const tpl = tplKey ? templates.find((tt) => tt.key === tplKey) : undefined;
+            const isDefaultTitle = !!tpl && (r.title === tpl.title_uz || r.title === tpl.title_ru);
+            const isDefaultDesc = !!tpl && (r.description === tpl.description_uz || r.description === tpl.description_ru);
+            const displayTitle = isDefaultTitle && tpl
+              ? (locale === 'ru' ? tpl.title_ru : tpl.title_uz)
+              : r.title;
+            const displayDesc = isDefaultDesc && tpl
+              ? (locale === 'ru' ? tpl.description_ru : tpl.description_uz)
+              : r.description;
             return (
               <motion.div
                 key={r.id}
@@ -442,9 +454,9 @@ export function ReportsPanel() {
                     {t(sc.tKey)}
                   </span>
                 </div>
-                <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1">{r.title}</h3>
-                {r.description && (
-                  <p className="text-xs text-gray-500 line-clamp-2 mb-3">{r.description}</p>
+                <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1">{displayTitle}</h3>
+                {displayDesc && (
+                  <p className="text-xs text-gray-500 line-clamp-2 mb-3">{displayDesc}</p>
                 )}
 
                 <div className="space-y-1.5 mt-auto text-xs text-gray-500">
@@ -536,6 +548,8 @@ export function ReportsPanel() {
       />
       <ConfirmDeleteModal
         report={deleteReport}
+        templates={templates}
+        locale={locale}
         onClose={() => setDeleteReport(null)}
         onConfirm={() => deleteReport && handleDelete(deleteReport)}
         t={t}
@@ -571,7 +585,7 @@ function GenerateReportModal({ open, templates, onClose, onSubmit, t, locale }: 
     if (!picked) return;
     setSaving(true);
     try {
-      const payload: any = { template: picked.key };
+      const payload: any = { template: picked.key, language: locale };
       if (title.trim()) payload.title = title.trim();
       if (startDate) payload.start_date = startDate;
       if (endDate) payload.end_date = endDate;
@@ -756,12 +770,21 @@ function GenerateReportModal({ open, templates, onClose, onSubmit, t, locale }: 
 // ════════════════════════════════════════════════════════════════════
 // MODAL: Confirm Delete
 // ════════════════════════════════════════════════════════════════════
-function ConfirmDeleteModal({ report, onClose, onConfirm, t }: any) {
+function ConfirmDeleteModal({ report, templates, locale, onClose, onConfirm, t }: any) {
   const [loading, setLoading] = useState(false);
   const submit = async () => {
     setLoading(true);
     try { await onConfirm(); } finally { setLoading(false); }
   };
+  // Locale'ga mos sarlavhani aniqlash
+  const tplKey: string | undefined = report?.parameters?.template;
+  const tpl: Template | undefined = tplKey && Array.isArray(templates)
+    ? templates.find((tt: Template) => tt.key === tplKey)
+    : undefined;
+  const isDefaultTitle = !!tpl && report && (report.title === tpl.title_uz || report.title === tpl.title_ru);
+  const displayTitle = isDefaultTitle && tpl
+    ? (locale === 'ru' ? tpl.title_ru : tpl.title_uz)
+    : report?.title;
   return (
     <AnimatePresence>
       {report && (
@@ -785,7 +808,7 @@ function ConfirmDeleteModal({ report, onClose, onConfirm, t }: any) {
               </div>
               <h3 className="font-semibold text-gray-900">{t('admin.reports_panel.confirm_delete')}</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-5 break-words">{report.title}</p>
+            <p className="text-sm text-gray-600 mb-5 break-words">{displayTitle}</p>
             <div className="flex gap-2">
               <button
                 onClick={onClose}

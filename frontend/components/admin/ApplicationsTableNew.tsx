@@ -93,10 +93,19 @@ const statusConfig = {
 export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps) {
   const { user } = useAuth();
   const { t, locale } = useI18n();
-  const [hasAdminToken, setHasAdminToken] = useState(false);
+  // Lazy initializer: birinchi render'dayoq to'g'ri qiymatni olamiz.
+  // Aks holda useEffect ishlamasdan turib fetch user-endpoint'ga ketadi va
+  // "Arizalar topilmadi" qisqa vaqt ko'rinadi (race condition).
+  const [hasAdminToken, setHasAdminToken] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem('adminAccessToken');
+  });
 
+  // Token keyinchalik o'zgarishi mumkin (login/logout) — qayta o'qiymiz
   useEffect(() => {
-    setHasAdminToken(!!localStorage.getItem('adminAccessToken'));
+    const sync = () => setHasAdminToken(!!localStorage.getItem('adminAccessToken'));
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
   }, []);
 
   const isAdmin = hasAdminToken

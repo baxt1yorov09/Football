@@ -516,20 +516,30 @@ class AdminReportGenerateView(APIView):
         # Resolve template metadata
         meta = next((t for t in REPORT_TEMPLATES if t['key'] == template), None)
         custom_title = (request.data.get('title') or '').strip()
-        title = custom_title or (meta['title_uz'] if meta else template)
+
+        # Til: payload'dan yoki Accept-Language header'dan aniqlaymiz
+        lang = (request.data.get('language') or '').lower().strip()
+        if lang not in ('uz', 'ru'):
+            accept = (request.headers.get('Accept-Language') or '').lower()
+            lang = 'ru' if accept.startswith('ru') else 'uz'
+
+        title_key = 'title_ru' if lang == 'ru' else 'title_uz'
+        desc_key = 'description_ru' if lang == 'ru' else 'description_uz'
+        title = custom_title or (meta[title_key] if meta else template)
 
         params = {
             'template': template,
             'start_date': request.data.get('start_date'),
             'end_date': request.data.get('end_date'),
             'months': request.data.get('months'),
+            'language': lang,
             'downloads': 0,
         }
 
         report = Report.objects.create(
             type=rtype,
             title=title,
-            description=meta['description_uz'] if meta else '',
+            description=meta[desc_key] if meta else '',
             status='generating',
             parameters=params,
             generated_by=request.user,
