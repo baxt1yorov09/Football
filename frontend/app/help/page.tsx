@@ -121,7 +121,7 @@ const helpContent = [
       description: 'Qo\'llab-quvvatlash xizmati bilan bog\'lanish',
       content: [
         'Telefon raqami: +998 93 998 10 29 / +998 99 452 17 77',
-        'Email manzili: fmtmufa@gmail.com',
+        'Email manzili: murabbiylartalimi@gmail.com',
         'Ish vaqti: Dushanba-Juma: 9:00 - 18:00'
       ]
     }

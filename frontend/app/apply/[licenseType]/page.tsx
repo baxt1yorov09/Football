@@ -26,17 +26,8 @@ export default function ApplicationWizardPage() {
   const params = useParams();
   const router = useRouter();
   const licenseType = params.licenseType as string;
-  
-  // Debug URL params
-  console.log('=== URL PARAMS DEBUG ===');
-  console.log('Window location:', window.location.href);
-  console.log('params:', params);
-  console.log('licenseType from params:', licenseType);
-  console.log('typeof licenseType:', typeof licenseType);
-  console.log('Available license types:', Object.keys(LICENSE_REQUIREMENTS));
-  
+
   const licenseConfig = LICENSE_REQUIREMENTS[licenseType as keyof typeof LICENSE_REQUIREMENTS];
-  console.log('licenseConfig:', licenseConfig);
   const { isAuthenticated, isLoading } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -45,20 +36,7 @@ export default function ApplicationWizardPage() {
 
   // Load saved form data from localStorage
   useEffect(() => {
-    // Debug localStorage
-    console.log('=== LOCALSTORAGE DEBUG ===');
-    console.log('Current licenseType:', licenseType);
-    
-    // Clear all application localStorage for debugging
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('application_')) {
-        console.log('Found localStorage key:', key, localStorage.getItem(key));
-        localStorage.removeItem(key);
-      }
-    });
-    
     const saved = localStorage.getItem(`application_${licenseType}`);
-    console.log('Saved data for current licenseType:', saved);
     if (saved) {
       setFormData(JSON.parse(saved));
     }
@@ -119,16 +97,7 @@ export default function ApplicationWizardPage() {
       const form = new FormData();
 
       // Asosiy maydonlar - Django model field nomlariga moslashtirish
-      console.log('=== DEBUG INFO ===');
-      console.log('licenseType:', licenseType);
-      console.log('typeof licenseType:', typeof licenseType);
-      console.log('licenseType === null:', licenseType === null);
-      console.log('licenseType === undefined:', licenseType === undefined);
-      console.log('licenseType === "":', licenseType === "");
-      console.log('JSON.stringify(licenseType):', JSON.stringify(licenseType));
-      
       if (!licenseType || licenseType === 'undefined' || licenseType === 'null') {
-        console.error('ERROR: licenseType is invalid:', licenseType);
         alert('Litsenziya turi aniqlanmadi. Iltimos, qaytadan urinib ko\'ring.');
         return;
       }
@@ -143,76 +112,45 @@ export default function ApplicationWizardPage() {
       // Add phone number
       if (formData.phone) form.append('phone', formData.phone);
       
-      // Region formData'dan olinadi (user tanlaydi)
-      if (formData.regionId) form.append('region', String(formData.regionId));
-      
-      // Debug work info fields - use correct field names from ProfessionalStep
-      console.log('=== DEBUG FORM DATA ===');
-      console.log('formData.currentClub:', formData.currentClub);
-      console.log('formData.position:', formData.position);
-      console.log('formData.experience:', formData.experience);
-      
+      // Hudud:
+      //   - region          = O'qimoqchi bo'lgan hudud (admin yo'naltirish uchun)
+      //   - residence_region = Yashaydigan hudud
+      if (formData.studyRegionId) form.append('region', String(formData.studyRegionId));
+      if (formData.regionId) form.append('residence_region', String(formData.regionId));
+
       // Map ProfessionalStep fields to backend fields
       if (formData.currentClub)   form.append('workplace',      formData.currentClub);
       if (formData.position)      form.append('job_title',      formData.position);
       if (formData.experience)    form.append('coaching_years', String(formData.experience));
-      
-      // Debug FormData content
-      console.log('FormData entries:');
-      Array.from(form.entries()).forEach(([key, value]) => {
-        console.log(`${key}:`, value);
-      });
-      
+
       // Optional fields
       if (formData.prev_license_date)     form.append('prev_license_date',     formData.prev_license_date);
       if (formData.license_validity_start) form.append('license_validity_start', formData.license_validity_start);
       if (formData.license_validity_end)   form.append('license_validity_end',   formData.license_validity_end);
 
-      // Fayllar - backend kutayotgan nomlar
-      console.log('=== DEBUG FILES ===');
-      console.log('formData.passport:', formData.passport);
-      console.log('formData.photo_3x4:', formData.photo_3x4);
-      console.log('formData.prev_license:', formData.prev_license);
-      console.log('formData.documents:', formData.documents);
-      
       // Extract files from documents object (from DocumentsStep)
       if (formData.documents) {
         if (formData.documents.passport && formData.documents.passport.length > 0) {
-          const passportFile = formData.documents.passport[0].file;
-          console.log('Appending passport file from documents:', passportFile);
-          form.append('passport', passportFile);
+          form.append('passport', formData.documents.passport[0].file);
         }
         if (formData.documents.photo_3x4 && formData.documents.photo_3x4.length > 0) {
-          const photoFile = formData.documents.photo_3x4[0].file;
-          console.log('Appending photo_3x4 file from documents:', photoFile);
-          form.append('photo_3x4', photoFile);
+          form.append('photo_3x4', formData.documents.photo_3x4[0].file);
         }
         if (formData.documents.prev_license && formData.documents.prev_license.length > 0) {
-          const licenseFile = formData.documents.prev_license[0].file;
-          console.log('Appending prev_license file from documents:', licenseFile);
-          form.append('prev_license', licenseFile);
+          form.append('prev_license', formData.documents.prev_license[0].file);
         }
       }
-      
+
       // Fallback to direct file fields (if any)
       if (formData.passport) {
-        console.log('Appending passport file (direct)');
         form.append('passport', formData.passport);
       }
       if (formData.photo_3x4) {
-        console.log('Appending photo_3x4 file (direct)');
         form.append('photo_3x4', formData.photo_3x4);
       }
       if (formData.prev_license) {
-        console.log('Appending prev_license file (direct)');
         form.append('prev_license', formData.prev_license);
       }
-
-      // Debug FormData content
-      console.log('FormData entries:');
-      form.forEach((value, key) => {
-        console.log(`${key}:`, value);
-      });
 
       const response = await apiClient.post(
         API_ENDPOINTS.applications.list,

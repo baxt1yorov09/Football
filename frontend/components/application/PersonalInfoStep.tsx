@@ -19,6 +19,7 @@ export function PersonalInfoStep({ data, onNext }: PersonalInfoStepProps) {
     birthDate: data.birthDate || '',
     gender: data.gender || '',
     regionId: data.regionId || '',
+    studyRegionId: data.studyRegionId || '',
     phone: data.phone || '',
     email: data.email || '',
     address: data.address || '',
@@ -60,7 +61,10 @@ export function PersonalInfoStep({ data, onNext }: PersonalInfoStepProps) {
       newErrors.gender = 'Jinsni tanlash majburiy';
     }
     if (!formData.regionId) {
-      newErrors.regionId = 'Viloyatni tanlash majburiy';
+      newErrors.regionId = 'Yashaydigan hududni tanlash majburiy';
+    }
+    if (!formData.studyRegionId) {
+      newErrors.studyRegionId = "O'qimoqchi bo'lgan hududni tanlash majburiy";
     }
     if (!formData.phone) {
       newErrors.phone = 'Telefon raqam kiritish majburiy';
@@ -179,11 +183,11 @@ export function PersonalInfoStep({ data, onNext }: PersonalInfoStepProps) {
           </div>
         </div>
 
-        {/* Region and Contact */}
+        {/* Region: Yashaydigan + O'qimoqchi bo'lgan */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Viloyat <span className="text-red-500">*</span>
+              Yashaydigan hudud <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" suppressHydrationWarning />
@@ -194,7 +198,7 @@ export function PersonalInfoStep({ data, onNext }: PersonalInfoStepProps) {
                   errors.regionId ? 'border-red-500' : 'border-gray-200'
                 }`}
               >
-                <option value="">Viloyatni tanlang</option>
+                <option value="">Yashaydigan hududni tanlang</option>
                 {regions.map((region) => (
                   <option key={region.id} value={region.id}>
                     {region.name_uz}
@@ -207,6 +211,38 @@ export function PersonalInfoStep({ data, onNext }: PersonalInfoStepProps) {
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              O'qimoqchi bo'lgan hudud <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" suppressHydrationWarning />
+              <select
+                value={formData.studyRegionId}
+                onChange={(e) => handleChange('studyRegionId', e.target.value)}
+                className={`w-full h-12 pl-12 pr-4 border rounded-lg focus:outline-none focus:border-[#F39C12] appearance-none bg-white ${
+                  errors.studyRegionId ? 'border-red-500' : 'border-gray-200'
+                }`}
+              >
+                <option value="">O'qimoqchi bo'lgan hududni tanlang</option>
+                {regions.map((region) => (
+                  <option key={region.id} value={region.id}>
+                    {region.name_uz}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {errors.studyRegionId && (
+              <p className="text-red-500 text-xs mt-1">{errors.studyRegionId}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Arizangiz shu hudud admini tomonidan ko'rib chiqiladi.
+            </p>
+          </div>
+        </div>
+
+        {/* Phone */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Telefon <span className="text-red-500">*</span>

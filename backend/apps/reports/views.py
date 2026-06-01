@@ -54,71 +54,88 @@ class DashboardStatsView(APIView):
                 return 100.0 if curr > 0 else 0.0
             return round(((curr - prev) / prev) * 100, 1)
 
-        # ===== Application statistics =====
-        total_applications = Application.objects.count()
-        pending_applications = Application.objects.filter(status='pending').count()
-        under_review = Application.objects.filter(status='under_review').count()
-        approved_total = Application.objects.filter(status='approved').count()
-        rejected_total = Application.objects.filter(status='rejected').count()
+        # ===== Region scoping =====
+        # region_admin faqat o'z viloyatidagi ma'lumotlarni ko'radi.
+        # Super admin va boshqa rollar hammasini ko'radi.
+        is_region_admin = (
+            getattr(request.user, 'role', None) == 'region_admin'
+            and getattr(request.user, 'region_id', None)
+        )
+        scoped_region_id = request.user.region_id if is_region_admin else None
 
-        approved_this_month = Application.objects.filter(
+        apps_qs = Application.objects.all()
+        lic_qs = License.objects.all()
+        users_qs = User.objects.all()
+        if is_region_admin:
+            apps_qs = apps_qs.filter(region_id=scoped_region_id)
+            lic_qs = lic_qs.filter(Q(region_id=scoped_region_id) | Q(user__region_id=scoped_region_id))
+            users_qs = users_qs.filter(region_id=scoped_region_id)
+
+        # ===== Application statistics =====
+        total_applications = apps_qs.count()
+        pending_applications = apps_qs.filter(status='pending').count()
+        under_review = apps_qs.filter(status='under_review').count()
+        approved_total = apps_qs.filter(status='approved').count()
+        rejected_total = apps_qs.filter(status='rejected').count()
+
+        approved_this_month = apps_qs.filter(
             status='approved', reviewed_at__date__gte=thirty_days_ago
         ).count()
-        approved_prev_month = Application.objects.filter(
+        approved_prev_month = apps_qs.filter(
             status='approved',
             reviewed_at__date__gte=sixty_days_ago,
             reviewed_at__date__lt=thirty_days_ago,
         ).count()
 
         # Period stats
-        apps_today = Application.objects.filter(submitted_at__date=today).count()
-        apps_yesterday = Application.objects.filter(submitted_at__date=yesterday).count()
-        apps_week = Application.objects.filter(submitted_at__date__gte=seven_days_ago).count()
-        apps_prev_week = Application.objects.filter(
+        apps_today = apps_qs.filter(submitted_at__date=today).count()
+        apps_yesterday = apps_qs.filter(submitted_at__date=yesterday).count()
+        apps_week = apps_qs.filter(submitted_at__date__gte=seven_days_ago).count()
+        apps_prev_week = apps_qs.filter(
             submitted_at__date__gte=fourteen_days_ago,
             submitted_at__date__lt=seven_days_ago,
         ).count()
-        apps_month = Application.objects.filter(submitted_at__date__gte=thirty_days_ago).count()
-        apps_prev_month = Application.objects.filter(
+        apps_month = apps_qs.filter(submitted_at__date__gte=thirty_days_ago).count()
+        apps_prev_month = apps_qs.filter(
             submitted_at__date__gte=sixty_days_ago,
             submitted_at__date__lt=thirty_days_ago,
         ).count()
 
         # ===== License statistics =====
-        total_licenses = License.objects.count()
-        active_licenses = License.objects.filter(
+        total_licenses = lic_qs.count()
+        active_licenses = lic_qs.filter(
             is_active=True, expires_at__gt=timezone.now()
         ).count()
-        expired_licenses = License.objects.filter(expires_at__lt=timezone.now()).count()
-        new_licenses_month = License.objects.filter(issued_at__date__gte=thirty_days_ago).count()
-        new_licenses_prev_month = License.objects.filter(
+        expired_licenses = lic_qs.filter(expires_at__lt=timezone.now()).count()
+        new_licenses_month = lic_qs.filter(issued_at__date__gte=thirty_days_ago).count()
+        new_licenses_prev_month = lic_qs.filter(
             issued_at__date__gte=sixty_days_ago, issued_at__date__lt=thirty_days_ago,
         ).count()
 
         # ===== User statistics =====
-        total_users = User.objects.filter(role='coach').count()
-        new_users_month = User.objects.filter(
+        total_users = users_qs.filter(role='coach').count()
+        new_users_month = users_qs.filter(
             role='coach', date_joined__date__gte=thirty_days_ago
         ).count()
-        new_users_prev_month = User.objects.filter(
+        new_users_prev_month = users_qs.filter(
             role='coach',
             date_joined__date__gte=sixty_days_ago,
             date_joined__date__lt=thirty_days_ago,
         ).count()
 
         # ===== License type distribution (correct field) =====
-        license_distribution = list(Application.objects.values(
+        license_distribution = list(apps_qs.values(
             'license_type__name_uz', 'license_type__code', 'license_type__color_hex'
         ).annotate(count=Count('id')).order_by('-count'))
 
         # ===== Regional distribution =====
-        region_stats = list(Application.objects.exclude(region__isnull=True).values(
+        region_stats = list(apps_qs.exclude(region__isnull=True).values(
             'region__name_uz'
         ).annotate(count=Count('id')).order_by('-count')[:10])
 
         # ===== Monthly trend (last 6 months) =====
         six_months_ago = today - timedelta(days=180)
-        monthly_trend = Application.objects.filter(
+        monthly_trend = apps_qs.filter(
             submitted_at__date__gte=six_months_ago
         ).annotate(month=TruncMonth('submitted_at')).values('month').annotate(
             count=Count('id'),
@@ -127,7 +144,7 @@ class DashboardStatsView(APIView):
         ).order_by('month')
 
         # ===== Recent applications (last 10) =====
-        recent_apps = Application.objects.select_related(
+        recent_apps = apps_qs.select_related(
             'user', 'license_type', 'region'
         ).order_by('-submitted_at')[:10]
         recent_activity = [{
@@ -163,21 +180,21 @@ class DashboardStatsView(APIView):
             },
             'periods': {
                 'today':      {'applications': apps_today,
-                               'approved': Application.objects.filter(reviewed_at__date=today, status='approved').count(),
-                               'rejected': Application.objects.filter(reviewed_at__date=today, status='rejected').count(),
-                               'pending': Application.objects.filter(submitted_at__date=today, status__in=['pending', 'under_review']).count()},
+                               'approved': apps_qs.filter(reviewed_at__date=today, status='approved').count(),
+                               'rejected': apps_qs.filter(reviewed_at__date=today, status='rejected').count(),
+                               'pending': apps_qs.filter(submitted_at__date=today, status__in=['pending', 'under_review']).count()},
                 'yesterday':  {'applications': apps_yesterday,
-                               'approved': Application.objects.filter(reviewed_at__date=yesterday, status='approved').count(),
-                               'rejected': Application.objects.filter(reviewed_at__date=yesterday, status='rejected').count(),
-                               'pending': Application.objects.filter(submitted_at__date=yesterday, status__in=['pending', 'under_review']).count()},
+                               'approved': apps_qs.filter(reviewed_at__date=yesterday, status='approved').count(),
+                               'rejected': apps_qs.filter(reviewed_at__date=yesterday, status='rejected').count(),
+                               'pending': apps_qs.filter(submitted_at__date=yesterday, status__in=['pending', 'under_review']).count()},
                 'week':       {'applications': apps_week,
-                               'approved': Application.objects.filter(reviewed_at__date__gte=seven_days_ago, status='approved').count(),
-                               'rejected': Application.objects.filter(reviewed_at__date__gte=seven_days_ago, status='rejected').count(),
-                               'pending': Application.objects.filter(submitted_at__date__gte=seven_days_ago, status__in=['pending', 'under_review']).count()},
+                               'approved': apps_qs.filter(reviewed_at__date__gte=seven_days_ago, status='approved').count(),
+                               'rejected': apps_qs.filter(reviewed_at__date__gte=seven_days_ago, status='rejected').count(),
+                               'pending': apps_qs.filter(submitted_at__date__gte=seven_days_ago, status__in=['pending', 'under_review']).count()},
                 'month':      {'applications': apps_month,
-                               'approved': Application.objects.filter(reviewed_at__date__gte=thirty_days_ago, status='approved').count(),
-                               'rejected': Application.objects.filter(reviewed_at__date__gte=thirty_days_ago, status='rejected').count(),
-                               'pending': Application.objects.filter(submitted_at__date__gte=thirty_days_ago, status__in=['pending', 'under_review']).count()},
+                               'approved': apps_qs.filter(reviewed_at__date__gte=thirty_days_ago, status='approved').count(),
+                               'rejected': apps_qs.filter(reviewed_at__date__gte=thirty_days_ago, status='rejected').count(),
+                               'pending': apps_qs.filter(submitted_at__date__gte=thirty_days_ago, status__in=['pending', 'under_review']).count()},
             },
             'license_distribution': license_distribution,
             'region_stats': region_stats,
@@ -190,6 +207,10 @@ class DashboardStatsView(APIView):
                 } for item in monthly_trend
             ],
             'recent_activity': recent_activity,
+            'scoped_region': (
+                request.user.region.name_uz if is_region_admin and request.user.region else None
+            ),
+            'is_region_scoped': bool(is_region_admin),
             'server_time': timezone.now().isoformat(),
         })
 

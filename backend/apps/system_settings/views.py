@@ -74,7 +74,7 @@ class ContactMessageView(APIView):
             )
 
         # ── 3. Email tayyorlash ───────────────────────────────────
-        recipient = getattr(django_settings, 'CONTACT_RECIPIENT_EMAIL', 'fmtmufa@gmail.com')
+        recipient = getattr(django_settings, 'CONTACT_RECIPIENT_EMAIL', 'murabbiylartalimi@gmail.com')
         from_email = getattr(django_settings, 'DEFAULT_FROM_EMAIL', None) or 'no-reply@uff.local'
 
         body = (

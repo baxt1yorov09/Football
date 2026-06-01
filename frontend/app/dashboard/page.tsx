@@ -1,18 +1,27 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
 import { SmartSidebar } from '@/components/layout/SmartSidebar';
 import { StatsOverview } from '@/components/dashboard/StatsOverview';
-import { ActiveLicenses } from '@/components/dashboard/ActiveLicenses';
 import { RecentApplications } from '@/components/dashboard/RecentApplications';
 import { NotificationsPanel } from '@/components/dashboard/NotificationsPanel';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const { t, locale } = useI18n();
+  const router = useRouter();
+
+  // Onboarding tugallanmagan foydalanuvchini profil to'ldirishga yo'naltiramiz
+  useEffect(() => {
+    if (!isLoading && user && user.is_onboarded === false) {
+      router.replace('/onboarding');
+    }
+  }, [isLoading, user, router]);
 
   return (
     <div className="min-h-screen bg-[#F4F6F9]">
@@ -55,9 +64,9 @@ export default function DashboardPage() {
 
           {/* Main Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-            {/* Active Licenses */}
+            {/* Recent Applications */}
             <div className="lg:col-span-2">
-              <ActiveLicenses />
+              <RecentApplications />
             </div>
 
             {/* Notifications */}
@@ -66,10 +75,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Recent Applications */}
-          <div className="mt-8">
-            <RecentApplications />
-          </div>
+          {/* All public applications table */}
         </div>
       </main>
     </div>

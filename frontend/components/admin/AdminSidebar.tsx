@@ -98,9 +98,9 @@ export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
     <>
       {/* Admin Badge */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#F39C12]/10 to-[#E67E22]/10 rounded-lg flex-1">
-          <Shield className="w-5 h-5 text-[#F39C12]" />
-          <span className="text-sm font-semibold text-[#F39C12]">{t('admin.panel')}</span>
+        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#1B5E20]/10 to-[#43A047]/10 rounded-lg flex-1">
+          <Shield className="w-5 h-5 text-[#2E7D32]" />
+          <span className="text-sm font-semibold text-[#2E7D32]">{t('admin.panel')}</span>
         </div>
         <button
           onClick={() => setMobileOpen(false)}
@@ -127,8 +127,8 @@ export function AdminSidebar({ activeTab, setActiveTab }: AdminSidebarProps) {
                 onClick={() => handleNavClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   isActive
-                    ? 'bg-[#F39C12]/10 text-[#F39C12] font-medium'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-[#1A56A0]'
+                    ? 'bg-[#2E7D32]/10 text-[#2E7D32] font-medium'
+                    : 'text-gray-600 hover:bg-[#2E7D32]/5 hover:text-[#2E7D32]'
                 }`}
               >
                 <Icon className="w-5 h-5" />

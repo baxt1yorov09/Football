@@ -42,6 +42,10 @@ def application_created(sender, instance, created, **kwargs):
     if not created:
         return
 
+    # Daftardan (offline) kiritilgan yozuvlar uchun xabar yuborilmaydi
+    if getattr(instance, 'is_offline', False):
+        return
+
     def _dispatch():
         try:
             from apps.notifications.tasks import task_application_received

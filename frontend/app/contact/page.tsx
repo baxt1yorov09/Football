@@ -73,7 +73,7 @@ export default function ContactPage() {
     {
       icon: Mail,
       label: 'Email',
-      value: 'fmtmufa@gmail.com'
+      value: 'murabbiylartalimi@gmail.com'
     },
     {
       icon: MapPin,

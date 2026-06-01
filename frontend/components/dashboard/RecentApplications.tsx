@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import {
-  FileText, Clock, CheckCircle, XCircle, ChevronRight, Eye, AlertCircle, Plus, Sparkles,
+  FileText, Clock, CheckCircle, XCircle, ChevronRight, Eye, AlertCircle, Plus, Sparkles, Users,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +73,16 @@ function AppRow({ app, index, t, locale }: { app: DashboardApplication; index: n
             <span>{t('applications.submitted_at')}: {formatDate(app.submitted_at, locale)}</span>
             {app.reviewed_at && <span>{t('applications.reviewed_at')}: {formatDate(app.reviewed_at, locale)}</span>}
           </div>
+          {app.queue_position != null && (
+            <div className="flex items-center gap-1 mt-1.5">
+              <Users className={`w-3 h-3 ${app.status === 'approved' ? 'text-[#27AE60]' : 'text-[#F39C12]'}`} />
+              <span className={`text-xs font-medium ${app.status === 'approved' ? 'text-[#27AE60]' : 'text-[#F39C12]'}`}>
+                {locale === 'ru'
+                  ? `Ваша позиция в очереди: ${app.queue_position} из ${app.queue_total} (${app.queue_region})`
+                  : `Navbatdagi o'rningiz: ${app.queue_position} / ${app.queue_total} (${app.queue_region})`}
+              </span>
+            </div>
+          )}
           {app.rejection_reason && (
             <p className="text-xs text-red-500 mt-1 line-clamp-1">
               {t('applications.rejection_reason')}: {app.rejection_reason}

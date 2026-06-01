@@ -9,6 +9,7 @@ interface User {
   full_name: string;
   role: string;
   region?: any;
+  is_onboarded?: boolean;
 }
 
 interface AuthState {
@@ -69,12 +70,10 @@ export function useAuth() {
 
   const login = useCallback(async (phone: string, code: string) => {
     try {
-      console.log('Sending OTP verification:', { phone, code });
       const response = await apiClient.post(API_ENDPOINTS.auth.verifyOtp, {
         phone,
         code,
       });
-      console.log('OTP verification response:', response.data);
 
       // 2FA gate: foydalanuvchi 2FA yoqgan bo'lsa, JWT yo'q — 2FA bosqichi kerak
       if (response.data?.requires_2fa) {

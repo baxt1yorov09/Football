@@ -36,6 +36,9 @@ export interface DashboardApplication {
   reviewed_at: string | null;
   rejection_reason: string;
   admin_note: string;
+  queue_position: number | null;
+  queue_total: number | null;
+  queue_region: string;
 }
 
 export interface DashboardData {

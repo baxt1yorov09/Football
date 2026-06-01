@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ChevronRight, ChevronLeft, AlertTriangle, Upload, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,22 @@ interface ReviewStepProps {
 
 export function ReviewStep({ data, licenseType, onSubmit, onBack, isSubmitting }: ReviewStepProps) {
   const [agreed, setAgreed] = useState(false);
+  const [regions, setRegions] = useState<Array<{ id: number | string; name_uz: string; name_ru?: string }>>([]);
+
+  useEffect(() => {
+    fetch('/api/auth/regions')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((j) => setRegions(Array.isArray(j) ? j : (j.results || [])))
+      .catch(() => setRegions([]));
+  }, []);
+
+  const resolveRegion = (id: any) => {
+    if (!id) return '';
+    const match = regions.find((r) => String(r.id) === String(id));
+    return match ? match.name_uz : String(id);
+  };
+  const regionName = resolveRegion(data?.regionId);
+  const studyRegionName = resolveRegion(data?.studyRegionId);
   const licenseConfig = LICENSE_REQUIREMENTS[licenseType as keyof typeof LICENSE_REQUIREMENTS];
   const color = LICENSE_COLORS[licenseType as keyof typeof LICENSE_COLORS] || '#3498DB';
 
@@ -97,8 +113,12 @@ export function ReviewStep({ data, licenseType, onSubmit, onBack, isSubmitting }
               <p className="font-medium">{data.email}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Viloyat</p>
-              <p className="font-medium">{data.regionId}</p>
+              <p className="text-sm text-gray-500">Yashaydigan hudud</p>
+              <p className="font-medium">{regionName || '—'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">O'qimoqchi bo'lgan hudud</p>
+              <p className="font-medium">{studyRegionName || '—'}</p>
             </div>
           </div>
         </div>
@@ -111,7 +131,7 @@ export function ReviewStep({ data, licenseType, onSubmit, onBack, isSubmitting }
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-500">Joriy klub</p>
+              <p className="text-sm text-gray-500">Ish joyi</p>
               <p className="font-medium">{data.currentClub}</p>
             </div>
             <div>

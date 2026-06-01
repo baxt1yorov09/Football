@@ -26,7 +26,7 @@ export function Step4Region({ data, onSubmit, onBack, isSubmitting }: Props) {
   }, []);
 
   const handleSubmit = () => {
-    if (!selected) { setError('Viloyatni tanlang'); return; }
+    if (!selected) { setError('Hududni tanlang'); return; }
     onSubmit({ region: selected });
   };
 

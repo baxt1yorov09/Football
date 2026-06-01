@@ -28,9 +28,9 @@ export const profileSchema = z.object({
   lastName: z.string().min(1, 'Familiya kiritish majburiy').max(100, 'Familiya 100 ta belgidan oshmasligi kerak'),
   birthDate: z.string().min(1, "Tug'ilgan sana kiritish majburiy"),
   gender: z.enum(['male', 'female'], {
-    required_error: 'Jinsni tanlash majburiy',
+    message: 'Jinsni tanlash majburiy',
   }),
-  regionId: z.number().int().positive('Viloyatni tanlash majburiy'),
+  regionId: z.number().int().positive('Hududni tanlash majburiy'),
 });
 
 export type PhoneInput = z.infer<typeof phoneSchema>;

@@ -103,8 +103,42 @@ class UserDashboardView(APIView):
         approved_apps = apps_qs.filter(status__in=['approved', 'license_issued']).count()
         rejected_apps = apps_qs.filter(status='rejected').count()
 
+        # Navbatga kiradigan statuslar (completed arxivga o'tadi)
+        pending_statuses = ['pending', 'under_review', 'additional_docs']
+        active_study_statuses = ['approved', 'called', 'studying']
+
         recent_apps = []
         for app in apps_qs[:5]:
+            queue_position = None
+            queue_total = None
+            if app.status in pending_statuses and app.submitted_at:
+                # Queue position by region (study region)
+                region_qs = Application.objects.filter(
+                    status__in=pending_statuses,
+                    region_id=app.region_id,
+                )
+                queue_position = region_qs.filter(
+                    submitted_at__lte=app.submitted_at,
+                ).count()
+                queue_total = region_qs.count()
+            elif app.status in active_study_statuses and app.license_type:
+                # Queue position by region + license type (for approved/called/studying)
+                region_type_qs = Application.objects.filter(
+                    status__in=active_study_statuses,
+                    region_id=app.region_id,
+                    license_type=app.license_type,
+                )
+                order_field = app.reviewed_at or app.submitted_at
+                if order_field:
+                    queue_position = region_type_qs.filter(
+                        reviewed_at__lte=order_field,
+                    ).count() if app.reviewed_at else region_type_qs.filter(
+                        submitted_at__lte=order_field,
+                    ).count()
+                else:
+                    queue_position = 1
+                queue_total = region_type_qs.count()
+
             recent_apps.append({
                 'id': str(app.id),
                 'license_type_code': app.license_type.code if app.license_type else '',
@@ -115,6 +149,9 @@ class UserDashboardView(APIView):
                 'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None,
                 'rejection_reason': app.rejection_reason or '',
                 'admin_note': app.admin_note or '',
+                'queue_position': queue_position,
+                'queue_total': queue_total,
+                'queue_region': app.region.name_uz if app.region else '',
             })
 
         return Response({
@@ -585,7 +622,7 @@ class CompleteOnboardingView(APIView):
             from apps.users.models import Region
             user.region = Region.objects.get(id=data['region'])
         except Region.DoesNotExist:
-            return Response({'error': 'Viloyat topilmadi'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Hudud topilmadi'}, status=status.HTTP_400_BAD_REQUEST)
 
         user.save()
 

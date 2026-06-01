@@ -443,12 +443,22 @@ class NotificationService:
 
     # ─── ADMIN EVENTS ─────────────────────────────────────────────────
     def _get_admins(self, region=None):
-        """super_admin + region_admin (mos viloyat bo'lsa) qaytaradi."""
+        """super_admin + region_admin (mos viloyat bo'lsa) qaytaradi.
+        Agar region berilgan bo'lsa: barcha super_admin + faqat o'sha viloyatga
+        biriktirilgan region_admin'lar.
+        """
         from django.contrib.auth import get_user_model
+        from django.db.models import Q
         User = get_user_model()
-        qs = User.objects.filter(is_active=True, role__in=['super_admin', 'region_admin'])
-        # region_admin'larni faqat o'z viloyati bo'yicha cheklash (agar mavjud bo'lsa)
-        # Hozircha hamma admin'lar ko'radi
+        if region is not None:
+            region_id = getattr(region, 'id', region)
+            qs = User.objects.filter(
+                is_active=True,
+            ).filter(
+                Q(role='super_admin') | Q(role='region_admin', region_id=region_id)
+            )
+        else:
+            qs = User.objects.filter(is_active=True, role__in=['super_admin', 'region_admin'])
         return list(qs)
 
     def notify_admins_new_application(self, application):

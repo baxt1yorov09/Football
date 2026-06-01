@@ -125,7 +125,7 @@ T = {
             "👤 Ism: *{name}*\n"
             "📱 Telefon: `{phone}`\n"
             "📧 Email: {email}\n"
-            "🗺 Viloyat: {region}\n"
+            "🗺 Hudud: {region}\n"
             "🏢 Ish joyi: {workplace}\n"
             "💼 Lavozim: {job}\n"
             "📅 Ro'yxatdan o'tgan: {joined}"

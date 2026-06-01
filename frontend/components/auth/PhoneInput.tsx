@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Phone, ArrowRight, Loader2 } from 'lucide-react';
+import { Phone, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
@@ -116,6 +117,16 @@ export function PhoneInput({ onSubmit }: PhoneInputProps) {
         </a>{' '}
         bilan tanishgan bo'lasiz
       </p>
+
+      <div className="mt-4 flex justify-center">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#1A56A0] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Bosh sahifaga qaytish
+        </Link>
+      </div>
     </div>
   );
 }

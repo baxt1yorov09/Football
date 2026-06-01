@@ -57,7 +57,7 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
       newErrors.gender = 'Jinsni tanlash majburiy';
     }
     if (!formData.regionId) {
-      newErrors.regionId = 'Viloyatni tanlash majburiy';
+      newErrors.regionId = 'Hududni tanlash majburiy';
     }
 
     setErrors(newErrors);
@@ -171,7 +171,7 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
                 errors.regionId ? 'border-red-500' : 'border-gray-200'
               }`}
             >
-              <option value="">Viloyatni tanlang</option>
+              <option value="">Hududni tanlang</option>
               {regions.map((region) => (
                 <option key={region.id} value={region.id}>
                   {region.name_uz}

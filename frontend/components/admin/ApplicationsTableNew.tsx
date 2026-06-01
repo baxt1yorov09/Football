@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Search, 
@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
   User,
   Phone,
@@ -27,7 +28,11 @@ import {
   FileWarning,
   CheckCircle2,
   History,
-  Archive
+  Archive,
+  PhoneCall,
+  GraduationCap,
+  BookOpen,
+  UserX
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,6 +63,9 @@ interface Application {
   reviewed_by_name?: string;
   rejection_reason?: string;
   admin_notes?: string;
+  queue_number?: number | null;
+  queue_total?: number | null;
+  is_offline?: boolean;
   timeline?: Array<{
     action: string;
     note: string;
@@ -81,11 +89,17 @@ interface ApplicationsTableProps {
   showAll?: boolean;
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { tKey: string; color: string; bgColor: string; icon: any }> = {
   pending:         { tKey: 'applications.status.pending',         color: '#F39C12', bgColor: '#F39C12/10', icon: Clock },
   under_review:    { tKey: 'applications.status.under_review',    color: '#3498DB', bgColor: '#3498DB/10', icon: Eye },
   additional_docs: { tKey: 'applications.status.additional_docs', color: '#E67E22', bgColor: '#E67E22/10', icon: Clock },
   approved:        { tKey: 'applications.status.approved',        color: '#27AE60', bgColor: '#27AE60/10', icon: CheckCircle },
+  // O'qish workflow
+  called:          { tKey: 'applications.status.called',          color: '#9B59B6', bgColor: '#9B59B6/10', icon: Phone },
+  studying:        { tKey: 'applications.status.studying',        color: '#1ABC9C', bgColor: '#1ABC9C/10', icon: Award },
+  completed:       { tKey: 'applications.status.completed',       color: '#2C3E50', bgColor: '#2C3E50/10', icon: CheckCircle },
+  no_show:         { tKey: 'applications.status.no_show',         color: '#95A5A6', bgColor: '#95A5A6/10', icon: XCircle },
+  // Rejected/cancelled
   rejected:        { tKey: 'applications.status.rejected',        color: '#E74C3C', bgColor: '#E74C3C/10', icon: XCircle },
   cancelled:       { tKey: 'applications.status.cancelled',       color: '#7F8C8D', bgColor: '#7F8C8D/10', icon: Archive },
 };
@@ -114,7 +128,17 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
     || user?.role === 'admin';
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [regionFilter, setRegionFilter] = useState('all');
+  const [licenseTypeFilter, setLicenseTypeFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState<number | null>(null);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const typeDropdownRef = useRef<HTMLDivElement>(null);
+  const typeButtonRef = useRef<HTMLButtonElement>(null);
+  const [regions, setRegions] = useState<Array<{ id: number; name_uz: string; name_ru?: string }>>([]);
+  const [licenseTypes, setLicenseTypes] = useState<Array<{ code: string; name_uz: string; name_ru?: string; color_hex?: string }>>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedApplication, setSelectedApplication] = useState<string | null>(null);
   const [showDrawer, setShowDrawer] = useState(false);
@@ -125,24 +149,136 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
   const [rejectionReason, setRejectionReason] = useState('');
   const [adminNote, setAdminNote] = useState('');
   const [previewDoc, setPreviewDoc] = useState<{name: string, url: string} | null>(null);
+  // Call confirmation modal
+  const [showCallModal, setShowCallModal] = useState(false);
+  // Offline application create modal
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [offlineLoading, setOfflineLoading] = useState(false);
+  const [offlineError, setOfflineError] = useState('');
+  const [offlineForm, setOfflineForm] = useState({
+    full_name: '',
+    phone: '',
+    license_type: '',
+    region: '',
+    workplace: '',
+    job_title: '',
+    coaching_years: '',
+    queue_date: new Date().toISOString().split('T')[0],
+    status: 'pending',
+  });
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Debounce search input
+  useEffect(() => {
+    const tt = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
+    return () => clearTimeout(tt);
+  }, [searchTerm]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, statusFilter, regionFilter, licenseTypeFilter, levelFilter]);
+
+  // Close type dropdown on outside click
+  useEffect(() => {
+    if (!showTypeDropdown) return;
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node;
+      const insideTrigger = typeButtonRef.current && typeButtonRef.current.contains(t);
+      const insideMenu = typeDropdownRef.current && typeDropdownRef.current.contains(t);
+      if (!insideTrigger && !insideMenu) {
+        setShowTypeDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showTypeDropdown]);
+
+  // Compute dropdown position when opened (fixed -> escapes Card's overflow-hidden)
+  useEffect(() => {
+    if (!showTypeDropdown || !typeButtonRef.current) return;
+    const DROPDOWN_WIDTH = 384; // w-96
+    const MARGIN = 8;
+    const compute = () => {
+      if (!typeButtonRef.current) return;
+      const r = typeButtonRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      let left = r.left;
+      if (left + DROPDOWN_WIDTH + MARGIN > vw) {
+        left = Math.max(MARGIN, vw - DROPDOWN_WIDTH - MARGIN);
+      }
+      if (left < MARGIN) left = MARGIN;
+      setDropdownPos({ top: r.bottom + 4, left });
+    };
+    compute();
+    // Scroll paytida dropdown'ni yopamiz (header bilan to'qnashmasligi uchun),
+    // lekin dropdown ICHIDAGI ro'yxat scroll'iga teginmaymiz.
+    const onScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (target && typeDropdownRef.current && typeDropdownRef.current.contains(target)) {
+        return;
+      }
+      setShowTypeDropdown(false);
+    };
+    window.addEventListener('resize', compute);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [showTypeDropdown]);
+
+  // Load regions and license types for filter dropdowns
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/auth/regions');
+        if (r.ok) {
+          const j = await r.json();
+          setRegions(Array.isArray(j) ? j : (j.results || []));
+        }
+      } catch {}
+      try {
+        const token = localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
+        const r2 = await fetch('/api/licenses/types/', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (r2.ok) {
+          const j = await r2.json();
+          setLicenseTypes(Array.isArray(j?.results) ? j.results : []);
+        }
+      } catch {}
+    })();
+  }, []);
+
   useEffect(() => {
     fetchApplications();
-  }, [isAdmin]);
+  }, [isAdmin, debouncedSearch, statusFilter, regionFilter, licenseTypeFilter, levelFilter]);
 
   const fetchApplications = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Use admin endpoint for admins, user endpoint for regular users
-      const endpoint = isAdmin 
-        ? API_ENDPOINTS.applications.adminList 
+      const baseEndpoint = isAdmin
+        ? API_ENDPOINTS.applications.adminList
         : API_ENDPOINTS.applications.list;
-        
+
+      // Server-side filtering (admin endpoint qo'llab-quvvatlaydi)
+      const params = new URLSearchParams();
+      if (isAdmin) {
+        if (statusFilter !== 'all') params.append('status', statusFilter);
+        if (regionFilter !== 'all') params.append('region', regionFilter);
+        if (licenseTypeFilter !== 'all') params.append('license_type', licenseTypeFilter);
+        if (levelFilter != null) params.append('level', String(levelFilter));
+        if (debouncedSearch) params.append('search', debouncedSearch);
+      }
+      const qs = params.toString();
+      const endpoint = qs ? `${baseEndpoint}?${qs}` : baseEndpoint;
+
       const response = await apiClient.get(endpoint);
       
       // Handle different response formats
@@ -171,17 +307,21 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
   // Ensure applications is always an array
   const safeApplications = Array.isArray(applications) ? applications : [];
   
-  const filteredApplications = safeApplications.filter((app: Application) => {
-    // Handle undefined/null values safely
-    const userName = app?.user_name || '';
-    const appId = app?.id || '';
-    const appStatus = app?.status || '';
-    
-    const matchesSearch = userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         appId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || appStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Admin uchun filterlar server-side qo'llaniladi.
+  // Oddiy foydalanuvchi uchun esa client-side filterlash kerak (uning endpoint'i filter qabul qilmaydi).
+  const filteredApplications = isAdmin
+    ? safeApplications
+    : safeApplications.filter((app: Application) => {
+        const userName = app?.user_name || '';
+        const appId = app?.id || '';
+        const appStatus = app?.status || '';
+        const term = debouncedSearch.toLowerCase();
+        const matchesSearch = !term ||
+          userName.toLowerCase().includes(term) ||
+          appId.toLowerCase().includes(term);
+        const matchesStatus = statusFilter === 'all' || appStatus === statusFilter;
+        return matchesSearch && matchesStatus;
+      });
 
   const totalPages = Math.ceil(filteredApplications.length / 10);
   const paginatedApplications = filteredApplications.slice(
@@ -269,6 +409,100 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
     }
   };
 
+  // === O'QISH WORKFLOW ACTION HANDLERS ===
+  const handleCall = async (applicationId: string) => {
+    try {
+      setActionLoading(applicationId);
+      await postAction(applicationId, {
+        action: 'call',
+        note: adminNote || 'Telefon qilib o\'qishga chaqirildi'
+      });
+      await fetchApplications();
+      setShowDrawer(false);
+    } catch (err: any) {
+      console.error('Chaqirishda xatolik:', err);
+      alert(`Chaqirishda xatolik: ${err.message || err}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleStartStudy = async (applicationId: string) => {
+    try {
+      setActionLoading(applicationId);
+      await postAction(applicationId, {
+        action: 'start_study',
+        note: adminNote || 'O\'qishni boshladi'
+      });
+      await fetchApplications();
+      setShowDrawer(false);
+    } catch (err: any) {
+      console.error('O\'qishni boshlashda xatolik:', err);
+      alert(`O'qishni boshlashda xatolik: ${err.message || err}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleComplete = async (applicationId: string) => {
+    try {
+      setActionLoading(applicationId);
+      await postAction(applicationId, {
+        action: 'complete',
+        note: adminNote || 'O\'qib bitirdi (arxivga o\'tkazildi)'
+      });
+      await fetchApplications();
+      setShowDrawer(false);
+    } catch (err: any) {
+      console.error('Arxivlashda xatolik:', err);
+      alert(`Arxivlashda xatolik: ${err.message || err}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleNoShow = async (applicationId: string) => {
+    try {
+      setActionLoading(applicationId);
+      await postAction(applicationId, {
+        action: 'no_show',
+        note: adminNote || 'Chaqirildi lekin kelmadi'
+      });
+      await fetchApplications();
+      setShowDrawer(false);
+    } catch (err: any) {
+      console.error('Kelmadi statusida xatolik:', err);
+      alert(`Kelmadi statusida xatolik: ${err.message || err}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleOfflineCreate = async () => {
+    if (!offlineForm.full_name.trim() || !offlineForm.license_type || !offlineForm.region || !offlineForm.queue_date) {
+      setOfflineError(locale === 'ru'
+        ? 'Ф.И.О, тип лицензии, регион и дата обязательны'
+        : "F.I.O, litsenziya turi, hudud va sana majburiy");
+      return;
+    }
+    setOfflineLoading(true);
+    setOfflineError('');
+    try {
+      await apiClient.post(API_ENDPOINTS.applications.adminOfflineCreate, {
+        ...offlineForm,
+        coaching_years: offlineForm.coaching_years ? parseInt(offlineForm.coaching_years) : 0,
+        region: parseInt(offlineForm.region),
+      });
+      setShowOfflineModal(false);
+      setOfflineForm({ full_name: '', phone: '', license_type: '', region: '', workplace: '', job_title: '', coaching_years: '', queue_date: new Date().toISOString().split('T')[0], status: 'pending' });
+      await fetchApplications();
+    } catch (err: any) {
+      setOfflineError(err?.response?.data?.detail || err?.response?.data?.error || err?.message || 'Xatolik');
+    } finally {
+      setOfflineLoading(false);
+    }
+  };
+
   const handleStatusChange = async (applicationId: string, newStatus: string) => {
     try {
       await apiClient.patch(`${API_ENDPOINTS.applications.detail(applicationId)}`, {
@@ -327,6 +561,17 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
           {showAll ? t('admin.apps_table.all_applications') : t('admin.recent_apps')}
         </CardTitle>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => setShowOfflineModal(true)}
+              className="bg-[#1A56A0] hover:bg-[#0D3B6E] text-white"
+              title={locale === 'ru' ? 'Офлайн заявка' : 'Offline ariza'}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              {locale === 'ru' ? 'Офлайн заявка' : 'Offline ariza'}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -354,20 +599,170 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                title={t('admin.table.status')}
               >
                 <option value="all">{t('common.all')}</option>
                 <option value="pending">{t('applications.status.pending')}</option>
                 <option value="under_review">{t('applications.status.under_review')}</option>
                 <option value="additional_docs">{t('applications.status.additional_docs')}</option>
                 <option value="approved">{t('applications.status.approved')}</option>
+                <option value="called">Telefon qilib chaqirilgan</option>
+                <option value="studying">O'qiyotgan</option>
                 <option value="rejected">{t('applications.status.rejected')}</option>
                 <option value="cancelled">{t('applications.status.cancelled')}</option>
+                <option value="completed">O'qib bitirgan (arxiv)</option>
+                <option value="no_show">Kelmadi (arxiv)</option>
               </select>
+
+              {isAdmin && (
+                <>
+                  <select
+                    value={regionFilter}
+                    onChange={(e) => setRegionFilter(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    title={locale === 'ru' ? 'Регион' : 'Hudud'}
+                  >
+                    <option value="all">
+                      {locale === 'ru' ? 'Все регионы' : 'Barcha hududlar'}
+                    </option>
+                    {regions.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {locale === 'ru' ? (r.name_ru || r.name_uz) : r.name_uz}
+                      </option>
+                    ))}
+                  </select>
+
+                  {(() => {
+                    const HIDDEN_CODES = [
+                      'E', 'F',
+                      'TEMPORARY', 'SPECIAL', 'INTERNATIONAL', 'HONORARY',
+                      'RENEWAL_E', 'RENEWAL_F', 'RENEWAL_D',
+                      'SPECIALIST', 'ASSISTANT',
+                    ];
+                    const LEVEL_CODES = ['GK', 'FITNESS', 'FUTSAL'];
+                    const renameToCandidates = (name: string) => locale === 'ru'
+                      ? name.replace(/лицензи[ияей]+/gi, 'список кандидатов')
+                      : name
+                          .replace(/murabbiylik litsenziyasi/gi, 'nomzodlar ro\'yxati')
+                          .replace(/litsenziyasi/gi, 'nomzodlar ro\'yxati')
+                          .replace(/litsenziya/gi, 'nomzodlar ro\'yxati');
+
+                    type Item = { code: string; name: string; level?: number };
+                    const baseItems: Item[] = [
+                      { code: 'MANAGEMENT', name: locale === 'ru' ? 'Список кандидатов на менеджмент' : 'Menejment nomzodlar ro\'yxati' },
+                      { code: 'RENEWAL_PRO', name: locale === 'ru' ? 'Список кандидатов на продление PRO' : 'PRO yangilash nomzodlar ro\'yxati' },
+                      ...licenseTypes
+                        .filter((tp) => !HIDDEN_CODES.includes(tp.code))
+                        .map((tp) => ({
+                          code: tp.code,
+                          name: renameToCandidates(locale === 'ru' ? (tp.name_ru || tp.name_uz) : tp.name_uz),
+                        })),
+                    ];
+                    // GK / FITNESS / FUTSAL ni 3 ta daraja bilan kengaytiramiz
+                    const items: Item[] = baseItems.flatMap((it) => {
+                      if (!LEVEL_CODES.includes(it.code)) return [it];
+                      return [1, 2, 3].map((lvl) => ({
+                        code: it.code,
+                        level: lvl,
+                        name: `${it.name} · ${locale === 'ru' ? 'Уровень' : 'Daraja'} ${lvl}`,
+                      }));
+                    });
+
+                    // Joriy tanlovni ko'rsatish
+                    let buttonLabel: string;
+                    if (licenseTypeFilter === 'all') {
+                      buttonLabel = locale === 'ru' ? 'Все типы' : 'Barcha toifalar';
+                    } else {
+                      const cur = items.find((it) => it.code === licenseTypeFilter && (it.level ?? null) === levelFilter)
+                        || items.find((it) => it.code === licenseTypeFilter);
+                      buttonLabel = cur ? `${cur.code} — ${cur.name}` : licenseTypeFilter;
+                    }
+
+                    return (
+                      <>
+                        <button
+                          ref={typeButtonRef}
+                          type="button"
+                          onClick={() => setShowTypeDropdown((v) => !v)}
+                          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white inline-flex items-center gap-2"
+                          title={locale === 'ru' ? 'Тип лицензии' : 'Litsenziya turi'}
+                        >
+                          <span className="whitespace-nowrap">{buttonLabel}</span>
+                          <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                        </button>
+
+                        {showTypeDropdown && dropdownPos && (
+                          <div
+                            ref={typeDropdownRef}
+                            className="fixed z-[60] w-96 bg-white border border-gray-200 rounded-lg shadow-lg py-1"
+                            style={{ top: dropdownPos.top, left: dropdownPos.left, overflow: 'visible' }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLicenseTypeFilter('all');
+                                setLevelFilter(null);
+                                setShowTypeDropdown(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${
+                                licenseTypeFilter === 'all' ? 'bg-blue-50 text-[#1A56A0] font-medium' : ''
+                              }`}
+                            >
+                              {locale === 'ru' ? 'Все типы' : 'Barcha toifalar'}
+                            </button>
+
+                            <div className="max-h-80 overflow-y-auto">
+                            {items.map((it, idx) => {
+                              const isActive = licenseTypeFilter === it.code && (levelFilter ?? null) === (it.level ?? null);
+                              return (
+                                <button
+                                  key={`${it.code}-${it.level ?? 'x'}-${idx}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setLicenseTypeFilter(it.code);
+                                    setLevelFilter(it.level ?? null);
+                                    setShowTypeDropdown(false);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${
+                                    isActive ? 'bg-blue-50 text-[#1A56A0] font-medium' : ''
+                                  }`}
+                                >
+                                  <span className="font-mono text-xs text-gray-500 mr-1.5">{it.code}</span>
+                                  <span className="break-words">{it.name}</span>
+                                </button>
+                              );
+                            })}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  {(statusFilter !== 'all' || regionFilter !== 'all' || licenseTypeFilter !== 'all' || levelFilter != null || searchTerm) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter('all');
+                        setRegionFilter('all');
+                        setLicenseTypeFilter('all');
+                        setLevelFilter(null);
+                        setSearchTerm('');
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center gap-1"
+                      title={locale === 'ru' ? 'Сбросить фильтры' : 'Filterlarni tozalash'}
+                    >
+                      <X className="w-4 h-4" />
+                      {locale === 'ru' ? 'Сбросить' : 'Tozalash'}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -390,6 +785,9 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                   {t('admin.table.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {locale === 'ru' ? 'Очередь' : 'Navbat'}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('applications.submitted_at')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -400,7 +798,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
             <tbody className="bg-white divide-y divide-gray-200">
               {error ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center">
+                  <td colSpan={7} className="p-8 text-center">
                     <div className="text-red-500 mb-2">{error}</div>
                     <button 
                       onClick={fetchApplications}
@@ -412,18 +810,18 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 </tr>
               ) : loading ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">
+                  <td colSpan={7} className="p-8 text-center text-gray-500">
                     {t('common.loading')}
                   </td>
                 </tr>
               ) : paginatedApplications.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-500">
+                  <td colSpan={7} className="p-8 text-center text-gray-500">
                     {t('admin.apps_table.no_applications')}
                   </td>
                 </tr>
               ) : paginatedApplications.map((app: Application, index: number) => (
-                <tr key={app.id} className="hover:bg-gray-50">
+                <tr key={app.id} className={`hover:bg-gray-50 ${app.is_offline ? 'border-l-4 border-l-orange-400' : ''}`}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {app.id}
                   </td>
@@ -449,6 +847,16 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                     >
                       {(() => { const sc = statusConfig[app.status as keyof typeof statusConfig]; return sc ? t(sc.tKey) : app.status; })()}
                     </Badge>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {app.queue_number ? (
+                      <div className="flex items-center gap-1">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-800 font-bold text-xs">{app.queue_number}</span>
+                        {app.queue_total && <span className="text-xs text-gray-400">/ {app.queue_total}</span>}
+                      </div>
+                    ) : (
+                      <span className="text-gray-300 text-sm">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(app.submitted_at).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'uz-UZ')}
@@ -646,7 +1054,7 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                           <MapPin className="w-5 h-5 text-orange-600" />
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Viloyat</p>
+                          <p className="text-xs text-gray-500">Hudud</p>
                           <p className="font-medium text-gray-900">{selectedAppDetails.region_name || selectedAppDetails.region}</p>
                         </div>
                       </div>
@@ -799,52 +1207,129 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
               )}
 
               {/* Action Buttons */}
-              {isAdmin && (selectedAppDetails.status === 'pending' || selectedAppDetails.status === 'under_review' || selectedAppDetails.status === 'additional_docs') && (
+              {isAdmin && (
                 <div className="sticky bottom-0 bg-white pt-4 pb-2 border-t border-gray-200 space-y-3">
-                  <div className="flex gap-3">
+                  {/* Initial review actions */}
+                  {(selectedAppDetails.status === 'pending' || selectedAppDetails.status === 'under_review' || selectedAppDetails.status === 'additional_docs') && (
+                    <>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleApprove(selectedAppDetails.id)}
+                          disabled={actionLoading === selectedAppDetails.id}
+                          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          {actionLoading === selectedAppDetails.id ? (
+                            <RefreshCw className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-5 h-5" />
+                          )}
+                          {t('admin.apps_table.approve')}
+                        </button>
+                        <button
+                          onClick={() => setShowRejectModal(true)}
+                          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all font-medium"
+                        >
+                          <XCircle className="w-5 h-5" />
+                          {t('admin.apps_table.reject')}
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => handleRequestDocs(selectedAppDetails.id)}
+                        disabled={actionLoading === selectedAppDetails.id}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-100 text-orange-700 rounded-xl hover:bg-orange-200 transition-all disabled:opacity-50 font-medium"
+                      >
+                        {actionLoading === selectedAppDetails.id ? (
+                          <RefreshCw className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <FileWarning className="w-5 h-5" />
+                        )}
+                        {t('admin.apps_table.request_docs')}
+                      </button>
+                    </>
+                  )}
+
+                  {/* Approved → Call for study */}
+                  {selectedAppDetails.status === 'approved' && (
                     <button
-                      onClick={() => handleApprove(selectedAppDetails.id)}
+                      onClick={() => setShowCallModal(true)}
                       disabled={actionLoading === selectedAppDetails.id}
-                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all disabled:opacity-50 font-medium"
                     >
                       {actionLoading === selectedAppDetails.id ? (
                         <RefreshCw className="w-5 h-5 animate-spin" />
                       ) : (
-                        <CheckCircle2 className="w-5 h-5" />
+                        <PhoneCall className="w-5 h-5" />
                       )}
-                      {t('admin.apps_table.approve')}
+                      Telefon qilib chaqirish
                     </button>
-                    <button
-                      onClick={() => setShowRejectModal(true)}
-                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all font-medium"
-                    >
-                      <XCircle className="w-5 h-5" />
-                      {t('admin.apps_table.reject')}
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => handleRequestDocs(selectedAppDetails.id)}
-                    disabled={actionLoading === selectedAppDetails.id}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-100 text-orange-700 rounded-xl hover:bg-orange-200 transition-all disabled:opacity-50 font-medium"
-                  >
-                    {actionLoading === selectedAppDetails.id ? (
-                      <RefreshCw className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <FileWarning className="w-5 h-5" />
-                    )}
-                    {t('admin.apps_table.request_docs')}
-                  </button>
-                </div>
-              )}
+                  )}
 
-              {/* Already processed message */}
-              {isAdmin && (selectedAppDetails.status === 'approved' || selectedAppDetails.status === 'rejected') && (
-                <div className="p-4 bg-gray-50 rounded-xl text-center">
-                  <p className="text-gray-600">
-                    {t('applications.title')} <span className="font-semibold">{selectedAppDetails.status_display}</span>
-                  </p>
-                  {selectedAppDetails.rejection_reason && (
-                    <p className="text-sm text-red-600 mt-1">{t('admin.apps_table.rejection_reason_prefix')}{selectedAppDetails.rejection_reason}</p>
+                  {/* Called → Start study */}
+                  {selectedAppDetails.status === 'called' && (
+                    <button
+                      onClick={() => handleStartStudy(selectedAppDetails.id)}
+                      disabled={actionLoading === selectedAppDetails.id}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-all disabled:opacity-50 font-medium"
+                    >
+                      {actionLoading === selectedAppDetails.id ? (
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <BookOpen className="w-5 h-5" />
+                      )}
+                      O'qishni boshladi
+                    </button>
+                  )}
+
+                  {/* Studying → Complete or No Show */}
+                  {selectedAppDetails.status === 'studying' && (
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => handleComplete(selectedAppDetails.id)}
+                        disabled={actionLoading === selectedAppDetails.id}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-900 transition-all disabled:opacity-50 font-medium"
+                      >
+                        {actionLoading === selectedAppDetails.id ? (
+                          <RefreshCw className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <GraduationCap className="w-5 h-5" />
+                        )}
+                        O'qib bitirdi (arxivga)
+                      </button>
+                      <button
+                        onClick={() => handleNoShow(selectedAppDetails.id)}
+                        disabled={actionLoading === selectedAppDetails.id}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-400 text-white rounded-xl hover:bg-gray-500 transition-all disabled:opacity-50 font-medium"
+                      >
+                        {actionLoading === selectedAppDetails.id ? (
+                          <RefreshCw className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <UserX className="w-5 h-5" />
+                        )}
+                        Kelmadi (arxivga)
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Archived status message */}
+                  {(selectedAppDetails.status === 'completed' || selectedAppDetails.status === 'no_show') && (
+                    <div className="p-4 bg-gray-100 rounded-xl text-center">
+                      <p className="text-gray-600">
+                        <Archive className="w-5 h-5 inline mr-1" />
+                        Arxivga o'tkazilgan
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Already processed message for rejected */}
+                  {selectedAppDetails.status === 'rejected' && (
+                    <div className="p-4 bg-red-50 rounded-xl text-center">
+                      <p className="text-red-600">
+                        {t('applications.title')} <span className="font-semibold">{selectedAppDetails.status_display}</span>
+                      </p>
+                      {selectedAppDetails.rejection_reason && (
+                        <p className="text-sm text-red-600 mt-1">{t('admin.apps_table.rejection_reason_prefix')}{selectedAppDetails.rejection_reason}</p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -894,6 +1379,95 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                 className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all disabled:opacity-50 font-medium"
               >
                 {actionLoading === selectedAppDetails?.id ? t('admin.apps_table.processing') : t('admin.apps_table.reject')}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Call Confirmation Modal */}
+      {showCallModal && selectedAppDetails && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+          onClick={() => setShowCallModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl p-6 w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <PhoneCall className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {locale === 'ru' ? 'Звонок кандидату' : 'Nomzodga qo\'ng\'iroq'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {locale === 'ru' 
+                  ? 'Позвоните по указанному номеру и подтвердите готовность к обучению'
+                  : "Ko'rsatilgan raqamga qo'ng'iroq qiling va o'qishga tayyorligini tasdiqlang"}
+              </p>
+              
+              {/* Phone number display */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <p className="text-sm text-gray-500 mb-1">
+                  {locale === 'ru' ? 'Телефон номер:' : 'Telefon raqam:'}
+                </p>
+                <p className="text-2xl font-bold text-purple-600 font-mono">
+                  {selectedAppDetails.user_phone || '—'}
+                </p>
+              </div>
+
+              <p className="text-sm text-gray-500">
+                {locale === 'ru' 
+                  ? 'После разговора отметьте результат:'
+                  : "Suhbatdan keyin natijani belgilang:"}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Yes - Spoke and confirmed */}
+              <button
+                onClick={() => {
+                  setShowCallModal(false);
+                  handleCall(selectedAppDetails.id);
+                }}
+                disabled={actionLoading === selectedAppDetails.id}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all disabled:opacity-50 font-medium"
+              >
+                {actionLoading === selectedAppDetails.id ? (
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-5 h-5" />
+                )}
+                {locale === 'ru' ? 'Да, договорились (Обучается)' : "Ha, keldi (O'qiydi)"}
+              </button>
+
+              {/* No - Did not answer / rejected */}
+              <button
+                onClick={() => {
+                  setShowCallModal(false);
+                  // Open reject modal with pre-filled reason
+                  setRejectionReason(locale === 'ru' 
+                    ? 'Не отвечает / Отказался от обучения' 
+                    : "Javob bermaydi / O'qishdan bosh tortdi");
+                  setShowRejectModal(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium"
+              >
+                <XCircle className="w-5 h-5" />
+                {locale === 'ru' ? 'Нет, не дозвонился / Отказ' : "Yo'q, javob bermadi / Bekor"}
+              </button>
+
+              {/* Cancel */}
+              <button
+                onClick={() => setShowCallModal(false)}
+                className="w-full px-6 py-3 border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition-all text-sm"
+              >
+                {locale === 'ru' ? 'Отмена' : 'Bekor qilish'}
               </button>
             </div>
           </motion.div>
@@ -961,6 +1535,179 @@ export function ApplicationsTableNew({ showAll = false }: ApplicationsTableProps
                   </Button>
                 </div>
               )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Offline Application Create Modal */}
+      {showOfflineModal && (
+        <div
+          className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4"
+          onClick={() => !offlineLoading && setShowOfflineModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {locale === 'ru' ? 'Добавить офлайн заявку' : "Offline ariza qo'shish"}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {locale === 'ru' ? 'Из бумажного списка в платформу' : 'Daftardagi arizani platformaga kiritish'}
+                </p>
+              </div>
+              <button
+                onClick={() => !offlineLoading && setShowOfflineModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {offlineError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {offlineError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">F.I.O *</label>
+                <input
+                  type="text"
+                  value={offlineForm.full_name}
+                  onChange={(e) => setOfflineForm(f => ({ ...f, full_name: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                  placeholder="Ism Familiya Otasining ismi"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {locale === 'ru' ? 'Телефон' : 'Telefon raqam'}
+                </label>
+                <input
+                  type="text"
+                  value={offlineForm.phone}
+                  onChange={(e) => setOfflineForm(f => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                  placeholder="+998..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {locale === 'ru' ? 'Тип лицензии *' : 'Litsenziya turi *'}
+                  </label>
+                  <select
+                    value={offlineForm.license_type}
+                    onChange={(e) => setOfflineForm(f => ({ ...f, license_type: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
+                  >
+                    <option value="">{locale === 'ru' ? 'Выберите' : 'Tanlang'}</option>
+                    {licenseTypes.length > 0 ? licenseTypes.map(lt => (
+                      <option key={lt.code} value={lt.code}>{lt.code} - {locale === 'ru' ? (lt.name_ru || lt.name_uz) : lt.name_uz}</option>
+                    )) : (
+                      <>
+                        <option value="PRO">PRO</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {locale === 'ru' ? 'Регион *' : 'Hudud *'}
+                  </label>
+                  <select
+                    value={offlineForm.region}
+                    onChange={(e) => setOfflineForm(f => ({ ...f, region: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
+                  >
+                    <option value="">{locale === 'ru' ? 'Выберите' : 'Tanlang'}</option>
+                    {regions.map(r => (
+                      <option key={r.id} value={r.id}>{locale === 'ru' ? (r.name_ru || r.name_uz) : r.name_uz}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {locale === 'ru' ? 'Дата очереди (из журнала) *' : 'Navbat sanasi (daftarga yozilgan sana) *'}
+                </label>
+                <input
+                  type="date"
+                  value={offlineForm.queue_date}
+                  onChange={(e) => setOfflineForm(f => ({ ...f, queue_date: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {locale === 'ru' ? 'Место работы' : 'Ish joyi'}
+                  </label>
+                  <input
+                    type="text"
+                    value={offlineForm.workplace}
+                    onChange={(e) => setOfflineForm(f => ({ ...f, workplace: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {locale === 'ru' ? 'Опыт (лет)' : 'Tajriba (yil)'}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={offlineForm.coaching_years}
+                    onChange={(e) => setOfflineForm(f => ({ ...f, coaching_years: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {locale === 'ru' ? 'Статус' : 'Holat'}
+                </label>
+                <select
+                  value={offlineForm.status}
+                  onChange={(e) => setOfflineForm(f => ({ ...f, status: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
+                >
+                  <option value="pending">{t('applications.status.pending')}</option>
+                  <option value="under_review">{t('applications.status.under_review')}</option>
+                  <option value="approved">{t('applications.status.approved')}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowOfflineModal(false)}
+                disabled={offlineLoading}
+                className="flex-1 px-6 py-3 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleOfflineCreate}
+                disabled={offlineLoading}
+                className="flex-1 px-6 py-3 bg-[#1A56A0] text-white rounded-xl hover:bg-[#0D3B6E] transition-all disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+              >
+                {offlineLoading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                {offlineLoading
+                  ? (locale === 'ru' ? 'Сохранение...' : 'Saqlanmoqda...')
+                  : (locale === 'ru' ? 'Добавить' : "Qo'shish")}
+              </button>
             </div>
           </motion.div>
         </div>

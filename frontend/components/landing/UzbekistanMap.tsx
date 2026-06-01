@@ -31,10 +31,10 @@ export function UzbekistanMap() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold text-[#0D3B6E] mb-4">
-            O&apos;zbekiston viloyatlari
+            O&apos;zbekiston hududlari
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            12 ta viloyat, Qoraqalpog&apos;iston Respublikasi va Toshkent shahri bo&apos;ylab murabbiylar tarqalishi
+            12 ta hudud, Qoraqalpog&apos;iston Respublikasi va Toshkent shahri bo&apos;ylab murabbiylar tarqalishi
           </p>
         </motion.div>
 
@@ -99,7 +99,7 @@ export function UzbekistanMap() {
               <div className="absolute bottom-4 left-4 right-4 flex justify-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-[#1A56A0]" />
-                  <span className="text-gray-600">Viloyatlar</span>
+                  <span className="text-gray-600">Hududlar</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-[#F39C12]" />

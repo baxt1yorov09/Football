@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import MaintenanceBanner from "@/components/system/MaintenanceBanner";
+import { Watermark } from "@/components/system/Watermark";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -34,6 +35,8 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <I18nProvider>
+            {/* FMTM watermark — faqat admin va foydalanuvchi panellarida */}
+            <Watermark />
             <MaintenanceBanner />
             {children}
           </I18nProvider>

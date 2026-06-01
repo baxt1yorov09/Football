@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   FileText,
   Award,
-  PlusCircle,
   User,
   Settings,
   ChevronRight,
@@ -25,7 +24,6 @@ export function Sidebar() {
     { icon: LayoutDashboard, label: t('nav.dashboard'), href: '/dashboard' },
     { icon: FileText, label: t('nav.applications'), href: '/applications' },
     { icon: Award, label: t('nav.licenses'), href: '/licenses' },
-    { icon: PlusCircle, label: t('nav.apply'), href: '/apply' },
     { icon: User, label: t('nav.profile'), href: '/profile' },
     { icon: Settings, label: t('nav.settings'), href: '/settings' },
   ];
@@ -63,8 +61,8 @@ export function Sidebar() {
                 onClick={onItemClick}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   isActive
-                    ? 'bg-[#F39C12]/10 text-[#F39C12] font-medium'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-[#1A56A0]'
+                    ? 'bg-[#2E7D32]/10 text-[#2E7D32] font-medium'
+                    : 'text-gray-600 hover:bg-[#2E7D32]/5 hover:text-[#2E7D32]'
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -77,14 +75,24 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 mt-4">
-        <Link
-          href="/apply/D"
-          onClick={onItemClick}
-          className="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-[#F39C12] to-[#E67E22] text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-shadow"
-        >
-          <PlusCircle className="w-5 h-5" />
-          {t('nav.apply')}
-        </Link>
+        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+          <Link
+            href="/apply"
+            onClick={onItemClick}
+            className="group relative flex items-center justify-center gap-2 w-full py-3 overflow-hidden rounded-xl font-semibold text-white shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-[#1B5E20] via-[#2E7D32] to-[#43A047]"
+          >
+            {/* Maydon chiziqlari (football pitch stripes) */}
+            <span className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(255,255,255,0.08)_0px,rgba(255,255,255,0.08)_14px,transparent_14px,transparent_28px)]" />
+            {/* Markaziy oq chiziq */}
+            <span className="pointer-events-none absolute top-0 bottom-0 left-1/2 w-px -translate-x-1/2 bg-white/15" />
+
+            {/* Futbol to'pi */}
+            <span aria-hidden="true" className="relative z-10 text-lg leading-none">
+              ⚽
+            </span>
+            <span className="relative z-10">{t('nav.apply')}</span>
+          </Link>
+        </motion.div>
       </div>
     </>
   );

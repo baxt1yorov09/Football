@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
@@ -765,7 +765,7 @@ function LicenseDetailModal({ lic, onClose }: { lic: APILicense | null; onClose:
             ['Egasi', lic.user.full_name],
             ['Telefon', lic.user.phone],
             ['Email', lic.user.email || '—'],
-            ['Viloyat', lic.region || '—'],
+            ['Hudud', lic.region || '—'],
             ['Tur kodi', lic.license_type.code],
             ['Holati', lic.status_display],
             ['Berilgan', lic.issued_at],
@@ -1267,13 +1267,24 @@ function BulkReasonModal({ open, title, danger, onClose, onConfirm }: {
 
 
 // ============ MAIN ADMIN PAGE ============
-export default function AdminPage() {
-  const { t } = useI18n();
+function AdminPageInner() {
+  const { t, locale } = useI18n();
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Admin foydalanuvchining roli va viloyati (region_admin uchun ko'rsatamiz)
+  const adminInfo = useMemo(() => {
+    if (typeof window === 'undefined') return { role: null, region: null };
+    try {
+      const u = JSON.parse(localStorage.getItem('adminUser') || 'null');
+      return { role: u?.role || null, region: u?.region || null };
+    } catch {
+      return { role: null, region: null };
+    }
+  }, []);
 
   // Auth tekshiruvi
   useEffect(() => {
@@ -1325,11 +1336,23 @@ export default function AdminPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <h1 className="text-3xl font-bold text-[#0D3B6E]">
-              {t('admin.panel')}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-bold text-[#0D3B6E]">
+                {t('admin.panel')}
+              </h1>
+              {adminInfo.role === 'region_admin' && adminInfo.region && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#1A56A0]/10 text-[#1A56A0] rounded-full text-sm font-semibold">
+                  <MapPin className="w-4 h-4" />
+                  {adminInfo.region}
+                </span>
+              )}
+            </div>
             <p className="text-gray-600 mt-1">
-              {t('admin.subtitle')}
+              {adminInfo.role === 'region_admin' && adminInfo.region
+                ? (locale === 'ru'
+                    ? `Вы управляете регионом: ${adminInfo.region}`
+                    : `Siz ${adminInfo.region} hududiga mas'ulsiz`)
+                : t('admin.subtitle')}
             </p>
           </motion.div>
 
@@ -1353,5 +1376,13 @@ export default function AdminPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminPageInner />
+    </Suspense>
   );
 }

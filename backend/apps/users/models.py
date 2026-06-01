@@ -12,14 +12,14 @@ def user_avatar_path(instance, filename):
 class Region(models.Model):
     """O'zbekiston viloyatlari"""
     id = models.AutoField(primary_key=True)
-    name_uz = models.CharField(max_length=100, verbose_name="Viloyat nomi (uz)")
-    name_ru = models.CharField(max_length=100, blank=True, null=True, verbose_name="Viloyat nomi (ru)")
+    name_uz = models.CharField(max_length=100, verbose_name="Hudud nomi (uz)")
+    name_ru = models.CharField(max_length=100, blank=True, null=True, verbose_name="Hudud nomi (ru)")
     code = models.CharField(max_length=10, unique=True, verbose_name="Kod")
     is_tashkent = models.BooleanField(default=False, verbose_name="Toshkent shahri")
 
     class Meta:
-        verbose_name = "Viloyat"
-        verbose_name_plural = "Viloyatlar"
+        verbose_name = "Hudud"
+        verbose_name_plural = "Hududlar"
         ordering = ['id']
 
     def __str__(self):
@@ -30,7 +30,7 @@ class User(AbstractUser):
     """Custom user model"""
     ROLE_CHOICES = [
         ('coach', 'Murabbiy'),
-        ('region_admin', 'Viloyat admin'),
+        ('region_admin', 'Hudud admin'),
         ('super_admin', 'Super admin'),
         ('viewer', 'Tomoshabin'),
     ]
@@ -52,7 +52,7 @@ class User(AbstractUser):
     email = models.EmailField(blank=True, null=True, verbose_name="Email")
     birth_date = models.DateField(blank=True, null=True, verbose_name="Tug'ilgan sana")
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default='male', blank=True, null=True, verbose_name="Jins")
-    region = models.ForeignKey(Region, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Viloyat")
+    region = models.ForeignKey(Region, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Hudud")
     workplace = models.CharField(max_length=300, blank=True, null=True, verbose_name="Ish joyi")
     job_title = models.CharField(max_length=200, blank=True, null=True, verbose_name="Lavozim")
     coaching_years = models.PositiveIntegerField(default=0, verbose_name="Murabbiylik tajribasi (yil)")

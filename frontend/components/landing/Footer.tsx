@@ -18,7 +18,7 @@ const footerLinks = {
   ],
   admin: [
     { label: "Admin panel", href: "/admin" },
-    { label: "Viloyat adminlari", href: "/admin/regions" },
+    { label: "Hudud adminlari", href: "/admin/regions" },
   ],
 };
 
@@ -156,8 +156,8 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-[#F39C12] flex-shrink-0" />
-                <a href="mailto:fmtmufa@gmail.com" className="text-white/70 text-sm hover:text-[#F39C12]">
-                  fmtmufa@gmail.com
+                <a href="mailto:murabbiylartalimi@gmail.com" className="text-white/70 text-sm hover:text-[#F39C12]">
+                  murabbiylartalimi@gmail.com
                 </a>
               </li>
             </ul>

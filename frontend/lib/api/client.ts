@@ -90,6 +90,7 @@ export const API_ENDPOINTS = {
     list: '/applications/',
     detail: (id: string) => `/applications/${id}/`,
     adminList: '/applications/admin/all',
+    adminOfflineCreate: '/applications/admin/offline',
     adminAction: (id: string) => `/applications/admin/${id}/action`,
     resubmit: (id: string) => `/applications/${id}/resubmit/`,
     timeline: (id: string) => `/applications/${id}/timeline/`,

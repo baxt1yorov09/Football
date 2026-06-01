@@ -140,7 +140,7 @@ export default function PrivacyPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-semibold mb-2">Elektron pochta</h4>
-                    <p className="text-gray-600">fmtmufa@gmail.com</p>
+                    <p className="text-gray-600">murabbiylartalimi@gmail.com</p>
                   </div>
                   <div>
                     <h4 className="font-semibold mb-2">Telefon</h4>

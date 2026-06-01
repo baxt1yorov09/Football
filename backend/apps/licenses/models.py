@@ -52,7 +52,7 @@ class License(models.Model):
     )
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='licenses', verbose_name="Foydalanuvchi")
     license_type = models.ForeignKey(LicenseType, on_delete=models.PROTECT, verbose_name="Litsenziya turi")
-    region = models.ForeignKey('users.Region', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Viloyat")
+    region = models.ForeignKey('users.Region', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Hudud")
 
     license_number = models.CharField(max_length=50, unique=True, verbose_name="Litsenziya raqami")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name="Holati")

@@ -111,7 +111,7 @@ export function HeroSection() {
               transition={{ delay: 0.5, duration: 0.6 }}
               className="text-lg md:text-xl text-white/80 mb-8 max-w-xl"
             >
-              Barcha 12 ta viloyat, Qoraqalpog&apos;iston Respublikasi va Toshkent shahri uchun yagona raqamli platforma. Murabbiylar uchun professional litsenziyalash jarayonini raqamlashtirish.
+              Barcha 12 ta hudud, Qoraqalpog&apos;iston Respublikasi va Toshkent shahri uchun yagona raqamli platforma. Murabbiylar uchun professional litsenziyalash jarayonini raqamlashtirish.
             </motion.p>
 
             <motion.div

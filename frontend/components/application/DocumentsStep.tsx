@@ -52,13 +52,6 @@ export function DocumentsStep({ data, licenseType, onNext, onBack }: DocumentsSt
       accepted_types: ['.pdf', '.jpg', '.jpeg', '.png']
     },
     {
-      type: 'medical_certificate',
-      name: 'Tibbiy guvohnoma',
-      required: false,
-      max_size_mb: 3,
-      accepted_types: ['.pdf', '.jpg', '.jpeg', '.png']
-    },
-    {
       type: 'prev_license',
       name: 'Avvalgi litsenziya',
       required: licenseConfig?.prerequisite !== null,

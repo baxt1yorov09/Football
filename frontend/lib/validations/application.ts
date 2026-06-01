@@ -7,7 +7,7 @@ export const personalInfoSchema = z.object({
   birthDate: z.string().min(1, "Tug'ilgan sana kiritish majburiy"),
   gender: z.enum(['male', 'female']),
   phone: z.string().min(1, 'Telefon raqam kiritish majburiy'),
-  regionId: z.number().int().positive('Viloyatni tanlash majburiy'),
+  regionId: z.number().int().positive('Hududni tanlash majburiy'),
 });
 
 // Professional info step validation

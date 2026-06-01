@@ -323,7 +323,7 @@ class AdminUserUpdateView(APIView):
                         try:
                             u.region = Region.objects.get(id=int(value))
                         except (Region.DoesNotExist, ValueError):
-                            return Response({'error': 'Viloyat topilmadi'}, status=status.HTTP_400_BAD_REQUEST)
+                            return Response({'error': 'Hudud topilmadi'}, status=status.HTTP_400_BAD_REQUEST)
                 else:
                     setattr(u, field, value)
                 changed[field] = value
@@ -398,6 +398,25 @@ class AdminUserCreateView(APIView):
         if User.objects.filter(phone=phone).exists():
             return Response({'error': 'Bu telefon raqam allaqachon mavjud'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Email tekshiruvi: agar boshqa admin allaqachon shu emaildan foydalansa
+        email = (request.data.get('email') or '').strip()
+        if email:
+            existing_admin = User.objects.filter(
+                email__iexact=email,
+                role__in=['super_admin', 'region_admin', 'staff']
+            ).first()
+            if existing_admin:
+                return Response({
+                    'error': 'Boshqa admin bu email orqali ro\'yxatdan o\'tgan',
+                    'detail': f"{existing_admin.full_name or existing_admin.phone} allaqachon admin ({existing_admin.get_role_display()}). Boshqa email ishlating yoki mavjud foydalanuvchini admin qiling (Mavjuddan tayinlash).",
+                    'existing_user': {
+                        'id': str(existing_admin.id),
+                        'full_name': existing_admin.full_name,
+                        'phone': existing_admin.phone,
+                        'role': existing_admin.role,
+                    }
+                }, status=status.HTTP_400_BAD_REQUEST)
+
         role = request.data.get('role') or 'coach'
         valid_roles = {r[0] for r in User.ROLE_CHOICES}
         if role not in valid_roles:
@@ -412,7 +431,7 @@ class AdminUserCreateView(APIView):
             try:
                 region = Region.objects.get(id=int(region_id))
             except (Region.DoesNotExist, ValueError):
-                return Response({'error': 'Viloyat topilmadi'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Hudud topilmadi'}, status=status.HTTP_400_BAD_REQUEST)
         elif request.user.role == 'region_admin' and request.user.region_id:
             region = request.user.region
 

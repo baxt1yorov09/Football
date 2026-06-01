@@ -49,6 +49,9 @@ interface Application {
   rejection_reason?: string;
   admin_note?: string;
   timeline?: any[];
+  queue_number?: number;
+  queue_total?: number;
+  is_offline?: boolean;
 }
 
 interface Statistics {
@@ -107,6 +110,20 @@ export default function AdminApplicationsPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [viewingDocument, setViewingDocument] = useState<{ url: string; name: string; mime: string } | null>(null);
   const [regions, setRegions] = useState<Array<{ id: number; name_uz: string }>>([]);
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [offlineForm, setOfflineForm] = useState({
+    full_name: '',
+    phone: '',
+    license_type: '',
+    region: '',
+    workplace: '',
+    job_title: '',
+    coaching_years: '',
+    queue_date: new Date().toISOString().split('T')[0],
+    status: 'pending',
+  });
+  const [offlineLoading, setOfflineLoading] = useState(false);
+  const [offlineError, setOfflineError] = useState('');
   const router = useRouter();
   const itemsPerPage = 10;
 
@@ -189,6 +206,38 @@ export default function AdminApplicationsPage() {
     };
     const label = code || name || '';
     return <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${colors[code || ''] || 'bg-gray-100 text-gray-800'}`} title={name || ''}>{label}</span>;
+  };
+
+  const handleOfflineCreate = async () => {
+    if (!offlineForm.full_name.trim() || !offlineForm.license_type || !offlineForm.region || !offlineForm.queue_date) {
+      setOfflineError('F.I.O, litsenziya turi, hudud va sana majburiy');
+      return;
+    }
+    setOfflineLoading(true);
+    setOfflineError('');
+    try {
+      const token = localStorage.getItem('adminAccessToken');
+      const res = await fetch('/api/applications/admin/offline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          ...offlineForm,
+          coaching_years: offlineForm.coaching_years ? parseInt(offlineForm.coaching_years) : 0,
+          region: parseInt(offlineForm.region),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.detail || data?.error || 'Xatolik');
+      }
+      setShowOfflineModal(false);
+      setOfflineForm({ full_name: '', phone: '', license_type: '', region: '', workplace: '', job_title: '', coaching_years: '', queue_date: new Date().toISOString().split('T')[0], status: 'pending' });
+      await loadApplications();
+    } catch (err: any) {
+      setOfflineError(err.message || 'Xatolik yuz berdi');
+    } finally {
+      setOfflineLoading(false);
+    }
   };
 
   // Handle application actions
@@ -400,7 +449,7 @@ export default function AdminApplicationsPage() {
                   onChange={(e) => setRegionFilter(e.target.value)}
                   className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
                 >
-                  <option value="all">Barcha viloyatlar</option>
+                  <option value="all">Barcha hududlar</option>
                   {regions.map(r => (
                     <option key={r.id} value={r.id}>{r.name_uz}</option>
                   ))}
@@ -447,6 +496,13 @@ export default function AdminApplicationsPage() {
                 >
                   <RefreshCw className="w-5 h-5" />
                   Yangilash
+                </button>
+                <button
+                  onClick={() => setShowOfflineModal(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#1A56A0] text-white rounded-xl hover:bg-[#0D3B6E] transition-all font-medium"
+                >
+                  <FileText className="w-5 h-5" />
+                  Offline ariza
                 </button>
               </div>
             </div>
@@ -523,7 +579,8 @@ export default function AdminApplicationsPage() {
                     <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ariza №</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Murabbiy</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Litsenziya</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Viloyat</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Hudud</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Navbat</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Sana</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Holat</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Amallar</th>
@@ -540,7 +597,7 @@ export default function AdminApplicationsPage() {
                   ) : applications.map((app) => {
                     const isSelected = selectedApplications.includes(app.id);
                     return (
-                      <tr key={app.id} className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                      <tr key={app.id} className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50/50' : ''} ${app.is_offline ? 'border-l-4 border-l-orange-400' : ''}`}>
                         <td className="px-4 py-4">
                           <input 
                             type="checkbox" 
@@ -550,7 +607,10 @@ export default function AdminApplicationsPage() {
                           />
                         </td>
                         <td className="px-4 py-4">
-                          <span className="font-mono text-sm text-gray-900">{app.id.slice(-4)}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-sm text-gray-900">{app.id.slice(-4)}</span>
+                            {app.is_offline && <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">offline</span>}
+                          </div>
                         </td>
                         <td className="px-4 py-4">
                           <div>
@@ -560,6 +620,16 @@ export default function AdminApplicationsPage() {
                         </td>
                         <td className="px-4 py-4">{getLicenseBadge(app.license_type_code, app.license_type_name)}</td>
                         <td className="px-4 py-4 text-gray-600">{app.region_name}</td>
+                        <td className="px-4 py-4">
+                          {app.queue_number ? (
+                            <div className="flex items-center gap-1">
+                              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-bold text-sm">{app.queue_number}</span>
+                              {app.queue_total && <span className="text-xs text-gray-400">/ {app.queue_total}</span>}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-4 text-gray-600 text-sm">
                           {new Date(app.submitted_at).toLocaleDateString('uz-UZ')}
                         </td>
@@ -662,10 +732,6 @@ export default function AdminApplicationsPage() {
 
           {/* Application Details Drawer */}
           <AnimatePresence>
-            {(() => {
-              console.log('Drawer render check:', { showDrawer, hasSelectedApp: !!selectedApplication, selectedAppId: selectedApplication?.id });
-              return null;
-            })()}
             {showDrawer && selectedApplication && (
               <motion.div
                 key="drawer-overlay"
@@ -723,7 +789,7 @@ export default function AdminApplicationsPage() {
                             <p className="font-medium text-gray-900">{selectedApplication.user_email}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500">Viloyat</p>
+                            <p className="text-sm text-gray-500">Hudud</p>
                             <p className="font-medium text-gray-900">{selectedApplication.region_name}</p>
                           </div>
                         </div>
@@ -767,6 +833,15 @@ export default function AdminApplicationsPage() {
                           <span className="text-gray-600">Hujjatlar soni</span>
                           <span className="font-medium text-gray-900">{selectedApplication.documents_count} ta</span>
                         </div>
+                        {selectedApplication.queue_number && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Navbat raqami</span>
+                            <span className="inline-flex items-center gap-1 font-bold text-blue-700">
+                              #{selectedApplication.queue_number}
+                              {selectedApplication.queue_total && <span className="text-gray-400 font-normal text-sm">/ {selectedApplication.queue_total}</span>}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -862,6 +937,153 @@ export default function AdminApplicationsPage() {
                         </div>
                       )}
                     </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Offline Application Create Modal */}
+          <AnimatePresence>
+            {showOfflineModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+                onClick={() => setShowOfflineModal(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                  className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Offline ariza qo'shish</h3>
+                      <p className="text-sm text-gray-500 mt-1">Daftardagi arizani platformaga kiritish</p>
+                    </div>
+                    <button onClick={() => setShowOfflineModal(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {offlineError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{offlineError}</div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">F.I.O *</label>
+                      <input
+                        type="text"
+                        value={offlineForm.full_name}
+                        onChange={(e) => setOfflineForm(f => ({ ...f, full_name: e.target.value }))}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                        placeholder="Ism Familiya Otasining ismi"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Telefon raqam</label>
+                      <input
+                        type="text"
+                        value={offlineForm.phone}
+                        onChange={(e) => setOfflineForm(f => ({ ...f, phone: e.target.value }))}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                        placeholder="+998..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Litsenziya turi *</label>
+                        <select
+                          value={offlineForm.license_type}
+                          onChange={(e) => setOfflineForm(f => ({ ...f, license_type: e.target.value }))}
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
+                        >
+                          <option value="">Tanlang</option>
+                          <option value="PRO">Professional</option>
+                          <option value="A">A toifali</option>
+                          <option value="B">B toifali</option>
+                          <option value="C">C toifali</option>
+                          <option value="D">D toifali</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Hudud *</label>
+                        <select
+                          value={offlineForm.region}
+                          onChange={(e) => setOfflineForm(f => ({ ...f, region: e.target.value }))}
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
+                        >
+                          <option value="">Tanlang</option>
+                          {regions.map(r => (
+                            <option key={r.id} value={r.id}>{r.name_uz}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Navbat sanasi (daftarga yozilgan sana) *</label>
+                      <input
+                        type="date"
+                        value={offlineForm.queue_date}
+                        onChange={(e) => setOfflineForm(f => ({ ...f, queue_date: e.target.value }))}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Ish joyi</label>
+                        <input
+                          type="text"
+                          value={offlineForm.workplace}
+                          onChange={(e) => setOfflineForm(f => ({ ...f, workplace: e.target.value }))}
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tajriba (yil)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={offlineForm.coaching_years}
+                          onChange={(e) => setOfflineForm(f => ({ ...f, coaching_years: e.target.value }))}
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Holat</label>
+                      <select
+                        value={offlineForm.status}
+                        onChange={(e) => setOfflineForm(f => ({ ...f, status: e.target.value }))}
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] bg-white"
+                      >
+                        <option value="pending">Kutilmoqda</option>
+                        <option value="under_review">Ko'rib chiqilmoqda</option>
+                        <option value="approved">Tasdiqlangan</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      onClick={() => setShowOfflineModal(false)}
+                      className="flex-1 px-6 py-3 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
+                    >
+                      Bekor qilish
+                    </button>
+                    <button
+                      onClick={handleOfflineCreate}
+                      disabled={offlineLoading}
+                      className="flex-1 px-6 py-3 bg-[#1A56A0] text-white rounded-xl hover:bg-[#0D3B6E] transition-all disabled:opacity-50 font-medium"
+                    >
+                      {offlineLoading ? 'Saqlanmoqda...' : 'Qo\'shish'}
+                    </button>
                   </div>
                 </motion.div>
               </motion.div>

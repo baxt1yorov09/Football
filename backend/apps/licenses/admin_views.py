@@ -521,7 +521,7 @@ class AdminLicenseExportView(APIView):
 
         headers = [
             'Litsenziya raqami', 'Egasi', 'Telefon', 'Litsenziya turi',
-            'Viloyat', 'Holat', 'Berilgan sana', 'Tugash sanasi', 'Qolgan kunlar'
+            'Hudud', 'Holat', 'Berilgan sana', 'Tugash sanasi', 'Qolgan kunlar'
         ]
         widths = [22, 30, 18, 22, 20, 18, 16, 16, 14]
         for col, (hdr, w) in enumerate(zip(headers, widths), 1):

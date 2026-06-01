@@ -35,7 +35,7 @@ export function ProfessionalStep({ data, onNext, onBack }: ProfessionalStepProps
     const newErrors: Record<string, string> = {};
     
     if (!formData.currentClub.trim()) {
-      newErrors.currentClub = 'Joriy klub kiritish majburiy';
+      newErrors.currentClub = 'Ish joyi kiritish majburiy';
     }
     if (!formData.position.trim()) {
       newErrors.position = 'Lavozim kiritish majburiy';
@@ -72,13 +72,13 @@ export function ProfessionalStep({ data, onNext, onBack }: ProfessionalStepProps
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Joriy klub <span className="text-red-500">*</span>
+              Ish joyi <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Klub nomi"
+                placeholder="Klub nomi yoki ish joyi"
                 value={formData.currentClub}
                 onChange={(e) => handleChange('currentClub', e.target.value)}
                 className={`pl-12 h-12 ${errors.currentClub ? 'border-red-500' : ''}`}
@@ -140,7 +140,7 @@ export function ProfessionalStep({ data, onNext, onBack }: ProfessionalStepProps
               <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Oliy ma'lumot, murabbiylik maktabi..."
+                placeholder=""
                 value={formData.education}
                 onChange={(e) => handleChange('education', e.target.value)}
                 className={`pl-12 h-12 ${errors.education ? 'border-red-500' : ''}`}

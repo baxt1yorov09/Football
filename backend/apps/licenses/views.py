@@ -38,6 +38,89 @@ class LicenseTypeListView(APIView):
         })
 
 
+class PublicLicenseListView(APIView):
+    """Barcha murabbiylarning faol litsenziyalari ro'yxati (umumiy ko'rish).
+    Telefon raqamlari va shaxsiy ma'lumotlar ko'rsatilmaydi."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Q
+
+        qs = License.objects.select_related(
+            'user', 'user__region', 'license_type', 'region'
+        ).order_by('-issued_at')
+
+        p = request.query_params
+        search = (p.get('search') or '').strip()
+        type_f = (p.get('license_type') or '').strip()
+        region_f = (p.get('region') or '').strip()
+        status_f = (p.get('status') or '').strip()
+
+        # Faqat faol litsenziyalarni ko'rsatish (default)
+        if not status_f or status_f == 'active':
+            now = timezone.now()
+            qs = qs.filter(is_active=True, status='active', expires_at__gt=now)
+        elif status_f == 'all':
+            pass  # filtrsiz
+        else:
+            qs = qs.filter(status=status_f)
+
+        if type_f:
+            qs = qs.filter(license_type__code=type_f)
+        if region_f:
+            qs = qs.filter(Q(region_id=region_f) | Q(user__region_id=region_f))
+        if search:
+            qs = qs.filter(
+                Q(license_number__icontains=search) |
+                Q(user__full_name__icontains=search) |
+                Q(license_type__name_uz__icontains=search) |
+                Q(license_type__code__icontains=search)
+            )
+
+        # Pagination
+        try:
+            limit = max(1, min(int(p.get('limit', 20)), 100))
+            offset = max(0, int(p.get('offset', 0)))
+        except (TypeError, ValueError):
+            limit, offset = 20, 0
+
+        total = qs.count()
+        items = list(qs[offset:offset + limit])
+
+        is_admin = request.user.is_staff or request.user.is_superuser
+
+        results = []
+        for lic in items:
+            comp = lic.computed_status
+            row = {
+                'id': str(lic.id),
+                'license_number': lic.license_number,
+                'license_type_code': lic.license_type.code,
+                'license_type_name': lic.license_type.name_uz,
+                'license_type_name_ru': lic.license_type.name_ru or lic.license_type.name_uz,
+                'color_hex': lic.license_type.color_hex or '#1A56A0',
+                'full_name': lic.user.full_name or '',
+                'region': (lic.region.name_uz if lic.region else
+                           (lic.user.region.name_uz if lic.user.region else '')),
+                'status': comp,
+                'issued_at': lic.issued_at.strftime('%Y-%m-%d') if lic.issued_at else '',
+                'expires_at': lic.expires_at.strftime('%Y-%m-%d') if lic.expires_at else '',
+                'verification_url': f"/verify/{lic.id}",
+            }
+            # Faqat admin uchun telefon va email
+            if is_admin:
+                row['phone'] = lic.user.phone or ''
+                row['email'] = lic.user.email or ''
+            results.append(row)
+
+        return Response({
+            'count': total,
+            'limit': limit,
+            'offset': offset,
+            'results': results,
+        })
+
+
 class LicenseListView(APIView):
     """Get all licenses for current user (with rich data + summary stats)"""
     permission_classes = [IsAuthenticated]
@@ -319,12 +402,14 @@ def issue_license(request, application_id):
         
         license_number = f"UFF-{year}-{license_type.code}-{license_count:06d}"
         
-        # Create license
+        # Create license — viloyatni arizadan (yoki user'dan) meros qilib olamiz
+        license_region = application.region or getattr(application.user, 'region', None)
         license_obj = License.objects.create(
             license_number=license_number,
             license_type=license_type,
             user=application.user,
             application=application,
+            region=license_region,
             issued_at=timezone.now(),
             expires_at=timezone.now() + timezone.timedelta(days=license_type.validity_days),
             current_club=application.data.get('current_club', ''),

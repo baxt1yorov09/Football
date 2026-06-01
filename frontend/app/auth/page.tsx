@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PhoneInput } from '@/components/auth/PhoneInput';
@@ -8,21 +8,26 @@ import { OTPInput } from '@/components/auth/OTPInput';
 import { TwoFactorChallenge } from '@/components/auth/TwoFactorChallenge';
 import { useAuth } from '@/hooks/useAuth';
 
-export default function AuthPage() {
+function AuthPageInner() {
   const [step, setStep] = useState<'phone' | 'otp' | '2fa'>('phone');
   const [phone, setPhone] = useState('');
   const [twoFactorToken, setTwoFactorToken] = useState('');
-  const { login, verify2FA, isAuthenticated } = useAuth();
+  const { login, verify2FA, isAuthenticated, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
 
-  // If already authenticated, redirect to target or dashboard
+  // If already authenticated, redirect appropriately.
+  // Onboarding tugallanmagan foydalanuvchi har doim /onboarding ga yo'naltiriladi
+  // (orqaga tugmasi bilan dashboard'ga kirib qolmasligi uchun).
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isAuthenticated || !user) return;
+    if (user.is_onboarded === false) {
+      router.push('/onboarding');
+    } else {
       router.push(redirectUrl || '/dashboard');
     }
-  }, [isAuthenticated, redirectUrl, router]);
+  }, [isAuthenticated, user, redirectUrl, router]);
 
   const handlePhoneSubmit = (phoneNumber: string) => {
     setPhone(phoneNumber);
@@ -31,7 +36,6 @@ export default function AuthPage() {
 
   const handleOTPSubmit = async (code: string) => {
     const result: any = await login(phone, code);
-    console.log('Login result:', result);
 
     if (!result?.success) return;
 
@@ -42,7 +46,7 @@ export default function AuthPage() {
       return;
     }
 
-    if (result.isNewUser) {
+    if (result.isNewUser || result.user?.is_onboarded === false) {
       router.push('/onboarding');
     } else {
       router.push(redirectUrl || '/dashboard');
@@ -52,7 +56,7 @@ export default function AuthPage() {
   const handle2FASubmit = async (code: string) => {
     const result = await verify2FA(twoFactorToken, code);
     if (result.success) {
-      if (result.isNewUser) {
+      if (result.isNewUser || result.user?.is_onboarded === false) {
         router.push('/onboarding');
       } else {
         router.push(redirectUrl || '/dashboard');
@@ -63,7 +67,6 @@ export default function AuthPage() {
 
   const handleResendOTP = () => {
     // Resend OTP
-    console.log('Resending OTP to', phone);
   };
 
   return (
@@ -135,5 +138,13 @@ export default function AuthPage() {
         </p>
       </motion.div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthPageInner />
+    </Suspense>
   );
 }

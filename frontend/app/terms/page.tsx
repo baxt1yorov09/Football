@@ -201,7 +201,7 @@ export default function TermsPage() {
                   </div>
                   <div>
                     <h4 className="font-medium mb-2">Email</h4>
-                    <p className="text-gray-700">fmtmufa@gmail.com</p>
+                    <p className="text-gray-700">murabbiylartalimi@gmail.com</p>
                   </div>
                   <div>
                     <h4 className="font-medium mb-2">Manzil</h4>

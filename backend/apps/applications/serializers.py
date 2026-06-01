@@ -26,8 +26,11 @@ class ApplicationSerializer(serializers.ModelSerializer):
     license_type_name = serializers.CharField(source='license_type.name_uz', read_only=True)
     license_type_code = serializers.CharField(source='license_type.code', read_only=True)
     region_name = serializers.SerializerMethodField()
+    residence_region_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     reviewed_by_name = serializers.CharField(source='reviewed_by.full_name', read_only=True)
+    queue_number = serializers.IntegerField(read_only=True)
+    queue_total = serializers.IntegerField(read_only=True)
     documents_count = serializers.SerializerMethodField()
     documents = serializers.SerializerMethodField()
     timeline = serializers.SerializerMethodField()
@@ -36,9 +39,11 @@ class ApplicationSerializer(serializers.ModelSerializer):
         model = Application
         fields = [
             'id', 'user_name', 'user_phone', 'user_email', 'full_name', 'phone',
-            'license_type', 'license_type_name', 'license_type_code', 'region', 'region_name',
+            'license_type', 'license_type_name', 'license_type_code',
+            'region', 'region_name', 'residence_region', 'residence_region_name',
             'status', 'status_display', 'workplace', 'job_title', 'coaching_years',
             'prev_license_date', 'submitted_at', 'reviewed_at', 'reviewed_by_name',
+            'queue_number', 'queue_total', 'is_offline',
             'admin_note', 'rejection_reason', 'documents_count', 'documents', 'timeline'
         ]
         read_only_fields = ['id', 'submitted_at', 'reviewed_at', 'reviewed_by']
@@ -71,6 +76,12 @@ class ApplicationSerializer(serializers.ModelSerializer):
         """Get region name"""
         if obj.region:
             return obj.region.name_uz or obj.region.name or str(obj.region)
+        return None
+
+    def get_residence_region_name(self, obj):
+        """Get residence region name"""
+        if obj.residence_region:
+            return obj.residence_region.name_uz or str(obj.residence_region)
         return None
     
     def get_documents_count(self, obj):
@@ -110,15 +121,43 @@ class ApplicationCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    residence_region = serializers.PrimaryKeyRelatedField(
+        queryset=Region.objects.all(),
+        required=False,
+        allow_null=True
+    )
     full_name = serializers.CharField(required=False, allow_blank=True)
     phone = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = Application
         fields = [
-            'license_type', 'region', 'workplace', 'job_title',
+            'license_type', 'region', 'residence_region', 'workplace', 'job_title',
             'coaching_years', 'prev_license_date', 'full_name', 'phone'
         ]
+
+
+class AdminOfflineApplicationCreateSerializer(serializers.Serializer):
+    """Admin: daftardan (offline) o'quvchini navbat sanasi bilan qo'shish."""
+    full_name = serializers.CharField()
+    phone = serializers.CharField(required=False, allow_blank=True)
+    license_type = serializers.SlugRelatedField(
+        slug_field='code',
+        queryset=LicenseType.objects.filter(is_active=True)
+    )
+    region = serializers.PrimaryKeyRelatedField(queryset=Region.objects.all())
+    residence_region = serializers.PrimaryKeyRelatedField(
+        queryset=Region.objects.all(), required=False, allow_null=True
+    )
+    workplace = serializers.CharField(required=False, allow_blank=True)
+    job_title = serializers.CharField(required=False, allow_blank=True)
+    coaching_years = serializers.IntegerField(required=False, default=0)
+    # Daftarga ro'yxatga olingan sana — navbatdagi o'rinni belgilaydi
+    queue_date = serializers.DateField()
+    status = serializers.ChoiceField(
+        choices=[s[0] for s in Application.STATUS_CHOICES],
+        required=False, default='pending'
+    )
 
 
 class ApplicationAdminSerializer(serializers.ModelSerializer):
@@ -129,8 +168,11 @@ class ApplicationAdminSerializer(serializers.ModelSerializer):
     license_type_name = serializers.CharField(source='license_type.name_uz', read_only=True)
     license_type_code = serializers.CharField(source='license_type.code', read_only=True)
     region_name = serializers.CharField(source='region.name_uz', read_only=True)
+    residence_region_name = serializers.CharField(source='residence_region.name_uz', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     reviewed_by_name = serializers.CharField(source='reviewed_by.full_name', read_only=True)
+    queue_number = serializers.IntegerField(read_only=True)
+    queue_total = serializers.IntegerField(read_only=True)
     documents_count = serializers.SerializerMethodField()
     documents = serializers.SerializerMethodField()
     timeline = serializers.SerializerMethodField()
@@ -139,9 +181,11 @@ class ApplicationAdminSerializer(serializers.ModelSerializer):
         model = Application
         fields = [
             'id', 'user_name', 'user_phone', 'user_email',
-            'license_type', 'license_type_name', 'license_type_code', 'region', 'region_name',
+            'license_type', 'license_type_name', 'license_type_code',
+            'region', 'region_name', 'residence_region', 'residence_region_name',
             'status', 'status_display', 'workplace', 'job_title', 'coaching_years',
             'prev_license_date', 'license_validity_start', 'license_validity_end',
+            'queue_number', 'queue_total', 'is_offline', 'queue_priority',
             'admin_note', 'rejection_reason', 'submitted_at', 'reviewed_at',
             'reviewed_by', 'reviewed_by_name', 'documents_count', 'documents', 'timeline'
         ]

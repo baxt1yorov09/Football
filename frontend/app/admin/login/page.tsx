@@ -170,7 +170,7 @@ export default function AdminLoginPage() {
               <Award className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">UFF System</h2>
+              <h2 className="text-2xl font-bold">UFA System</h2>
               <p className="text-white/70 text-sm">Admin Dashboard</p>
             </div>
           </motion.div>
@@ -228,7 +228,7 @@ export default function AdminLoginPage() {
           >
             {[
               { value: '2,500+', label: 'Murabbiylar' },
-              { value: '12', label: 'Viloyatlar' },
+              { value: '12', label: 'Hududlar' },
               { value: '99.9%', label: 'Ishlaydi' },
             ].map((stat, index) => (
               <div key={index}>

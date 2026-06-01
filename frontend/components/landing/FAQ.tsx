@@ -19,7 +19,7 @@ const faqs = [
   },
   {
     question: "PRO litsenziya faqat Toshkentda olinadimi?",
-    answer: "Ha, PRO litsenziya faqat Toshkent shahrida o'tkaziladigan maxsus trening va imtihonlardan so'ng beriladi. Boshqa viloyatlarda faqat D, C, B, A litsenziyalarini olish mumkin."
+    answer: "Ha, PRO litsenziya faqat Toshkent shahrida o'tkaziladigan maxsus trening va imtihonlardan so'ng beriladi. Boshqa hududlarda faqat D, C, B, A litsenziyalarini olish mumkin."
   },
   {
     question: "Litsenziya amal qilish muddati qancha?",

@@ -22,7 +22,8 @@ from .serializers import (
     ApplicationSerializer, 
     ApplicationCreateSerializer,
     ApplicationTimelineSerializer, 
-    ApplicationAdminSerializer
+    ApplicationAdminSerializer,
+    AdminOfflineApplicationCreateSerializer,
 )
 from utils.email_service import EmailService
 
@@ -31,6 +32,125 @@ class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
+
+
+class PublicApplicationListView(APIView):
+    """Barcha foydalanuvchilarning arizalari ro'yxati (umumiy ko'rish).
+    Telefon va email faqat adminlar uchun ko'rinadi."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = Application.objects.select_related(
+            'user', 'user__region', 'license_type', 'region'
+        ).order_by('-submitted_at')
+
+        p = request.query_params
+        search = (p.get('search') or '').strip()
+        type_f = (p.get('license_type') or '').strip()
+        status_f = (p.get('status') or '').strip()
+        region_f = (p.get('region') or '').strip()
+
+        if status_f and status_f != 'all':
+            qs = qs.filter(status=status_f)
+        if type_f:
+            qs = qs.filter(license_type__code=type_f)
+        if region_f:
+            qs = qs.filter(Q(region_id=region_f) | Q(user__region_id=region_f))
+        if search:
+            qs = qs.filter(
+                Q(full_name__icontains=search) |
+                Q(user__full_name__icontains=search) |
+                Q(license_type__name_uz__icontains=search) |
+                Q(license_type__code__icontains=search)
+            )
+
+        # Pagination
+        try:
+            limit = max(1, min(int(p.get('limit', 20)), 100))
+            offset = max(0, int(p.get('offset', 0)))
+        except (TypeError, ValueError):
+            limit, offset = 20, 0
+
+        total = qs.count()
+        items = list(qs[offset:offset + limit])
+
+        is_admin = request.user.is_staff or request.user.is_superuser
+
+        # Pre-compute queue totals/positions for pending statuses
+        pending_statuses = ['pending', 'under_review', 'additional_docs']
+        total_in_queue = Application.objects.filter(status__in=pending_statuses).count()
+
+        results = []
+        for app in items:
+            full_name = app.full_name or app.user.full_name or ''
+            row = {
+                'id': str(app.id),
+                'full_name': full_name,
+                'license_type_code': app.license_type.code if app.license_type else '',
+                'license_type_name': app.license_type.name_uz if app.license_type else '',
+                'license_type_name_ru': (
+                    app.license_type.name_ru or app.license_type.name_uz
+                ) if app.license_type else '',
+                'color_hex': (app.license_type.color_hex if app.license_type else '') or '#1A56A0',
+                'region': (app.region.name_uz if app.region else
+                           (app.user.region.name_uz if app.user.region else '')),
+                'status': app.status,
+                'status_display': dict(Application.STATUS_CHOICES).get(app.status, app.status),
+                'submitted_at': app.submitted_at.strftime('%Y-%m-%d') if app.submitted_at else '',
+                'reviewed_at': app.reviewed_at.strftime('%Y-%m-%d') if app.reviewed_at else '',
+            }
+
+            # Navbatga kiradigan statuslar (completed arxivga o'tadi)
+            active_statuses = ['pending', 'under_review', 'additional_docs', 'approved', 'called', 'studying']
+
+            # Queue position for pending applications (by region)
+            if app.status in pending_statuses and app.submitted_at:
+                region_qs = Application.objects.filter(
+                    status__in=pending_statuses,
+                    region_id=app.region_id,
+                )
+                row['queue_position'] = region_qs.filter(
+                    submitted_at__lte=app.submitted_at,
+                ).count()
+                row['queue_total'] = region_qs.count()
+                row['queue_region'] = app.region.name_uz if app.region else ''
+            # Queue position for approved/called/studying applications (by region + license type)
+            elif app.status in ['approved', 'called', 'studying'] and app.license_type:
+                region_type_qs = Application.objects.filter(
+                    status__in=['approved', 'called', 'studying'],
+                    region_id=app.region_id,
+                    license_type=app.license_type,
+                )
+                # Agar reviewed_at bo'lmasa submitted_at ishlatiladi
+                order_field = app.reviewed_at or app.submitted_at
+                if order_field:
+                    row['queue_position'] = region_type_qs.filter(
+                        reviewed_at__lte=order_field,
+                    ).count() if app.reviewed_at else region_type_qs.filter(
+                        submitted_at__lte=order_field,
+                    ).count()
+                else:
+                    row['queue_position'] = 1
+                row['queue_total'] = region_type_qs.count()
+                row['queue_region'] = app.region.name_uz if app.region else ''
+            else:
+                row['queue_position'] = None
+                row['queue_total'] = None
+                row['queue_region'] = ''
+
+            # Faqat admin uchun shaxsiy ma'lumot
+            if is_admin:
+                row['phone'] = (app.phone or app.user.phone or '')
+                row['email'] = app.user.email or ''
+
+            results.append(row)
+
+        return Response({
+            'count': total,
+            'limit': limit,
+            'offset': offset,
+            'results': results,
+        })
 
 
 class ApplicationListCreateView(APIView):
@@ -107,14 +227,17 @@ class ApplicationListCreateView(APIView):
         print(f"DEBUG: phone received: {phone}")
         
         # License_type endi code bilan keladi, validation serializer da bo'ladi
-        # Region from request data (validated_data) or user profile
+        # region = O'qimoqchi bo'lgan hudud (admin yo'naltirish uchun)
+        # residence_region = Yashaydigan hudud
         region = validated_data.pop('region', None) or getattr(request.user, 'region', None)
+        residence_region = validated_data.pop('residence_region', None) or getattr(request.user, 'region', None)
         
         application = Application.objects.create(
             user=request.user,
             full_name=full_name,  # Save full_name to this application only
             phone=phone,          # Save phone to this application only
             region=region,
+            residence_region=residence_region,
             **validated_data
         )
         
@@ -312,6 +435,9 @@ class AdminApplicationListView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     pagination_class = StandardResultsSetPagination
 
+    # Arxivga o'tkazilgan statuslar (default bo'yicha ko'rsatilmaydi)
+    ARCHIVED_STATUSES = ['completed', 'no_show', 'cancelled']
+
     @swagger_auto_schema(
         operation_description="Get all applications (admin only)",
         manual_parameters=[
@@ -322,22 +448,48 @@ class AdminApplicationListView(APIView):
         ],
         responses={200: ApplicationAdminSerializer(many=True)}
     )
+
     def get(self, request):
         """Get all applications with filters"""
         applications = Application.objects.all()
+
+        # Region admin'ni o'z viloyatidagi arizalar bilan cheklaymiz.
+        # Super admin va boshqa rollar barchasini ko'radi.
+        if getattr(request.user, 'role', None) == 'region_admin' and getattr(request.user, 'region_id', None):
+            applications = applications.filter(region_id=request.user.region_id)
 
         # Apply filters
         status_filter = request.query_params.get('status')
         if status_filter:
             applications = applications.filter(status=status_filter)
+        else:
+            # Default: arxivga o'tganlarni ko'rsatma
+            applications = applications.exclude(status__in=self.ARCHIVED_STATUSES)
 
         region_filter = request.query_params.get('region')
         if region_filter:
-            applications = applications.filter(region_id=region_filter)
+            # region_admin uchun — boshqa viloyatni filterlay olmaydi
+            if getattr(request.user, 'role', None) == 'region_admin' and getattr(request.user, 'region_id', None):
+                if str(region_filter) != str(request.user.region_id):
+                    applications = applications.none()
+            else:
+                applications = applications.filter(region_id=region_filter)
 
         license_type_filter = request.query_params.get('license_type')
         if license_type_filter:
-            applications = applications.filter(license_type_id=license_type_filter)
+            # Frontend turi `code` (masalan 'A', 'B', 'PRO') yuboradi, eski integer ID ham qo'llab-quvvatlanadi.
+            if str(license_type_filter).isdigit():
+                applications = applications.filter(license_type_id=int(license_type_filter))
+            else:
+                applications = applications.filter(license_type__code=license_type_filter)
+
+        # GK / FITNESS / FUTSAL kabi turlar uchun daraja (level) filtri
+        level_filter = request.query_params.get('level')
+        if level_filter:
+            try:
+                applications = applications.filter(license_type__level=int(level_filter))
+            except (TypeError, ValueError):
+                pass
 
         search = request.query_params.get('search')
         if search:
@@ -347,13 +499,23 @@ class AdminApplicationListView(APIView):
                 Q(id__icontains=search)
             )
 
-        # Statistics
+        # Statistics — region_admin uchun ham o'z viloyati bo'yicha
+        stats_qs = Application.objects.all()
+        if getattr(request.user, 'role', None) == 'region_admin' and getattr(request.user, 'region_id', None):
+            stats_qs = stats_qs.filter(region_id=request.user.region_id)
+
+        # Asosiy statuslar (arxivga o'tmaganlar)
+        active_qs = stats_qs.exclude(status__in=self.ARCHIVED_STATUSES)
         stats = {
-            'total': Application.objects.count(),
-            'pending': Application.objects.filter(status='pending').count(),
-            'under_review': Application.objects.filter(status='under_review').count(),
-            'approved': Application.objects.filter(status='approved').count(),
-            'rejected': Application.objects.filter(status='rejected').count(),
+            'total': active_qs.count(),
+            'pending': stats_qs.filter(status='pending').count(),
+            'under_review': stats_qs.filter(status='under_review').count(),
+            'approved': stats_qs.filter(status='approved').count(),
+            'called': stats_qs.filter(status='called').count(),
+            'studying': stats_qs.filter(status='studying').count(),
+            'rejected': stats_qs.filter(status='rejected').count(),
+            'completed': stats_qs.filter(status='completed').count(),
+            'no_show': stats_qs.filter(status='no_show').count(),
         }
 
         serializer = ApplicationAdminSerializer(
@@ -370,12 +532,15 @@ class AdminApplicationActionView(APIView):
     """Admin: Approve, reject, or request additional documents"""
     permission_classes = [IsAuthenticated, IsAdminUser]
 
+    # Ruxsat etilgan harakatlar
+    VALID_ACTIONS = ['approve', 'reject', 'request_docs', 'call', 'start_study', 'complete', 'no_show']
+
     @swagger_auto_schema(
         operation_description="Admin action on application",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'action': openapi.Schema(type=openapi.TYPE_STRING, enum=['approve', 'reject', 'request_docs']),
+                'action': openapi.Schema(type=openapi.TYPE_STRING, enum=VALID_ACTIONS),
                 'note': openapi.Schema(type=openapi.TYPE_STRING),
                 'rejection_reason': openapi.Schema(type=openapi.TYPE_STRING),
             }
@@ -392,12 +557,22 @@ class AdminApplicationActionView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # Region admin faqat o'z viloyatidagi arizaga ta'sir o'tkaza oladi
+        if (getattr(request.user, 'role', None) == 'region_admin'
+                and getattr(request.user, 'region_id', None)
+                and application.region_id
+                and application.region_id != request.user.region_id):
+            return Response(
+                {'error': 'Bu ariza sizning viloyatingizga tegishli emas'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         action = request.data.get('action')
         note = request.data.get('note', '')
 
-        if action not in ['approve', 'reject', 'request_docs']:
+        if action not in self.VALID_ACTIONS:
             return Response(
-                {'error': 'Noto\'g\'ri harakat'},
+                {'error': 'Noto\'g\'ri harakat', 'valid_actions': self.VALID_ACTIONS},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -423,10 +598,37 @@ class AdminApplicationActionView(APIView):
             timeline_action = 'rejected'
             timeline_note = note or f'Ariza rad etildi: {rejection_reason}'
 
-        else:  # request_docs
+        elif action == 'request_docs':
             application.status = 'additional_docs'
             timeline_action = 'additional_docs'
             timeline_note = note or 'Qo\'shimcha hujjatlar talab qilindi'
+
+        # === O'QISH WORKFLOW ===
+        elif action == 'call':
+            # Telefon qilib chaqirish
+            application.status = 'called'
+            timeline_action = 'called'
+            timeline_note = note or 'Telefon qilib o\'qishga chaqirildi'
+
+        elif action == 'start_study':
+            # O'qishni boshladi
+            application.status = 'studying'
+            timeline_action = 'studying'
+            timeline_note = note or 'O\'qishni boshladi'
+
+        elif action == 'complete':
+            # O'qib bo'lgan (arxivga)
+            application.status = 'completed'
+            application.reviewed_at = timezone.now()
+            application.reviewed_by = request.user
+            timeline_action = 'completed'
+            timeline_note = note or 'O\'qib bitirdi (arxivga o\'tkazildi)'
+
+        elif action == 'no_show':
+            # Chaqirildi lekin kelmadi
+            application.status = 'no_show'
+            timeline_action = 'no_show'
+            timeline_note = note or 'Chaqirildi lekin kelmadi'
 
         application.save()
 
@@ -439,3 +641,87 @@ class AdminApplicationActionView(APIView):
         )
 
         return Response(ApplicationAdminSerializer(application).data)
+
+
+class AdminOfflineApplicationCreateView(APIView):
+    """Admin: daftardagi (offline) o'quvchini navbat sanasi bilan qo'shish.
+
+    Navbat raqami (region + litsenziya turi doirasida) queue_priority bo'yicha
+    avtomatik hisoblanadi — eski sanali offline yozuvlar oldinda turadi va
+    platformadan kelgan arizalarning raqami o'zi suriladi.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request):
+        serializer = AdminOfflineApplicationCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        region = data['region']
+
+        # Region admin faqat o'z viloyatiga qo'sha oladi
+        if (getattr(request.user, 'role', None) == 'region_admin'
+                and getattr(request.user, 'region_id', None)
+                and region.id != request.user.region_id):
+            return Response(
+                {'error': 'Faqat o\'z viloyatingizga qo\'sha olasiz'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        full_name = data['full_name'].strip()
+        phone = (data.get('phone') or '').strip()
+
+        # Foydalanuvchi: telefon bo'lsa get_or_create, bo'lmasa placeholder
+        # AbstractUser.username unique — offline userlar uchun unikal qiymat beriladi
+        import uuid as _uuid
+        if phone:
+            user, _created = User.objects.get_or_create(
+                phone=phone,
+                defaults={
+                    'username': f"offline_{_uuid.uuid4().hex[:12]}",
+                    'full_name': full_name,
+                    'role': 'coach',
+                    'region': region,
+                },
+            )
+        else:
+            user = User.objects.create(
+                username=f"offline_{_uuid.uuid4().hex[:12]}",
+                phone=f"offline-{_uuid.uuid4().hex[:12]}",
+                full_name=full_name, role='coach', region=region,
+            )
+
+        # queue_date (DateField) -> queue_priority (DateTimeField), tushdagi vaqt
+        from datetime import datetime, time
+        qd = data['queue_date']
+        naive = datetime.combine(qd, time(12, 0))
+        queue_priority = timezone.make_aware(naive) if timezone.is_naive(naive) else naive
+
+        application = Application(
+            user=user,
+            full_name=full_name,
+            phone=phone or None,
+            license_type=data['license_type'],
+            region=region,
+            residence_region=data.get('residence_region') or region,
+            workplace=data.get('workplace') or None,
+            job_title=data.get('job_title') or None,
+            coaching_years=data.get('coaching_years') or 0,
+            status=data.get('status') or 'pending',
+            is_offline=True,
+            queue_priority=queue_priority,
+        )
+        application.save()
+
+        ApplicationTimeline.objects.create(
+            application=application,
+            action='submitted',
+            note='Daftardan kiritildi (offline)',
+            created_by=request.user,
+        )
+
+        return Response(
+            ApplicationAdminSerializer(application).data,
+            status=status.HTTP_201_CREATED,
+        )

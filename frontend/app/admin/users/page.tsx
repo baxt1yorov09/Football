@@ -131,7 +131,7 @@ export default function AdminUsersPage() {
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Aloqa</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Rol</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Viloyat</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Hudud</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Litsenziyalar</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Qo'shilgan</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Amallar</th>

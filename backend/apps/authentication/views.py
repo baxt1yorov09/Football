@@ -299,36 +299,38 @@ class AdminLoginView(APIView):
                 status=400
             )
 
-        # Email orqali userni topamiz
+        # Email orqali userni topamiz.
+        # Bir xil email bilan bir nechta user bo'lishi mumkin (coach + region_admin),
+        # shuning uchun darhol admin rollar bilan cheklaymiz va eng yuqori
+        # imtiyozli adminni tanlaymiz.
+        from apps.users.models import User
+        admin_roles = ['super_admin', 'region_admin', 'staff', 'viewer']
+        qs = User.objects.filter(
+            email__iexact=email,
+            is_active=True,
+            role__in=admin_roles,
+        )
         try:
-            from apps.users.models import User
-            user_obj = User.objects.filter(email=email).first()
-            if not user_obj:
-                raise User.DoesNotExist
-        except User.DoesNotExist:
+            qs = qs.filter(deleted_at__isnull=True)
+        except Exception:
+            pass
+        role_priority = {'super_admin': 0, 'region_admin': 1, 'staff': 2, 'viewer': 3}
+        candidates = sorted(qs, key=lambda u: role_priority.get(u.role, 99))
+
+        # Parolga mos keladigan birinchi adminni tanlaymiz.
+        # Bu shuningdek bir xil email bilan eski (esiz parol bilan) coach
+        # va yangi parol o'rnatilgan region_admin bo'lsa to'g'ri ishlashini
+        # ta'minlaydi.
+        user_obj = None
+        for candidate in candidates:
+            if candidate.check_password(password):
+                user_obj = candidate
+                break
+
+        if not user_obj:
             return Response(
                 {'detail': 'Email yoki parol noto\'g\'ri'},
                 status=401
-            )
-
-        # Parolni tekshiramiz
-        if not user_obj.check_password(password):
-            return Response(
-                {'detail': 'Email yoki parol noto\'g\'ri'},
-                status=401
-            )
-
-        # Role tekshiruvi
-        if user_obj.role not in ['super_admin', 'region_admin', 'viewer']:
-            return Response(
-                {'detail': 'Sizda admin huquqi yo\'q'},
-                status=403
-            )
-
-        if not user_obj.is_active:
-            return Response(
-                {'detail': 'Hisob bloklangan'},
-                status=403
             )
 
         # JWT token yaratish
@@ -347,6 +349,7 @@ class AdminLoginView(APIView):
                 'email': user_obj.email,
                 'role': user_obj.role,
                 'region': user_obj.region.name_uz if user_obj.region else None,
+                'region_id': user_obj.region_id,
             }
         })
 
@@ -354,7 +357,7 @@ class AdminLoginView(APIView):
 # ══════════════════════════════════════════════════════════════════
 # ADMIN PASSWORD RESET (Forgot Password)
 # ══════════════════════════════════════════════════════════════════
-ADMIN_ROLES = ('super_admin', 'region_admin', 'viewer')
+ADMIN_ROLES = ('super_admin', 'region_admin', 'staff', 'viewer')
 
 
 class AdminForgotPasswordView(APIView):
@@ -387,15 +390,24 @@ class AdminForgotPasswordView(APIView):
             status=status.HTTP_200_OK,
         )
 
-        # User model'da `deleted_at` mavjudligini tekshiramiz (soft-delete)
-        qs = User.objects.filter(email__iexact=email, is_active=True)
+        # Bir xil email bilan bir nechta user bo'lishi mumkin (masalan, coach
+        # va region_admin). Shuning uchun darhol admin rollar bilan cheklaymiz —
+        # aks holda .first() coach'ni tanlab "topilmadi" deydi.
+        qs = User.objects.filter(
+            email__iexact=email,
+            is_active=True,
+            role__in=ADMIN_ROLES,
+        )
         try:
             qs = qs.filter(deleted_at__isnull=True)
         except Exception:
             pass
-        user = qs.first()
+        # Eng yuqori darajadagi rolni afzal ko'ramiz (super_admin > region_admin > staff > viewer)
+        role_priority = {'super_admin': 0, 'region_admin': 1, 'staff': 2, 'viewer': 3}
+        user = sorted(qs, key=lambda u: role_priority.get(u.role, 99))[:1]
+        user = user[0] if user else None
 
-        if not user or user.role not in ADMIN_ROLES:
+        if not user:
             logger.info(f"Forgot-password: admin email topilmadi — {email}")
             return generic_ok
 

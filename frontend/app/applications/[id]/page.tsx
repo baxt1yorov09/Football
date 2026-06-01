@@ -46,6 +46,9 @@ interface Application {
   submitted_at: string;
   reviewed_at?: string | null;
   documents?: ApplicationDoc[];
+  queue_number?: number | null;
+  queue_total?: number | null;
+  is_offline?: boolean;
 }
 
 interface TimelineEntry {
@@ -368,6 +371,29 @@ export default function ApplicationDetailPage() {
                     {t('applications.admin_note')}
                   </p>
                   <p className="text-sm text-blue-800">{app.admin_note}</p>
+                </div>
+              )}
+
+              {/* Queue position banner */}
+              {app.queue_number != null && app.queue_number > 0 && !['approved', 'rejected', 'cancelled'].includes(app.status) && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-sm">{app.queue_number}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900">
+                      {locale === 'ru'
+                        ? `Ваш номер в очереди: ${app.queue_number}`
+                        : `Navbatdagi raqamingiz: ${app.queue_number}`}
+                    </p>
+                    {app.queue_total && (
+                      <p className="text-xs text-blue-700 mt-0.5">
+                        {locale === 'ru'
+                          ? `Jami navbatda: ${app.queue_total} kishi`
+                          : `Jami navbatda: ${app.queue_total} kishi`}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 

@@ -45,9 +45,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'phone', 'full_name', 'birth_date', 'gender', 
             'region', 'avatar_url', 'workplace', 'role', 'is_active',
-            'created_at', 'updated_at'
+            'is_onboarded', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'phone', 'role', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'phone', 'role', 'is_active', 'is_onboarded', 'created_at', 'updated_at']
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

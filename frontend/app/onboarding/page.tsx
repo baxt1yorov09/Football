@@ -15,7 +15,7 @@ const STEPS = [
   { id: 1, title: 'Ismingiz', subtitle: "To'liq ismingizni kiriting" },
   { id: 2, title: 'Shaxsiy', subtitle: "Tug'ilgan sana va jinsingiz" },
   { id: 3, title: 'Kasb', subtitle: "Ish joyingiz va tajribangiz" },
-  { id: 4, title: 'Manzil', subtitle: "Viloyatingizni tanlang" },
+  { id: 4, title: 'Manzil', subtitle: "Hududingizni tanlang" },
 ];
 
 interface OnboardingData {
