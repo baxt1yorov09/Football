@@ -26,7 +26,14 @@ import { useI18n } from '@/lib/i18n/I18nProvider';
 function roleLabel(role: string | undefined, t: (k: string) => string) {
   if (!role) return t('header.user');
   if (role === 'coach') return t('header.coach');
-  if (role.includes('admin')) return t('header.admin');
+  // Faqat /admin/login orqali kirgan adminlarda "Admin" labeli ko'rinadi.
+  // Telefon OTP orqali kirgan adminlar oddiy foydalanuvchi sifatida ko'rsatiladi.
+  if (role.includes('admin')) {
+    const hasAdminToken =
+      typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
+    if (hasAdminToken) return t('header.admin');
+    return t('header.coach');
+  }
   return t('header.user');
 }
 

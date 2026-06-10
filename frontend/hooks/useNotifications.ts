@@ -50,7 +50,11 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   const fetchUnreadCount = useCallback(async () => {
     if (!checkAuth()) return;
     try {
-      const res = await apiClient.get('/notifications/unread-count/');
+      // Faqat /admin/login orqali kirgan adminlarda admin_alert ko'rsatamiz.
+      const isAdminSession =
+        typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
+      const params = isAdminSession ? {} : { as_user: 'true' };
+      const res = await apiClient.get('/notifications/unread-count/', { params });
       setUnreadCount(res.data.unread_count ?? 0);
       isAuthed.current = true;
     } catch (e: any) {
@@ -69,6 +73,11 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
       const params: any = { limit: 100 };
       if (filter === 'unread') params.is_read = 'false';
       else if (filter === 'read') params.is_read = 'true';
+
+      // Faqat /admin/login orqali kirgan adminlarda admin_alert ko'rsatamiz.
+      const isAdminSession =
+        typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
+      if (!isAdminSession) params.as_user = 'true';
 
       const res = await apiClient.get('/notifications/', { params });
       setNotifications(res.data.results || []);

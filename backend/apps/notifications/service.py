@@ -474,10 +474,10 @@ class NotificationService:
             for admin in self._get_admins(region=getattr(application, 'region', None)):
                 prefs = _get_user_pref(admin, 'new_application')
 
-                # admin user'iga web bell yozamiz
+                # admin user'iga web bell yozamiz (admin_alert turi — oddiy sessiyada yashiriladi)
                 if prefs.get('in_app', True):
                     try:
-                        _create_web_notification(admin, 'system', title, message)
+                        _create_web_notification(admin, 'admin_alert', title, message)
                     except Exception as e:
                         logger.warning(f"admin web notif xato: {e}")
 
@@ -512,7 +512,7 @@ class NotificationService:
                 if not prefs.get('in_app', True):
                     continue
                 try:
-                    _create_web_notification(admin, 'system', title, message)
+                    _create_web_notification(admin, 'admin_alert', title, message)
                 except Exception as e:
                     logger.warning(f"admin expiry web notif xato: {e}")
         except Exception as e:

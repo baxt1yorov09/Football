@@ -33,15 +33,9 @@ export default function MaintenanceBanner() {
   useEffect(() => {
     // Admin tokeni mavjudligini tekshirish (admin/oddiy user banneri farqi uchun)
     try {
+      // Faqat /admin/login orqali kirgan adminlarni admin deb hisoblaymiz.
       const adminToken = localStorage.getItem("adminAccessToken");
-      const userRaw = localStorage.getItem("user");
-      const user = userRaw ? JSON.parse(userRaw) : null;
-      const role = user?.role;
-      setIsAdmin(
-        Boolean(adminToken) ||
-          role === "super_admin" ||
-          role === "region_admin"
-      );
+      setIsAdmin(Boolean(adminToken));
     } catch {
       setIsAdmin(false);
     }

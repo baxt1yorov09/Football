@@ -94,7 +94,9 @@ export function ApplicationsTable({
 }: ApplicationsTableProps) {
   const { user } = useAuth();
   const { t, locale } = useI18n();
-  const isAdmin = user?.role === 'admin';
+  // Faqat /admin/login orqali kirgan adminlarni admin deb hisoblaymiz.
+  // Telefon OTP orqali kirgan adminlar oddiy foydalanuvchi sifatida ko'rinadi.
+  const isAdmin = typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
 
   const [internalSearchTerm, setInternalSearchTerm] = useState('');
   const [internalStatusFilter, setInternalStatusFilter] = useState('all');

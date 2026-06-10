@@ -6,10 +6,11 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, HelpCircle, Book, Video, MessageSquare, Phone, Mail } from 'lucide-react';
+import { Search, HelpCircle, Book, Video, MessageSquare, Phone, Mail, X, Play } from 'lucide-react';
 
 export default function HelpPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeVideo, setActiveVideo] = useState<{ title: string; youtubeId?: string; videoUrl?: string } | null>(null);
   const [activeCategory, setActiveCategory] = useState('all');
 
   const categories = [
@@ -27,7 +28,9 @@ export default function HelpPage() {
   videos?: Array<{
     title: string;
     duration: string;
-    thumbnail: string;
+    thumbnail?: string;
+    youtubeId?: string;
+    videoUrl?: string;
   }>;
   faqs?: Array<{
     question: string;
@@ -42,7 +45,7 @@ interface ContactInfo {
   action: string;
 }
 
-const helpContent = [
+const helpContent: Array<HelpItem & { category: string }> = [
     {
       category: 'getting-started',
       title: 'Tizimdan ro\'yxatdan o\'tish',
@@ -74,17 +77,17 @@ const helpContent = [
         {
           title: 'Ro\'yxatdan o\'tish',
           duration: '3:45',
-          thumbnail: '/api/placeholder/320x180'
+          youtubeId: 'dQw4w9WgXcQ'
         },
         {
           title: 'Ariza to\'ldirish',
           duration: '5:20',
-          thumbnail: '/api/placeholder/320x180'
+          youtubeId: 'dQw4w9WgXcQ'
         },
         {
           title: 'Hujjatlar yuklash',
           duration: '2:30',
-          thumbnail: '/api/placeholder/320x180'
+          youtubeId: 'dQw4w9WgXcQ'
         }
       ]
     },
@@ -235,19 +238,39 @@ const helpContent = [
                     {/* Videos */}
                     {content.videos && (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {content.videos.map((video, videoIndex) => (
-                          <div key={videoIndex} className="group cursor-pointer">
-                            <div className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden">
-                              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
-                                  <Video className="w-6 h-6 text-gray-700" />
+                        {content.videos.map((video, videoIndex) => {
+                          const thumb = video.youtubeId
+                            ? `https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`
+                            : video.thumbnail;
+                          const playable = !!(video.youtubeId || video.videoUrl);
+                          return (
+                            <div
+                              key={videoIndex}
+                              className="group cursor-pointer"
+                              onClick={() => playable && setActiveVideo({ title: video.title, youtubeId: video.youtubeId, videoUrl: video.videoUrl })}
+                            >
+                              <div className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden">
+                                {thumb && (
+                                  <img
+                                    src={thumb}
+                                    alt={video.title}
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                  />
+                                )}
+                                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                                  <div className="w-14 h-14 bg-white/95 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                    <Play className="w-6 h-6 text-[#0D3B6E] ml-0.5" fill="currentColor" />
+                                  </div>
                                 </div>
+                                <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/70 text-white text-xs">
+                                  {video.duration}
+                                </span>
                               </div>
+                              <h4 className="mt-3 font-medium">{video.title}</h4>
+                              <p className="text-sm text-gray-500">{video.duration}</p>
                             </div>
-                            <h4 className="mt-3 font-medium">{video.title}</h4>
-                            <p className="text-sm text-gray-500">{video.duration}</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 
@@ -271,7 +294,7 @@ const helpContent = [
                     {content.content && Array.isArray(content.content) && content.content.map((item: any, itemIndex: number) => (
                       itemIndex === 0 && typeof item === 'string' && item.includes('Telefon') && (
                         <div key={itemIndex} className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {content.content.map((contactItem: any, contactIndex: number) => (
+                          {(content.content ?? []).map((contactItem: any, contactIndex: number) => (
                             <div key={contactIndex} className="text-center p-4 bg-gray-50 rounded-lg">
                               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                 {contactIndex === 0 && <Phone className="w-6 h-6 text-blue-600" />}
@@ -317,6 +340,46 @@ const helpContent = [
           </div>
         </div>
       </main>
+
+      {/* Video Player Modal */}
+      {activeVideo && (
+        <div
+          className="fixed inset-0 bg-black/80 z-[80] flex items-center justify-center p-4"
+          onClick={() => setActiveVideo(null)}
+        >
+          <div
+            className="relative w-full max-w-4xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setActiveVideo(null)}
+              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white"
+              aria-label="Close"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <h3 className="absolute -top-11 left-0 text-white font-medium">{activeVideo.title}</h3>
+            <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-2xl">
+              {activeVideo.youtubeId ? (
+                <iframe
+                  src={`https://www.youtube.com/embed/${activeVideo.youtubeId}?autoplay=1&rel=0`}
+                  title={activeVideo.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              ) : activeVideo.videoUrl ? (
+                <video
+                  src={activeVideo.videoUrl}
+                  controls
+                  autoPlay
+                  className="w-full h-full"
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

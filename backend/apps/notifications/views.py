@@ -68,6 +68,11 @@ class NotificationListView(APIView):
     def get(self, request):
         qs = Notification.objects.filter(user=request.user)
 
+        # Admin alert'larini oddiy foydalanuvchi sessiyasida yashirish
+        as_user = request.query_params.get('as_user') in ('true', '1')
+        if as_user:
+            qs = qs.exclude(type='admin_alert')
+
         # Filters
         is_read = request.query_params.get('is_read')
         if is_read in ('true', '1'):
@@ -87,10 +92,11 @@ class NotificationListView(APIView):
         limit = min(max(limit, 1), 200)
 
         notifications = qs.order_by('-created_at')[:limit]
-        unread_count = Notification.objects.filter(
-            user=request.user, is_read=False
-        ).count()
-        total_count = Notification.objects.filter(user=request.user).count()
+        base_qs = Notification.objects.filter(user=request.user)
+        if as_user:
+            base_qs = base_qs.exclude(type='admin_alert')
+        unread_count = base_qs.filter(is_read=False).count()
+        total_count = base_qs.count()
 
         return Response({
             'results': [_notification_to_dict(n) for n in notifications],
@@ -104,10 +110,11 @@ class NotificationUnreadCountView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        count = Notification.objects.filter(
-            user=request.user, is_read=False
-        ).count()
-        return Response({'unread_count': count})
+        qs = Notification.objects.filter(user=request.user, is_read=False)
+        # Admin alert'larini oddiy foydalanuvchi sessiyasida yashirish
+        if request.query_params.get('as_user') in ('true', '1'):
+            qs = qs.exclude(type='admin_alert')
+        return Response({'unread_count': qs.count()})
 
 
 class NotificationMarkReadView(APIView):

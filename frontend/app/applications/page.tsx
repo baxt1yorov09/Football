@@ -21,10 +21,10 @@ export default function ApplicationsPage() {
 
   // Admin'larni admin paneliga yo'naltirish
   useEffect(() => {
+    // Faqat /admin/login orqali kirgan adminlarni admin paneliga yo'naltiramiz.
     const hasAdminToken =
       typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
-    const roleAdmin = !!user?.role && /admin/i.test(user.role);
-    if (hasAdminToken || roleAdmin) {
+    if (hasAdminToken) {
       setRedirecting(true);
       router.replace('/admin?tab=applications');
     }

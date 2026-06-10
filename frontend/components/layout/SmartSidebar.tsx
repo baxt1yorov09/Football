@@ -25,10 +25,11 @@ export function SmartSidebar({ adminActiveTab = '' }: SmartSidebarProps) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Faqat /admin/login orqali kirgan foydalanuvchilarni admin deb hisoblaymiz.
+    // Telefon OTP orqali kirgan adminlar oddiy foydalanuvchi sifatida ko'rinadi.
     const hasAdminToken =
       typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
-    const roleAdmin = !!user?.role && /admin/i.test(user.role);
-    setIsAdmin(hasAdminToken || roleAdmin);
+    setIsAdmin(hasAdminToken);
   }, [user]);
 
   if (isAdmin) {

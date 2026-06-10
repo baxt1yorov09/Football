@@ -72,6 +72,7 @@ class Notification(models.Model):
         ('expiry_7', '7 kunda tugaydi'),
         ('docs_required', 'Qo\'shimcha hujjat kerak'),
         ('system', 'Tizim xabari'),
+        ('admin_alert', 'Admin xabari'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
