@@ -1,19 +1,93 @@
 'use client';
 
+// Litsenziya ariza turlari — backend `/licenses/types/` endpointidan dinamik yuklanadi.
+// Rang, ikonka va tavsif kod bo'yicha xaritalanadi (kategoriya asosida ikonka tanlanadi).
+
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Shield, Award, Users } from 'lucide-react';
+import {
+  ArrowRight, Shield, Award, Users,
+  Trophy, Dumbbell, Brain, LineChart, RefreshCcw, Star, Waves,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/lib/i18n/I18nProvider';
+import { apiClient } from '@/lib/api/client';
+
+interface ApiLicenseType {
+  code: string;
+  name_uz: string;
+  name_ru?: string | null;
+  category: string;
+  color_hex?: string;
+}
+
+// Kategoriya → ikonka + Tailwind bg klassi
+const CATEGORY_STYLE: Record<string, { icon: any; bg: string }> = {
+  main:       { icon: Award,     bg: 'bg-blue-500' },
+  gk:         { icon: Shield,    bg: 'bg-emerald-600' },
+  fitness:    { icon: Dumbbell,  bg: 'bg-pink-500' },
+  specialist: { icon: Brain,     bg: 'bg-indigo-600' },
+  renewal:    { icon: RefreshCcw,bg: 'bg-gray-500' },
+  special:    { icon: Star,      bg: 'bg-amber-500' },
+};
+
+// Kod bo'yicha maxsus ikonka override
+const CODE_ICON: Record<string, any> = {
+  PRO: Trophy,
+  BEACH: Waves,
+  ANALYTICS: LineChart,
+  FUTSAL: Users,
+};
+
+// Kod bo'yicha inglizcha qisqa tavsif (backend name_uz allaqachon inson uchun mos)
+const CODE_DESC_UZ: Record<string, string> = {
+  A: 'Professional darajadagi murabbiylik litsenziyasi',
+  B: 'Yuqori darajadagi murabbiylik litsenziyasi',
+  C: "O'rta darajadagi murabbiylik litsenziyasi",
+  D: "Boshlang'ich murabbiylik litsenziyasi",
+  E: 'Yordamchi murabbiylik litsenziyasi',
+  F: 'Kirish darajasidagi murabbiylik',
+  PRO: 'Eng yuqori professional daraja',
+  GK: "Darvozabonlar bo'yicha murabbiylik",
+  FITNESS: 'Fitness va jismoniy tayyorgarlik',
+  SPECIALIST: 'Mutaxassis murabbiy',
+  PSYCH: 'Sport psixologiyasi',
+  ANALYTICS: "O'yin tahlili va statistikasi",
+  SELEK: 'Iste\'dodli o\'yinchilarni saralash',
+  BEACH: 'Plaj futboli murabbiyligi',
+  FUTSAL: 'Futzal murabbiyligi',
+  SPECIAL: 'Maxsus litsenziya',
+  TEMPORARY: 'Vaqtinchalik litsenziya',
+  ASSISTANT: 'Yordamchi murabbiy',
+  INTERNATIONAL: 'Xalqaro daraja',
+  HONORARY: 'Fahriy litsenziya',
+};
 
 export default function ApplyPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const [types, setTypes] = useState<ApiLicenseType[]>([]);
+  const [loadingTypes, setLoadingTypes] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const res = await apiClient.get('/licenses/types/');
+        setTypes(res.data?.results || []);
+      } catch {
+        setTypes([]);
+      } finally {
+        setLoadingTypes(false);
+      }
+    })();
+  }, [isAuthenticated]);
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -33,48 +107,20 @@ export default function ApplyPage() {
     return null;
   }
 
-  const licenseTypes = [
-    {
-      type: 'PRO',
-      title: t('apply.types.pro_title'),
-      description: t('apply.types.pro_desc'),
-      icon: Shield,
-      color: 'bg-blue-500',
-      href: '/apply/PRO'
-    },
-    {
-      type: 'A',
-      title: t('apply.types.a_title'),
-      description: t('apply.types.a_desc'),
-      icon: Award,
-      color: 'bg-green-500',
-      href: '/apply/A'
-    },
-    {
-      type: 'B',
-      title: t('apply.types.b_title'),
-      description: t('apply.types.b_desc'),
-      icon: Users,
-      color: 'bg-orange-500',
-      href: '/apply/B'
-    },
-    {
-      type: 'C',
-      title: t('apply.types.c_title'),
-      description: t('apply.types.c_desc'),
-      icon: Award,
-      color: 'bg-purple-500',
-      href: '/apply/C'
-    },
-    {
-      type: 'D',
-      title: t('apply.types.d_title'),
-      description: t('apply.types.d_desc'),
-      icon: Users,
-      color: 'bg-red-500',
-      href: '/apply/D'
-    }
-  ];
+  const licenseTypes = types.map((tp) => {
+    const catStyle = CATEGORY_STYLE[tp.category] || CATEGORY_STYLE.main;
+    const Icon = CODE_ICON[tp.code] || catStyle.icon;
+    const title = locale === 'ru' && tp.name_ru ? tp.name_ru : tp.name_uz;
+    const description = CODE_DESC_UZ[tp.code] || title;
+    return {
+      type: tp.code,
+      title,
+      description,
+      icon: Icon,
+      color: catStyle.bg,
+      href: `/apply/${tp.code}`,
+    };
+  });
 
   return (
     <div className="min-h-screen bg-[#F4F6F9]">

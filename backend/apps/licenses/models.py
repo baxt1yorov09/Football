@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 
 
 class LicenseType(models.Model):
@@ -57,7 +58,7 @@ class License(models.Model):
     license_number = models.CharField(max_length=50, unique=True, verbose_name="Litsenziya raqami")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name="Holati")
 
-    issued_at = models.DateTimeField(auto_now_add=True, verbose_name="Berilgan sana")
+    issued_at = models.DateTimeField(default=timezone.now, verbose_name="Berilgan sana")
     expires_at = models.DateTimeField(verbose_name="Amal qilish muddati")
 
     revoked_at = models.DateTimeField(blank=True, null=True, verbose_name="Bekor qilingan sana")
@@ -67,6 +68,10 @@ class License(models.Model):
 
     pdf_url = models.URLField(blank=True, null=True, verbose_name="PDF URL")
     qr_code_url = models.URLField(blank=True, null=True, verbose_name="QR kod URL")
+    image = models.FileField(
+        upload_to='licenses/', blank=True, null=True,
+        verbose_name="Litsenziya rasmi/PDF"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Faol")
 
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, verbose_name="Yaratilgan sana")

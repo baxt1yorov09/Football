@@ -27,7 +27,18 @@ export default function ApplicationWizardPage() {
   const router = useRouter();
   const licenseType = params.licenseType as string;
 
-  const licenseConfig = LICENSE_REQUIREMENTS[licenseType as keyof typeof LICENSE_REQUIREMENTS];
+  // LICENSE_REQUIREMENTS'da mavjud bo'lmagan kodlar uchun ham fallback konfig beriladi,
+  // shunda backend'dagi barcha litsenziya turlari uchun ariza yuborish sahifasi ochiladi.
+  const licenseConfig = (LICENSE_REQUIREMENTS[licenseType as keyof typeof LICENSE_REQUIREMENTS]
+    || {
+      prerequisite: null,
+      waitingDays: 0,
+      minAge: 18,
+      tashkentOnly: false,
+      requiredDocs: ['passport', 'photo_3x4'],
+      name: `${licenseType} Litsenziyasi`,
+      description: 'Litsenziya arizasini yuborish',
+    }) as any;
   const { isAuthenticated, isLoading } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);

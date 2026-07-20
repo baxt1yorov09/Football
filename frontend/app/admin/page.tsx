@@ -267,7 +267,7 @@ function LicensesPanel() {
     { key: 'total',     label: t('licenses.kpi.total'),         icon: Award,       color: '#1A56A0', filter: '' },
     { key: 'active',    label: t('licenses.kpi.active'),        icon: CheckCircle, color: '#27AE60', filter: 'active' },
     { key: 'expired',   label: t('licenses.kpi.expired'),       icon: AlertCircle, color: '#E74C3C', filter: 'expired' },
-    { key: 'suspended', label: t('licenses.status.suspended'),  icon: Clock,       color: '#F39C12', filter: 'suspended' },
+    { key: 'revoked',   label: t('licenses.status.revoked'),    icon: XCircle,     color: '#7F8C8D', filter: 'revoked' },
   ];
 
   // Pagination range
@@ -423,7 +423,6 @@ function LicensesPanel() {
               <option value="">{t('licenses.filter_all')}</option>
               <option value="active">{t('licenses.status.active')}</option>
               <option value="expired">{t('licenses.status.expired')}</option>
-              <option value="suspended">{t('licenses.status.suspended')}</option>
               <option value="revoked">{t('licenses.status.revoked')}</option>
             </select>
             <select

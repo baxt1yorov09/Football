@@ -121,6 +121,121 @@ class PublicLicenseListView(APIView):
         })
 
 
+class SelfLicenseCreateView(APIView):
+    """Foydalanuvchi o'zining mavjud litsenziyasini qo'lda kiritishi uchun.
+
+    Foydalanuvchi:
+      - Litsenziya turini tanlaydi
+      - O'z litsenziya raqamini kiritadi (yoki bo'sh qoldirsa avtomatik generatsiya)
+      - Berilgan sanani tanlaydi
+      - Litsenziya rasmini/PDF fayl'ini yuklaydi (ixtiyoriy)
+
+    Litsenziya muddati sukut bo'yicha 3 yil (issued_at + 3 yil).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from datetime import timedelta
+
+        data = request.data or {}
+        type_code = (data.get('license_type_code') or data.get('license_type') or '').strip()
+        issued_at_raw = (data.get('issued_at') or '').strip()
+        license_number_input = (data.get('license_number') or '').strip()
+        image_file = request.FILES.get('image')
+
+        # ── Majburiy maydonlar validatsiyasi ───────────────────────────
+        errors = {}
+        if not type_code:
+            errors['license_type_code'] = 'Litsenziya turini tanlang'
+        if not license_number_input:
+            errors['license_number'] = 'Litsenziya raqamini kiriting'
+        if not issued_at_raw:
+            errors['issued_at'] = 'Berilgan sanani tanlang'
+        if not image_file:
+            errors['image'] = 'Litsenziya rasmini yoki PDF faylini yuklang'
+        if errors:
+            # Birinchi xatoni asosiy `detail` sifatida qaytaramiz (UI toast uchun)
+            first_msg = next(iter(errors.values()))
+            return Response({'detail': first_msg, 'errors': errors}, status=400)
+
+        try:
+            lic_type = LicenseType.objects.get(code=type_code, is_active=True)
+        except LicenseType.DoesNotExist:
+            return Response({'detail': 'Litsenziya turi topilmadi'}, status=400)
+
+        # Sana parse qilish (YYYY-MM-DD)
+        try:
+            issued_at = datetime.strptime(issued_at_raw, '%Y-%m-%d')
+            issued_at = timezone.make_aware(issued_at) if timezone.is_naive(issued_at) else issued_at
+        except ValueError:
+            return Response({'detail': "Sana formati noto'g'ri (YYYY-MM-DD)"}, status=400)
+        if issued_at > timezone.now():
+            return Response({'detail': "Berilgan sana kelajakda bo'lishi mumkin emas"}, status=400)
+
+        # Duplikat oldini olish: bir foydalanuvchida bir turdagi faol litsenziya
+        if License.objects.filter(
+            user=request.user, license_type=lic_type, is_active=True
+        ).exists():
+            return Response(
+                {'detail': "Sizda bu turdagi litsenziya allaqachon mavjud"},
+                status=400,
+            )
+
+        # Litsenziya raqami — foydalanuvchi kiritgan qiymatni ishlatamiz
+        if License.objects.filter(license_number=license_number_input).exists():
+            return Response(
+                {'detail': 'Bu litsenziya raqami allaqachon mavjud'},
+                status=400,
+            )
+        number = license_number_input
+
+        # Rasm/PDF fayl validatsiyasi
+        allowed = {'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'}
+        ctype = getattr(image_file, 'content_type', '') or ''
+        if ctype and ctype not in allowed:
+            return Response(
+                {'detail': 'Faqat JPG, PNG, WEBP yoki PDF fayllar qabul qilinadi'},
+                status=400,
+            )
+        # Max 5 MB
+        if image_file.size and image_file.size > 5 * 1024 * 1024:
+            return Response(
+                {'detail': "Fayl hajmi 5 MB'dan oshmasligi kerak"},
+                status=400,
+            )
+
+        # Amal qilish muddati: 3 yil
+        expires_at = issued_at + timedelta(days=365 * 3)
+
+        lic = License.objects.create(
+            user=request.user,
+            license_type=lic_type,
+            region=request.user.region,
+            license_number=number,
+            issued_at=issued_at,
+            expires_at=expires_at,
+            image=image_file,
+            is_active=True,
+            status='active',
+        )
+
+        image_url = ''
+        if lic.image:
+            try:
+                image_url = request.build_absolute_uri(lic.image.url)
+            except Exception:
+                image_url = lic.image.url if lic.image else ''
+
+        return Response({
+            'success': True,
+            'id': str(lic.id),
+            'license_number': lic.license_number,
+            'issued_at': lic.issued_at.strftime('%Y-%m-%d'),
+            'expires_at': lic.expires_at.strftime('%Y-%m-%d'),
+            'image_url': image_url,
+        }, status=201)
+
+
 class LicenseListView(APIView):
     """Get all licenses for current user (with rich data + summary stats)"""
     permission_classes = [IsAuthenticated]
@@ -174,6 +289,7 @@ class LicenseListView(APIView):
                 'is_active': lic.is_active,
                 'pdf_url': lic.pdf_url or '',
                 'qr_code_url': lic.qr_code_url or '',
+                'image_url': (request.build_absolute_uri(lic.image.url) if lic.image else ''),
                 'verification_url': f"/verify/{lic.id}",
             })
 

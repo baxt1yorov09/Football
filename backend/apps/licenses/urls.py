@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import LicenseListView, LicenseTypeListView, license_verification, PublicLicenseListView
+from .views import LicenseListView, LicenseTypeListView, license_verification, PublicLicenseListView, SelfLicenseCreateView
 from .admin_views import (
     AdminLicenseStatsView,
     AdminLicenseListView,
@@ -17,6 +17,10 @@ urlpatterns = [
     # Faol turlar ro'yxati (form'lar uchun)
     path('types/', LicenseTypeListView.as_view(), name='license-types'),
     path('types',  LicenseTypeListView.as_view()),
+
+    # Foydalanuvchi o'zining mavjud litsenziyasini kiritishi
+    path('self/', SelfLicenseCreateView.as_view(), name='license-self-create'),
+    path('self',  SelfLicenseCreateView.as_view()),
 
     # Public list (barcha murabbiylar)
     path('public/', PublicLicenseListView.as_view(), name='license-public'),
