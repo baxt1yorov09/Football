@@ -1,26 +1,59 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Users } from 'lucide-react';
 
-// Uzbekistan regions data
-const regions = [
-  { id: 1, name: 'Toshkent shahri', coaches: 312, isTashkent: true },
-  { id: 2, name: 'Toshkent viloyati', coaches: 198 },
-  { id: 3, name: 'Samarqand', coaches: 267 },
-  { id: 4, name: 'Buxoro', coaches: 189 },
-  { id: 5, name: 'Andijon', coaches: 245 },
-  { id: 6, name: 'Farg\'ona', coaches: 278 },
-  { id: 7, name: 'Namangan', coaches: 234 },
-  { id: 8, name: 'Xorazm', coaches: 156 },
-  { id: 9, name: 'Navoiy', coaches: 134 },
-  { id: 10, name: 'Qashqadaryo', coaches: 198 },
-  { id: 11, name: 'Surxondaryo', coaches: 187 },
-  { id: 12, name: 'Jizzax', coaches: 145 },
-  { id: 13, name: 'Sirdaryo', coaches: 123 },
-];
+interface RegionStat {
+  id: number;
+  name_uz: string;
+  name_ru: string;
+  is_tashkent: boolean;
+  coaches: number;
+  applications: number;
+}
+
+interface RegionView {
+  id: number;
+  name: string;
+  coaches: number;
+  isTashkent: boolean;
+}
 
 export function UzbekistanMap() {
+  const [regions, setRegions] = useState<RegionView[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/reports/public/regions/');
+        if (!res.ok) throw new Error('failed');
+        const data = await res.json();
+        const items: RegionStat[] = data?.results || [];
+        // Murabbiylar va arizalar yig'indisi bo'yicha ko'rsatamiz (ko'proq ma'lumot)
+        const view: RegionView[] = items.map((r) => ({
+          id: r.id,
+          name: r.name_uz,
+          coaches: (r.coaches || 0) + (r.applications || 0),
+          isTashkent: r.is_tashkent,
+        }));
+        // Toshkent shahrini birinchi qilish
+        view.sort((a, b) => (b.isTashkent ? 1 : 0) - (a.isTashkent ? 1 : 0) || b.coaches - a.coaches);
+        setRegions(view);
+      } catch {
+        setRegions([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const maxCoaches = useMemo(
+    () => regions.reduce((m, r) => Math.max(m, r.coaches), 0) || 1,
+    [regions]
+  );
+
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[#F4F6F9]">
       <div className="max-w-7xl mx-auto">
@@ -34,7 +67,7 @@ export function UzbekistanMap() {
             O&apos;zbekiston hududlari
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            12 ta hudud, Qoraqalpog&apos;iston Respublikasi va Toshkent shahri bo&apos;ylab murabbiylar tarqalishi
+            O&apos;zbekiston hududlari bo&apos;ylab murabbiylar va arizalar tarqalishi
           </p>
         </motion.div>
 
@@ -59,17 +92,18 @@ export function UzbekistanMap() {
                 
                 {/* Region markers */}
                 {regions.slice(0, 8).map((region, index) => {
-                  const angle = (index / 8) * Math.PI * 2;
+                  const angle = (index / Math.max(regions.slice(0, 8).length, 1)) * Math.PI * 2;
                   const radius = 100;
                   const x = 200 + Math.cos(angle) * radius;
                   const y = 200 + Math.sin(angle) * radius;
-                  
+                  const r = 10 + Math.round((region.coaches / maxCoaches) * 12);
+
                   return (
                     <g key={region.id}>
                       <circle
                         cx={x}
                         cy={y}
-                        r={Math.max(8, region.coaches / 40)}
+                        r={r}
                         fill={region.isTashkent ? '#F39C12' : '#1A56A0'}
                         opacity={0.8}
                         className="hover:opacity-100 transition-opacity cursor-pointer"
@@ -116,6 +150,12 @@ export function UzbekistanMap() {
             viewport={{ once: true }}
             className="space-y-3"
           >
+            {loading && (
+              <div className="text-center text-gray-500 py-8">Yuklanmoqda...</div>
+            )}
+            {!loading && regions.length === 0 && (
+              <div className="text-center text-gray-500 py-8">Ma&apos;lumot yo&apos;q</div>
+            )}
             {regions.map((region, index) => (
               <motion.div
                 key={region.id}

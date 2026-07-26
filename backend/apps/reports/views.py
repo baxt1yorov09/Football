@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.permissions import IsAuthenticated, BasePermission, AllowAny
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -29,6 +29,44 @@ class IsAdminRole(BasePermission):
         if not (u and u.is_authenticated):
             return False
         return getattr(u, 'role', None) in ADMIN_ROLES or u.is_staff or u.is_superuser
+
+
+class PublicRegionStatsView(APIView):
+    """Landing sahifasi uchun hududlar bo'yicha ochiq statistika.
+
+    Har bir hudud uchun murabbiylar va arizalar sonini qaytaradi.
+    Autentifikatsiya talab qilmaydi.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        # Murabbiylar (role='coach') soni hudud bo'yicha
+        coach_counts = {
+            row['region_id']: row['c']
+            for row in User.objects.filter(
+                role='coach', is_active=True, deleted_at__isnull=True,
+                region__isnull=False,
+            ).values('region_id').annotate(c=Count('id'))
+        }
+        # Arizalar soni hudud bo'yicha (rad etilgan va bekor qilinganlarsiz)
+        app_counts = {
+            row['region_id']: row['c']
+            for row in Application.objects.exclude(
+                status__in=['rejected', 'cancelled']
+            ).filter(region__isnull=False).values('region_id').annotate(c=Count('id'))
+        }
+
+        regions = []
+        for r in Region.objects.all().order_by('id'):
+            regions.append({
+                'id': r.id,
+                'name_uz': r.name_uz,
+                'name_ru': r.name_ru or r.name_uz,
+                'is_tashkent': r.is_tashkent,
+                'coaches': coach_counts.get(r.id, 0),
+                'applications': app_counts.get(r.id, 0),
+            })
+        return Response({'results': regions})
 
 
 class DashboardStatsView(APIView):

@@ -1,11 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, GraduationCap, Award, Clock, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LICENSE_REQUIREMENTS } from '@/lib/constants/licenses';
+import { apiClient } from '@/lib/api/client';
+
+interface LicenseTypeOption {
+  code: string;
+  name_uz: string;
+  name_ru?: string;
+  category: string;
+}
+
+// Avvalgi litsenziya sifatida ko'rsatilmaydigan kodlar
+const PREV_LICENSE_HIDDEN = new Set<string>([
+  'E', 'F',
+  'RENEWAL_A', 'RENEWAL_B', 'RENEWAL_C', 'RENEWAL_D', 'RENEWAL_E', 'RENEWAL_F',
+  'SPECIALIST', 'SPECIAL', 'TEMPORARY', 'ASSISTANT', 'INTERNATIONAL', 'HONORARY',
+  'GK', 'FITNESS', 'FUTSAL',
+]);
+
+// Kategoriya bo'yicha guruhlash uchun ko'rsatiladigan yorliqlar
+const CATEGORY_LABEL_UZ: Record<string, string> = {
+  main: 'Asosiy litsenziyalar',
+  gk: 'Darvozabon murabbiyligi',
+  fitness: 'Fitness',
+  special: 'Maxsus / Futzal / Sohil',
+  specialist: 'Mutaxassislik',
+  renewal: 'Yangilash',
+};
 
 interface ProfessionalStepProps {
   data: any;
@@ -25,6 +51,28 @@ export function ProfessionalStep({ data, onNext, onBack }: ProfessionalStepProps
     achievements: data.achievements || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [licenseOptions, setLicenseOptions] = useState<LicenseTypeOption[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiClient.get('/licenses/types/');
+        const items: LicenseTypeOption[] = (res.data?.results || []).filter(
+          (t: LicenseTypeOption) => !PREV_LICENSE_HIDDEN.has(t.code)
+        );
+        setLicenseOptions(items);
+      } catch {
+        setLicenseOptions([]);
+      }
+    })();
+  }, []);
+
+  // Kategoriya bo'yicha guruhlash
+  const groupedOptions = licenseOptions.reduce<Record<string, LicenseTypeOption[]>>((acc, opt) => {
+    (acc[opt.category] = acc[opt.category] || []).push(opt);
+    return acc;
+  }, {});
+  const categoryOrder = ['main', 'gk', 'fitness', 'special', 'specialist', 'renewal'];
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -170,11 +218,19 @@ export function ProfessionalStep({ data, onNext, onBack }: ProfessionalStepProps
                 className="w-full h-12 px-4 border border-gray-200 rounded-lg focus:outline-none focus:border-[#F39C12] appearance-none bg-white"
               >
                 <option value="">Litsenziya tanlang</option>
-                <option value="D">D Litsenziya</option>
-                <option value="C">C Litsenziya</option>
-                <option value="B">B Litsenziya</option>
-                <option value="A">A Litsenziya</option>
-                <option value="PRO">PRO Litsenziya</option>
+                {categoryOrder.map((cat) => {
+                  const opts = groupedOptions[cat];
+                  if (!opts || opts.length === 0) return null;
+                  return (
+                    <optgroup key={cat} label={CATEGORY_LABEL_UZ[cat] || cat}>
+                      {opts.map((opt) => (
+                        <option key={opt.code} value={opt.code}>
+                          {opt.name_uz}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
 

@@ -49,7 +49,7 @@ export const LICENSE_REQUIREMENTS = {
     tashkentOnly: false,
     requiredDocs: ['passport', 'photo_3x4', 'prev_license'],
     name: "C Litsenziya",
-    description: "O'rta murabbiy litsenziyasi",
+    description: "U12 gacha murabbiy litsenziyasi",
   },
   B: {
     prerequisite: 'C',
@@ -58,7 +58,7 @@ export const LICENSE_REQUIREMENTS = {
     tashkentOnly: false,
     requiredDocs: ['passport', 'photo_3x4', 'prev_license'],
     name: "B Litsenziya",
-    description: "Yuqori murabbiy litsenziyasi",
+    description: "U15 gacha murabbiy litsenziyasi",
   },
   A: {
     prerequisite: 'B',
@@ -67,7 +67,7 @@ export const LICENSE_REQUIREMENTS = {
     tashkentOnly: false,
     requiredDocs: ['passport', 'photo_3x4', 'prev_license'],
     name: "A Litsenziya",
-    description: "Professional murabbiy litsenziyasi",
+    description: "Yarim professional murabbiy litsenziyasi",
   },
   PRO: {
     prerequisite: 'A',
@@ -76,7 +76,7 @@ export const LICENSE_REQUIREMENTS = {
     tashkentOnly: true,
     requiredDocs: ['passport', 'photo_3x4', 'prev_license'],
     name: "PRO Litsenziya",
-    description: "Eng yuqori professional litsenziya",
+    description: "Professional murabbiy litsenziyasi",
   },
   GK_1: {
     prerequisite: 'C',
@@ -88,7 +88,7 @@ export const LICENSE_REQUIREMENTS = {
     description: "Darvozabon murabbiyligi - 1-daraja",
   },
   GK_2: {
-    prerequisite: 'GK_1',
+    prerequisite: 'B',
     waitingDays: 365,
     minAge: 0,
     tashkentOnly: true,
@@ -142,13 +142,13 @@ export const LICENSE_REQUIREMENTS = {
     description: "Futbolchilar seleksiyonchisi",
   },
   PSYCH: {
-    prerequisite: 'C',
+    prerequisite: null,
     waitingDays: 0,
     minAge: 0,
     tashkentOnly: true,
-    requiredDocs: ['passport', 'photo_3x4', 'prev_license'],
-    name: "Psixolog",
-    description: "Sport psixologi",
+    requiredDocs: ['passport', 'photo_3x4'],
+    name: "Sport psixolog litsenziyasi",
+    description: "Sport psixolog litsenziyasi",
   },
   ANALYTICS_1: {
     prerequisite: 'C',
@@ -214,8 +214,8 @@ export const LICENSE_REQUIREMENTS = {
     minAge: 18,
     tashkentOnly: false,
     requiredDocs: ['passport', 'photo_3x4'],
-    name: "Beach Soccer",
-    description: "Beach futbol murabbiyligi",
+    name: "Sohil futboli murabbiylik litsenziyasi",
+    description: "Sohil futboli murabbiylik litsenziyasi",
   },
   FUTSAL_1: {
     prerequisite: null,
@@ -223,8 +223,8 @@ export const LICENSE_REQUIREMENTS = {
     minAge: 18,
     tashkentOnly: false,
     requiredDocs: ['passport', 'photo_3x4'],
-    name: "Futsal 1-daraja",
-    description: "Futsal murabbiyligi - 1-daraja",
+    name: "Futzal murabbiylik litsenziyasi (Level 1)",
+    description: "Futzal murabbiyligi - Level 1",
   },
   FUTSAL_2: {
     prerequisite: 'FUTSAL_1',

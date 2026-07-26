@@ -3,7 +3,8 @@ from .views import (
     DashboardStatsView,
     ApplicationReportView,
     UserActivityReportView,
-    LicenseStatisticsView
+    LicenseStatisticsView,
+    PublicRegionStatsView,
 )
 from .admin_views import (
     AdminReportStatsView,
@@ -16,6 +17,10 @@ from .admin_views import (
 )
 
 urlpatterns = [
+    # Public (landing) region stats
+    path('public/regions/', PublicRegionStatsView.as_view(), name='public-region-stats'),
+    path('public/regions', PublicRegionStatsView.as_view()),
+
     # Dashboard statistics
     path('dashboard/', DashboardStatsView.as_view(), name='dashboard-stats'),
     path('dashboard', DashboardStatsView.as_view()),

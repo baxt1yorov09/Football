@@ -11,27 +11,23 @@ const faqs = [
   },
   {
     question: "Litsenziya olish jarayoni qancha vaqt oladi?",
-    answer: "Ariza topshirilgandan so'ng, 2-3 ish kuni ichida ko'rib chiqiladi. Tasdiqlangan taqdirda, litsenziya darhol PDF formatida yuklab olinishi mumkin."
+    answer: "Ariza topshirilgandan so'ng, 2-3 ish kuni ichida ko'rib chiqiladi. Tasdiqlangan taqdirda, siz onlayn ro'yxatga olinasiz."
   },
   {
     question: "Bir nechta litsenziya olish mumkinmi?",
     answer: "Ha, siz bir vaqtning o'zida bir nechta litsenziya turiga ega bo'lishingiz mumkin. Masalan, asosiy murabbiy litsenziyasi bilan birga fitness yoki darvozabon litsenziyasini ham olishingiz mumkin."
   },
   {
-    question: "PRO litsenziya faqat Toshkentda olinadimi?",
-    answer: "Ha, PRO litsenziya faqat Toshkent shahrida o'tkaziladigan maxsus trening va imtihonlardan so'ng beriladi. Boshqa hududlarda faqat D, C, B, A litsenziyalarini olish mumkin."
-  },
-  {
     question: "Litsenziya amal qilish muddati qancha?",
-    answer: "Litsenziyalar 2 yil muddatga beriladi. Muddat tugashidan 30 kun oldin yangilash arizasi topshirilishi mumkin."
+    answer: "Litsenziyalar 3 yil muddatga beriladi. Muddat tugashidan oldin yangilash arizasini topshirishingiz mumkin."
   },
   {
     question: "Ariza rad etilsa nima qilish kerak?",
-    answer: "Agar ariza rad etilsa, sizga rad etish sababi ko'rsatiladi. Xatolarni to'g'rilab, qayta ariza topshirishingiz mumkin. Rad etish sabablarini bartaraf etish uchun 30 kun vaqt beriladi."
+    answer: "Agar ariza rad etilsa, sizga rad etish sababi ko'rsatiladi. Xatolarni to'g'rilab, qayta ariza topshirishingiz mumkin."
   },
   {
-    question: "Litsenziya uchun to'lov qilish kerakmi?",
-    answer: "Hozirda tizim sinov rejimida ishlamoqda va litsenziyalar bepul berilmoqda. Kelajakda xarajatlarni qoplash uchun nominal to'lovlar joriy etilishi mumkin."
+    question: "Ariza uchun to'lov qilish kerakmi?",
+    answer: "Yo'q, ariza yuborish mutlaqo bepul."
   },
   {
     question: "Telegram botdan qanday foydalanish mumkin?",

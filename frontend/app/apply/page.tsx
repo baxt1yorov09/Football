@@ -41,32 +41,62 @@ const CODE_ICON: Record<string, any> = {
   PRO: Trophy,
   BEACH: Waves,
   ANALYTICS: LineChart,
-  FUTSAL: Users,
+  FUTSAL_1: Users,
+  FUTSAL_2: Users,
+  FUTSAL_3: Users,
+  FUTSAL_GK_1: Users,
+  FUTSAL_GK_2: Users,
+  FUTSAL_GK_3: Users,
 };
 
 // Kod bo'yicha inglizcha qisqa tavsif (backend name_uz allaqachon inson uchun mos)
 const CODE_DESC_UZ: Record<string, string> = {
-  A: 'Professional darajadagi murabbiylik litsenziyasi',
-  B: 'Yuqori darajadagi murabbiylik litsenziyasi',
-  C: "O'rta darajadagi murabbiylik litsenziyasi",
-  D: "Boshlang'ich murabbiylik litsenziyasi",
-  E: 'Yordamchi murabbiylik litsenziyasi',
-  F: 'Kirish darajasidagi murabbiylik',
-  PRO: 'Eng yuqori professional daraja',
-  GK: "Darvozabonlar bo'yicha murabbiylik",
-  FITNESS: 'Fitness va jismoniy tayyorgarlik',
-  SPECIALIST: 'Mutaxassis murabbiy',
-  PSYCH: 'Sport psixologiyasi',
+  A: 'Yarim professional murabbiy litsenziyasi',
+  B: 'U15 gacha murabbiy litsenziyasi',
+  C: 'U12 gacha murabbiy litsenziyasi',
+  D: "Boshlang'ich murabbiy litsenziyasi",
+  PRO: 'Professional murabbiy litsenziyasi',
+  GK_1: "Darvozabonlar murabbiyligi - Level 1",
+  GK_2: "Darvozabonlar murabbiyligi - Level 2",
+  GK_3: "Darvozabonlar murabbiyligi - Level 3",
+  FITNESS_1: 'Fitness litsenziyasi - Level 1',
+  FITNESS_2: 'Fitness litsenziyasi - Level 2',
+  FITNESS_3: 'Fitness litsenziyasi - Level 3',
+  PSYCH: 'Sport psixolog litsenziyasi',
   ANALYTICS: "O'yin tahlili va statistikasi",
   SELEK: 'Iste\'dodli o\'yinchilarni saralash',
-  BEACH: 'Plaj futboli murabbiyligi',
-  FUTSAL: 'Futzal murabbiyligi',
-  SPECIAL: 'Maxsus litsenziya',
-  TEMPORARY: 'Vaqtinchalik litsenziya',
-  ASSISTANT: 'Yordamchi murabbiy',
-  INTERNATIONAL: 'Xalqaro daraja',
-  HONORARY: 'Fahriy litsenziya',
+  BEACH: 'Sohil futboli murabbiyligi',
+  FUTSAL_1: 'Futzal murabbiyligi - Level 1',
+  FUTSAL_2: 'Futzal murabbiyligi - Level 2',
+  FUTSAL_3: 'Futzal murabbiyligi - Level 3',
+  FUTSAL_GK_1: 'Futzal darvozabon murabbiyligi - Level 1',
+  FUTSAL_GK_2: 'Futzal darvozabon murabbiyligi - Level 2',
+  FUTSAL_GK_3: 'Futzal darvozabon murabbiyligi - Level 3',
 };
+
+// Backend nomini almashtirish (agar kerak bo'lsa)
+const CODE_TITLE_OVERRIDE_UZ: Record<string, string> = {
+  PSYCH: 'Sport psixolog litsenziyasi',
+  BEACH: 'Sohil futboli murabbiylik litsenziyasi',
+};
+const CODE_TITLE_OVERRIDE_RU: Record<string, string> = {
+  PSYCH: 'Лицензия спортивного психолога',
+  BEACH: 'Тренерская лицензия по пляжному футболу',
+};
+
+// Ariza berish sahifasida ko'rsatilmaydigan litsenziya kodlari
+const HIDDEN_CODES = new Set<string>([
+  'E', 'F',
+  'RENEWAL_D', 'RENEWAL_E', 'RENEWAL_F',
+  'SPECIALIST',
+  'SPECIAL',
+  'TEMPORARY',
+  'ASSISTANT',
+  'INTERNATIONAL',
+  'HONORARY',
+  // Eski bir darajali kodlar (endi *_1 sifatida DB'da yangilangan) — ehtiyot uchun yashiriladi
+  'GK', 'FITNESS', 'FUTSAL',
+]);
 
 export default function ApplyPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -107,20 +137,27 @@ export default function ApplyPage() {
     return null;
   }
 
-  const licenseTypes = types.map((tp) => {
-    const catStyle = CATEGORY_STYLE[tp.category] || CATEGORY_STYLE.main;
-    const Icon = CODE_ICON[tp.code] || catStyle.icon;
-    const title = locale === 'ru' && tp.name_ru ? tp.name_ru : tp.name_uz;
-    const description = CODE_DESC_UZ[tp.code] || title;
-    return {
-      type: tp.code,
-      title,
-      description,
-      icon: Icon,
-      color: catStyle.bg,
-      href: `/apply/${tp.code}`,
-    };
-  });
+  const licenseTypes = types
+    .filter((tp) => !HIDDEN_CODES.has(tp.code))
+    .map((tp) => {
+      const catStyle = CATEGORY_STYLE[tp.category] || CATEGORY_STYLE.main;
+      const Icon = CODE_ICON[tp.code] || catStyle.icon;
+      const backendTitle = locale === 'ru' && tp.name_ru ? tp.name_ru : tp.name_uz;
+      const override =
+        locale === 'ru'
+          ? CODE_TITLE_OVERRIDE_RU[tp.code]
+          : CODE_TITLE_OVERRIDE_UZ[tp.code];
+      const title = override || backendTitle;
+      const description = CODE_DESC_UZ[tp.code] || title;
+      return {
+        type: tp.code,
+        title,
+        description,
+        icon: Icon,
+        color: catStyle.bg,
+        href: `/apply/${tp.code}`,
+      };
+    });
 
   return (
     <div className="min-h-screen bg-[#F4F6F9]">

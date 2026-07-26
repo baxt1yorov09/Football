@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { UserPlus, FileText, Search, FileCheck } from 'lucide-react';
+import { UserPlus, FileText, Search, ClipboardCheck } from 'lucide-react';
 
 const steps = [
   {
@@ -23,9 +23,9 @@ const steps = [
     color: '#F39C12',
   },
   {
-    icon: FileCheck,
-    title: 'Litsenziya oling',
-    description: 'PDF formatida litsenziya va QR-kodni yuklab oling',
+    icon: ClipboardCheck,
+    title: "Ro'yxatga olinasiz",
+    description: "Arizangiz tasdiqlanib, tizimda rasmiy ro'yxatga olinasiz",
     color: '#27AE60',
   },
 ];
@@ -44,7 +44,7 @@ export function ProcessSteps() {
             Jarayon qanday ishlaydi?
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            4 oddiy bosqichda professional murabbiy litsenziyasiga ega bo'ling
+            4 oddiy bosqichda arizangizni topshiring
           </p>
         </motion.div>
 
