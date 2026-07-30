@@ -147,8 +147,8 @@ export const LICENSE_REQUIREMENTS = {
     minAge: 0,
     tashkentOnly: true,
     requiredDocs: ['passport', 'photo_3x4'],
-    name: "Sport psixolog litsenziyasi",
-    description: "Sport psixolog litsenziyasi",
+    name: "Sport psixologiyasi",
+    description: "Sport psixologiyasi",
   },
   ANALYTICS_1: {
     prerequisite: 'C',

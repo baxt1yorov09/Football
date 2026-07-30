@@ -4,13 +4,16 @@ import { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PhoneInput } from '@/components/auth/PhoneInput';
+import { EmailInput } from '@/components/auth/EmailInput';
 import { OTPInput } from '@/components/auth/OTPInput';
 import { TwoFactorChallenge } from '@/components/auth/TwoFactorChallenge';
 import { useAuth } from '@/hooks/useAuth';
+import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
 
 function AuthPageInner() {
-  const [step, setStep] = useState<'phone' | 'otp' | '2fa'>('phone');
+  const [step, setStep] = useState<'phone' | 'email' | 'otp' | '2fa'>('phone');
   const [phone, setPhone] = useState('');
+  const [emailMasked, setEmailMasked] = useState<string>('');
   const [twoFactorToken, setTwoFactorToken] = useState('');
   const { login, verify2FA, isAuthenticated, user } = useAuth();
   const router = useRouter();
@@ -29,8 +32,19 @@ function AuthPageInner() {
     }
   }, [isAuthenticated, user, redirectUrl, router]);
 
-  const handlePhoneSubmit = (phoneNumber: string) => {
+  const handlePhoneSubmit = (phoneNumber: string, masked?: string) => {
     setPhone(phoneNumber);
+    setEmailMasked(masked || '');
+    setStep('otp');
+  };
+
+  const handleEmailRequired = (phoneNumber: string) => {
+    setPhone(phoneNumber);
+    setStep('email');
+  };
+
+  const handleEmailSubmit = (_email: string, masked: string) => {
+    setEmailMasked(masked);
     setStep('otp');
   };
 
@@ -65,8 +79,14 @@ function AuthPageInner() {
     return result;
   };
 
-  const handleResendOTP = () => {
-    // Resend OTP
+  const handleResendOTP = async () => {
+    // Emailga qayta yuborish — mavjud foydalanuvchi bo'lsa email allaqachon DB'da,
+    // yangi foydalanuvchi bo'lsa OTPCode jadvalidagi email ishlatiladi.
+    try {
+      await apiClient.post(API_ENDPOINTS.auth.sendOtp, { phone });
+    } catch {
+      // xatolik jim o'tkaziladi — OTPInput'ning o'z indikatsiyasi bor
+    }
   };
 
   return (
@@ -97,11 +117,11 @@ function AuthPageInner() {
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Progress indicator */}
           <div className="flex">
-            {['phone', 'otp', '2fa'].map((s, i) => (
+            {(['phone', 'email', 'otp', '2fa'] as const).map((s, i) => (
               <div
                 key={s}
                 className={`flex-1 h-1 transition-colors duration-300 ${
-                  ['phone', 'otp', '2fa'].indexOf(step) >= i
+                  ['phone', 'email', 'otp', '2fa'].indexOf(step) >= i
                     ? 'bg-[#F39C12]'
                     : 'bg-gray-200'
                 }`}
@@ -111,12 +131,24 @@ function AuthPageInner() {
 
           <div className="p-8">
             {step === 'phone' && (
-              <PhoneInput onSubmit={handlePhoneSubmit} />
+              <PhoneInput
+                onSubmit={handlePhoneSubmit}
+                onEmailRequired={handleEmailRequired}
+              />
+            )}
+
+            {step === 'email' && (
+              <EmailInput
+                phone={phone}
+                onSubmit={handleEmailSubmit}
+                onBack={() => setStep('phone')}
+              />
             )}
 
             {step === 'otp' && (
               <OTPInput
                 phone={phone}
+                emailMasked={emailMasked}
                 onSubmit={handleOTPSubmit}
                 onResend={handleResendOTP}
                 onBack={() => setStep('phone')}

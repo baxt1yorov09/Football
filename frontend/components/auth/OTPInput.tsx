@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button';
 
 interface OTPInputProps {
   phone: string;
+  emailMasked?: string;
   onSubmit: (code: string) => void;
   onResend: () => void;
   onBack: () => void;
 }
 
-export function OTPInput({ phone, onSubmit, onResend, onBack }: OTPInputProps) {
+export function OTPInput({ phone, emailMasked, onSubmit, onResend, onBack }: OTPInputProps) {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -100,10 +101,12 @@ export function OTPInput({ phone, onSubmit, onResend, onBack }: OTPInputProps) {
       </button>
 
       <h2 className="text-xl font-bold text-[#0D3B6E] mb-2">
-        SMS kodni kiriting
+        Tasdiqlash kodini kiriting
       </h2>
       <p className="text-gray-600 text-sm mb-6">
-        {formatPhone(phone)} raqamiga kod yuborildi
+        {emailMasked
+          ? <>Kod <span className="font-semibold">{emailMasked}</span> manziliga yuborildi</>
+          : <>{formatPhone(phone)} raqamiga kod yuborildi</>}
       </p>
 
       {/* OTP Boxes */}

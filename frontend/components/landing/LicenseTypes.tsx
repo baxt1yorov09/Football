@@ -6,7 +6,7 @@ import { LICENSE_CATEGORIES, LICENSE_REQUIREMENTS, LICENSE_COLORS } from '@/lib/
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Star, MapPin } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export function LicenseTypes() {
@@ -67,7 +67,6 @@ export function LicenseTypes() {
         {filteredLicenses.map(([code, license], index) => {
           const color = LICENSE_COLORS[code as keyof typeof LICENSE_COLORS] || '#3498DB';
           const isPro = code === 'PRO';
-          const isTashkentOnly = license.tashkentOnly;
 
           return (
             <motion.div
@@ -103,12 +102,6 @@ export function LicenseTypes() {
                         <Star className="w-5 h-5 text-[#F39C12] fill-[#F39C12]" />
                       )}
                     </div>
-                    {isTashkentOnly && (
-                      <Badge variant="secondary" className="text-xs mt-1">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        Faqat Toshkent
-                      </Badge>
-                    )}
                   </CardHeader>
 
                   <CardContent>

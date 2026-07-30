@@ -62,7 +62,7 @@ const CODE_DESC_UZ: Record<string, string> = {
   FITNESS_1: 'Fitness litsenziyasi - Level 1',
   FITNESS_2: 'Fitness litsenziyasi - Level 2',
   FITNESS_3: 'Fitness litsenziyasi - Level 3',
-  PSYCH: 'Sport psixolog litsenziyasi',
+  PSYCH: 'Sport psixologiyasi',
   ANALYTICS: "O'yin tahlili va statistikasi",
   SELEK: 'Iste\'dodli o\'yinchilarni saralash',
   BEACH: 'Sohil futboli murabbiyligi',
@@ -76,7 +76,7 @@ const CODE_DESC_UZ: Record<string, string> = {
 
 // Backend nomini almashtirish (agar kerak bo'lsa)
 const CODE_TITLE_OVERRIDE_UZ: Record<string, string> = {
-  PSYCH: 'Sport psixolog litsenziyasi',
+  PSYCH: 'Sport psixologiyasi',
   BEACH: 'Sohil futboli murabbiylik litsenziyasi',
 };
 const CODE_TITLE_OVERRIDE_RU: Record<string, string> = {

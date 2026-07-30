@@ -10,10 +10,11 @@ import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
 import { phoneSchema } from '@/lib/validations/auth';
 
 interface PhoneInputProps {
-  onSubmit: (phone: string) => void;
+  onSubmit: (phone: string, emailMasked?: string, code?: string) => void;
+  onEmailRequired?: (phone: string) => void;
 }
 
-export function PhoneInput({ onSubmit }: PhoneInputProps) {
+export function PhoneInput({ onSubmit, onEmailRequired }: PhoneInputProps) {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,11 +53,16 @@ export function PhoneInput({ onSubmit }: PhoneInputProps) {
 
     setLoading(true);
     try {
-      // Send OTP request
-      await apiClient.post(API_ENDPOINTS.auth.sendOtp, { phone });
-      onSubmit(phone);
+      const res = await apiClient.post(API_ENDPOINTS.auth.sendOtp, { phone });
+      // Backend email kiritish kerakligini bildirsa — email bosqichiga o'tamiz
+      if (res.data?.requires_email) {
+        onEmailRequired?.(phone);
+        return;
+      }
+      // Aks holda — kod allaqachon emailga yuborildi (mavjud foydalanuvchi)
+      onSubmit(phone, res.data?.email_masked, res.data?.code);
     } catch (err: any) {
-      setError(err.response?.data?.error || "SMS yuborishda xatolik");
+      setError(err.response?.data?.error || "Kod yuborishda xatolik");
     } finally {
       setLoading(false);
     }
@@ -68,7 +74,7 @@ export function PhoneInput({ onSubmit }: PhoneInputProps) {
         Telefon raqamingiz
       </h2>
       <p className="text-gray-600 text-sm mb-6">
-        SMS kod yuborish uchun telefon raqamingizni kiriting
+        Tasdiqlash kodi olish uchun telefon raqamingizni kiriting
       </p>
 
       <form onSubmit={handleSubmit}>

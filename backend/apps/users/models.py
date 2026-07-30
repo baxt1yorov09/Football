@@ -91,6 +91,7 @@ class OTPCode(models.Model):
     """OTP kodlari"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     phone = models.CharField(max_length=20, verbose_name="Telefon raqam")
+    email = models.EmailField(blank=True, null=True, verbose_name="Email (kod yuborilgan)")
     code = models.CharField(max_length=6, verbose_name="Kod")
     is_used = models.BooleanField(default=False, verbose_name="Islatilgan")
     expires_at = models.DateTimeField(verbose_name="Amal qilish muddati")

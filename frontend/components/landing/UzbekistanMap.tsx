@@ -164,22 +164,13 @@ export function UzbekistanMap() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ x: 8, transition: { duration: 0.2 } }}
-                className={`flex items-center justify-between p-4 rounded-xl transition-all cursor-pointer ${
-                  region.isTashkent 
-                    ? 'bg-[#F39C12]/10 border-l-4 border-[#F39C12]' 
-                    : 'bg-white hover:bg-gray-50'
-                }`}
+                className="flex items-center justify-between p-4 rounded-xl transition-all cursor-pointer bg-white hover:bg-gray-50"
               >
                 <div className="flex items-center gap-3">
-                  <MapPin className={`w-5 h-5 ${region.isTashkent ? 'text-[#F39C12]' : 'text-[#1A56A0]'}`} />
-                  <span className={`font-medium ${region.isTashkent ? 'text-[#F39C12]' : 'text-gray-800'}`}>
+                  <MapPin className="w-5 h-5 text-[#1A56A0]" />
+                  <span className="font-medium text-gray-800">
                     {region.name}
                   </span>
-                  {region.isTashkent && (
-                    <span className="px-2 py-1 bg-[#F39C12] text-white text-xs rounded-full">
-                      PRO
-                    </span>
-                  )}
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Users className="w-4 h-4" />

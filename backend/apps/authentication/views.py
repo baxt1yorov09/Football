@@ -18,7 +18,20 @@ from .serializers import (
     UserCreateSerializer, TokenResponseSerializer
 )
 from utils.sms_services import send_otp as send_sms_otp
+from utils.email_service import send_email_otp
 from django.conf import settings
+
+
+def _mask_email(email: str) -> str:
+    """Foydalanuvchiga ko'rsatish uchun email manzilni yashirish (a****@gmail.com)."""
+    if not email or '@' not in email:
+        return ''
+    local, _, domain = email.partition('@')
+    if len(local) <= 2:
+        masked_local = local[:1] + '*'
+    else:
+        masked_local = local[0] + '*' * (len(local) - 2) + local[-1]
+    return f"{masked_local}@{domain}"
 
 
 class SendOTPView(APIView):
@@ -42,6 +55,38 @@ class SendOTPView(APIView):
             )
 
         phone = serializer.validated_data['phone']
+        provided_email = (request.data.get('email') or '').strip().lower()
+
+        # ── Foydalanuvchining email manzilini aniqlaymiz ──────────
+        # 1) Agar telefon DB'da mavjud va emaili bo'lsa — o'sha email ishlatiladi
+        # 2) Aks holda — foydalanuvchidan email kiritish so'raladi
+        # 3) Agar email so'rovda kelgan bo'lsa — validatsiya qilamiz va ishlatamiz
+        try:
+            existing_user = User.objects.get(phone=phone)
+        except User.DoesNotExist:
+            existing_user = None
+
+        target_email = None
+        if existing_user and existing_user.email:
+            target_email = existing_user.email.strip().lower()
+        elif provided_email:
+            # Oddiy email validatsiyasi
+            from django.core.validators import validate_email
+            from django.core.exceptions import ValidationError
+            try:
+                validate_email(provided_email)
+            except ValidationError:
+                return Response(
+                    {'error': "Noto'g'ri email format"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            target_email = provided_email
+        else:
+            # Frontend'ga email kerakligini bildiramiz
+            return Response(
+                {'requires_email': True, 'message': "Email kiritish kerak"},
+                status=status.HTTP_200_OK,
+            )
 
         # Check rate limiting (max 5 requests per day per phone)
         today = timezone.now().date()
@@ -60,27 +105,29 @@ class SendOTPView(APIView):
         # Generate 6-digit OTP
         code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
 
-        # Create OTP record
+        # Create OTP record (email ham saqlanadi — VerifyOTPView'da user yaratishda ishlatiladi)
         otp = OTPCode.objects.create(
             phone=phone,
+            email=target_email,
             code=code,
             expires_at=timezone.now() + timedelta(minutes=5)
         )
 
-        # Send SMS via configured service
-        sms_service = getattr(settings, 'SMS_SERVICE', 'mock')
-        sms_result = send_sms_otp(phone, code, sms_service)
-        
+        # Kodni emailga yuborish
+        email_ok = send_email_otp(target_email, code)
+
         response_data = {
-            'message': "SMS kod yuborildi",
-            'expires_in': 300,  # 5 minutes in seconds
+            'message': "Tasdiqlash kodi emailga yuborildi",
+            'expires_in': 300,
+            'email_masked': _mask_email(target_email),
         }
-        
-        # In development or mock mode, return the code
-        if sms_service == 'mock' or not sms_result.get('success'):
-            response_data['code'] = code  # Only for development/testing!
-            if not sms_result.get('success'):
-                response_data['sms_error'] = sms_result.get('error')
+
+        # Development'da console backend bo'lsa yoki yuborilmasa — kodni qaytaramiz
+        email_backend = getattr(settings, 'EMAIL_BACKEND', '')
+        if 'console' in email_backend or not email_ok:
+            response_data['code'] = code
+            if not email_ok:
+                response_data['email_error'] = "Email yuborilmadi"
 
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -132,14 +179,20 @@ class VerifyOTPView(APIView):
             # Check if user has completed onboarding
             is_new_user = not user.is_onboarded
         except User.DoesNotExist:
-            # Create new user with minimal data
+            # Create new user with minimal data (email OTP jarayonida saqlangan)
             user = User.objects.create(
                 phone=phone,
                 username=phone,  # Django requires username
+                email=(otp.email or None),
                 full_name='',
                 role='coach'
             )
             is_new_user = True
+
+        # Agar mavjud user'ning emaili bo'lmasa va OTP'da email bo'lsa — biriktiramiz
+        if not user.email and otp.email:
+            user.email = otp.email
+            user.save(update_fields=['email'])
 
         # ── 2FA gate ─────────────────────────────────────────────
         # Agar foydalanuvchi 2FA yoqgan bo'lsa, JWT tokenlar BERILMAYDI.
