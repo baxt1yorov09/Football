@@ -105,7 +105,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Contact form
 CONTACT_RECIPIENT_EMAIL = os.getenv('CONTACT_RECIPIENT_EMAIL', 'murabbiylartalimi@gmail.com')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'UFF Litsenziya <no-reply@uff.local>')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'UFA Litsenziya <no-reply@ufa.local>')
 
 # Internationalization
 LANGUAGE_CODE = 'uz'
@@ -212,19 +212,19 @@ SMS_SERVICE = os.getenv('SMS_SERVICE', 'mock')
 # Eskiz.uz settings
 ESKIZ_EMAIL = os.getenv('ESKIZ_EMAIL', '')
 ESKIZ_PASSWORD = os.getenv('ESKIZ_PASSWORD', '')
-ESKIZ_FROM = os.getenv('ESKIZ_FROM', 'UFF')
+ESKIZ_FROM = os.getenv('ESKIZ_FROM', 'UFA')
 ESKIZ_TOKEN = os.getenv('ESKIZ_TOKEN', '')  # Pre-issued JWT — skips /auth/login
 
 # Playmobile settings
 PLAYMOBILE_USERNAME = os.getenv('PLAYMOBILE_USERNAME', '')
 PLAYMOBILE_PASSWORD = os.getenv('PLAYMOBILE_PASSWORD', '')
-PLAYMOBILE_ORIGINATOR = os.getenv('PLAYMOBILE_ORIGINATOR', 'UFF')
+PLAYMOBILE_ORIGINATOR = os.getenv('PLAYMOBILE_ORIGINATOR', 'UFA')
 
 # Telegram Bot
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_WEBHOOK_URL = os.getenv('TELEGRAM_WEBHOOK_URL', '')
 WEB_APP_URL = os.getenv('WEB_APP_URL', 'http://localhost:3000')
-SUPPORT_USERNAME = os.getenv('SUPPORT_USERNAME', '@UFFSupport')
+SUPPORT_USERNAME = os.getenv('SUPPORT_USERNAME', '@UFASupport')
 
 # File Storage (S3/R2)
 USE_S3 = os.getenv('USE_S3', 'False') == 'True'

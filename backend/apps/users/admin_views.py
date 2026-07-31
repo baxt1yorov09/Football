@@ -576,7 +576,7 @@ class AdminUserExportView(APIView):
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        filename = f"uff_foydalanuvchilar_{timezone.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        filename = f"ufa_foydalanuvchilar_{timezone.now().strftime('%Y%m%d_%H%M')}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         wb.save(response)
         return response

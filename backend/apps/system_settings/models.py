@@ -19,7 +19,7 @@ class SystemSettings(models.Model):
 
     # General
     system_name = models.CharField(max_length=200, default='UFA')
-    admin_email = models.EmailField(default='admin@uff.uz')
+    admin_email = models.EmailField(default='admin@ufa.uz')
     admin_phone = models.CharField(max_length=30, default='+998 71 123 45 67')
     timezone = models.CharField(max_length=50, default='Asia/Tashkent')
     description = models.TextField(

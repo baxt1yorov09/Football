@@ -1,11 +1,11 @@
-# 🏆 O'ZBEKISTON FUTBOL FEDERATSIYASI — MURABBIY LITSENZIYA TIZIMI
+# 🏆 O'ZBEKISTON FUTBOL ASSOTSIATSIYASI — MURABBIY LITSENZIYA TIZIMI
 
 Milliy miqyosdagi murabbiy litsenziya ro'yxatdan o'tish tizimi.
 
 ## 📋 Loyiha tarkibi
 
 - **Web Portal** (Next.js 14) — murabbiylar uchun
-- **Admin Panel** (Next.js 14) — federatsiya xodimlari uchun  
+- **Admin Panel** (Next.js 14) — assotsiatsiya xodimlari uchun  
 - **Telegram Bot** (python-telegram-bot) — bildirishnomalar
 - **Backend API** (Django 5 + DRF) — barcha biznes logikasi
 - **PDF Generator** — avtomatik litsenziya chiqarish
@@ -46,4 +46,4 @@ PostgreSQL 16 bilan ishlaydi. Barcha 11 ta jadval avtomatik yaratiladi.
 
 ---
 
-**O'zbekiston Futbol Federatsiyasi, 2026**
+**O'zbekiston Futbol Assotsiatsiyasi, 2026**

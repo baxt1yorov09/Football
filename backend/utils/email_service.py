@@ -1,5 +1,5 @@
 """
-Email Service for UFF License System
+Email Service for UFA License System
 """
 import os
 import logging
@@ -95,7 +95,7 @@ class EmailService:
     def send_welcome_email(user):
         """Send welcome email to new users"""
         try:
-            subject = "UFF Litsenziya Tizimiga Xush Kelibsiz!"
+            subject = "UFA Litsenziya Tizimiga Xush Kelibsiz!"
             
             context = {
                 'user': user,

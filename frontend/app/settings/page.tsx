@@ -62,7 +62,7 @@ export default function SettingsPage() {
         setUserPhone(res.data.phone || '');
       } catch (e) {
         // Fallback to localStorage
-        const stored = localStorage.getItem('uff-settings');
+        const stored = localStorage.getItem('ufa-settings');
         if (stored) {
           try {
             const s = JSON.parse(stored);
@@ -80,8 +80,8 @@ export default function SettingsPage() {
   // Persist + sync helpers
   const persistLocal = (patch: Record<string, any>) => {
     try {
-      const cur = JSON.parse(localStorage.getItem('uff-settings') || '{}');
-      localStorage.setItem('uff-settings', JSON.stringify({ ...cur, ...patch }));
+      const cur = JSON.parse(localStorage.getItem('ufa-settings') || '{}');
+      localStorage.setItem('ufa-settings', JSON.stringify({ ...cur, ...patch }));
     } catch {}
   };
 

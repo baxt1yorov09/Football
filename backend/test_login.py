@@ -4,7 +4,7 @@ import json
 # Test admin login endpoint
 url = 'http://127.0.0.1:8000/api/admin/login'
 data = {
-    'email': 'admin@uff.uz',
+    'email': 'admin@ufa.uz',
     'password': 'Admin1234!'
 }
 

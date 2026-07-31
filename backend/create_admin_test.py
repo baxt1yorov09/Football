@@ -10,7 +10,7 @@ from apps.users.models import User
 # Create admin user
 u = User(
     phone='900000000',
-    email='admin@uff.uz',
+    email='admin@ufa.uz',
     full_name='Super Admin',
     role='super_admin',
     is_active=True

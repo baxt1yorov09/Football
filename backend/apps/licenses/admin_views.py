@@ -380,14 +380,14 @@ class AdminLicenseCreateView(APIView):
         except LicenseType.DoesNotExist:
             return Response({'detail': 'Litsenziya turi topilmadi'}, status=400)
 
-        # Litsenziya raqami: UFF-{YEAR}-{CODE}-{NNNNNN}
+        # Litsenziya raqami: UFA-{YEAR}-{CODE}-{NNNNNN}
         year = timezone.now().year
         count = License.objects.filter(
             license_type=lic_type, issued_at__year=year
         ).count() + 1
         # Conflict bo'lmasin uchun loop
         while True:
-            number = f"UFF-{year}-{type_code}-{str(count).zfill(6)}"
+            number = f"UFA-{year}-{type_code}-{str(count).zfill(6)}"
             if not License.objects.filter(license_number=number).exists():
                 break
             count += 1
@@ -578,7 +578,7 @@ class AdminLicenseExportView(APIView):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         response['Content-Disposition'] = (
-            f'attachment; filename="uff_litsenziyalar_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+            f'attachment; filename="ufa_litsenziyalar_{timezone.now().strftime("%Y%m%d")}.xlsx"'
         )
         wb.save(response)
         return response

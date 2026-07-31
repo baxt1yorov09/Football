@@ -53,7 +53,7 @@ function FloatingFootball() {
 
 export function HeroSection() {
   const stats = [
-    { value: 2400, suffix: '+', label: 'Murabbiy', icon: Award },
+    { value: 5800, suffix: '+', label: 'Murabbiy', icon: Award },
     { value: 14, suffix: '', label: 'Hudud', icon: MapPin },
     { value: 26, suffix: '', label: 'Litsenziya turi', icon: Shield },
   ];

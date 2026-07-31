@@ -227,8 +227,8 @@ export default function AdminLoginPage() {
             className="flex gap-8 mt-8 pt-8 border-t border-white/20"
           >
             {[
-              { value: '2,500+', label: 'Murabbiylar' },
-              { value: '12', label: 'Hududlar' },
+              { value: '5,800+', label: 'Murabbiylar' },
+              { value: '14', label: 'Hududlar' },
               { value: '99.9%', label: 'Ishlaydi' },
             ].map((stat, index) => (
               <div key={index}>
@@ -313,7 +313,7 @@ export default function AdminLoginPage() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="admin@uff.uz"
+                    placeholder="admin@ufa.uz"
                     required
                     className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1A56A0] focus:border-transparent focus:bg-white transition-all text-gray-900 placeholder-gray-400"
                   />

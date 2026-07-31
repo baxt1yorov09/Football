@@ -1,4 +1,4 @@
-// UFF Platform — Translation dictionaries
+// UFA Platform — Translation dictionaries
 // Comprehensive uz/ru translations for the entire platform
 
 export type Locale = 'uz' | 'ru';
@@ -46,7 +46,7 @@ export const dictionaries = {
       help: 'Yordam',
       contact: "Bog'lanish",
       apply: 'Ariza yuborish',
-      portal: 'Murabbiy Portal',
+      portal: "Murabbiylar Ta'limi Portali",
     },
     header: {
       welcome: 'Xush kelibsiz',
@@ -439,7 +439,7 @@ export const dictionaries = {
         add_type_placeholder: 'Tanlang...',
         add_issued_label: 'Berilgan sana',
         add_number_label: 'Litsenziya raqami',
-        add_number_placeholder: 'Masalan: UFF-2022-D-000123',
+        add_number_placeholder: 'Masalan: C-26/0028',
         add_number_hint: 'Litsenziyangizdagi raqamni kiriting',
         add_image_label: 'Litsenziya rasmi yoki PDF',
         add_image_hint: 'JPG, PNG, WEBP yoki PDF. Maksimal 5 MB',
@@ -533,7 +533,7 @@ export const dictionaries = {
     },
     licenses: {
       title: 'Mening litsenziyalarim',
-      subtitle: 'UFF tomonidan berilgan barcha murabbiylik litsenziyalaringiz',
+      subtitle: 'UFA tomonidan berilgan barcha murabbiylik litsenziyalaringiz',
       new_application: 'Yangi ariza berish',
       refresh: 'Yangilash',
       search_placeholder: "Litsenziya raqami yoki turi bo'yicha qidirish...",
@@ -544,7 +544,7 @@ export const dictionaries = {
       view: "Ko'rish",
       download: 'PDF',
       empty_title: "Sizda hali litsenziya yo'q",
-      empty_subtitle: "UFF tomonidan tasdiqlangan murabbiylik litsenziyasini olish uchun ariza yuboring. Tasdiqlangandan so'ng litsenziyangiz shu yerda paydo bo'ladi.",
+      empty_subtitle: "UFA tomonidan tasdiqlangan murabbiylik litsenziyasini olish uchun ariza yuboring. Tasdiqlangandan so'ng litsenziyangiz shu yerda paydo bo'ladi.",
       empty_action: 'Ariza yuborish',
       no_match_title: 'Hech narsa topilmadi',
       no_match_subtitle: "Qidiruv shartlariga mos litsenziyalar yo'q",
@@ -667,7 +667,7 @@ export const dictionaries = {
       help: 'Помощь',
       contact: 'Контакты',
       apply: 'Подать заявку',
-      portal: 'Портал тренера',
+      portal: 'Портал обучения тренеров',
     },
     header: {
       welcome: 'Добро пожаловать',
@@ -677,7 +677,7 @@ export const dictionaries = {
     },
     admin: {
       panel: 'Админ-панель',
-      subtitle: 'Федерация футбола Узбекистана — Система управления',
+      subtitle: 'Ассоциация футбола Узбекистана — Система управления',
       overview: 'Главная',
       applications: 'Заявки',
       licenses: 'Лицензии',
@@ -1055,7 +1055,7 @@ export const dictionaries = {
         add_type_placeholder: 'Выберите...',
         add_issued_label: 'Дата выдачи',
         add_number_label: 'Номер лицензии',
-        add_number_placeholder: 'Например: UFF-2022-D-000123',
+        add_number_placeholder: 'Например: C-26/0028',
         add_number_hint: 'Введите номер с вашей лицензии',
         add_image_label: 'Изображение или PDF лицензии',
         add_image_hint: 'JPG, PNG, WEBP или PDF. Максимум 5 МБ',

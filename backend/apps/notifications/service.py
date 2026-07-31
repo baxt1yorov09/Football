@@ -188,7 +188,7 @@ class NotificationService:
             user,
             'app_received',
             sms_text=(
-                f"UFF: Arizangiz qabul qilindi! "
+                f"UFA: Arizangiz qabul qilindi! "
                 f"ID: #{app_id}. Litsenziya: {lic_name}. "
                 f"Natija haqida xabar beriladi."
             ),
@@ -246,7 +246,7 @@ class NotificationService:
             user,
             'docs_required',
             sms_text=(
-                f"UFF: Ariza #{app_id} uchun qo'shimcha hujjat kerak. "
+                f"UFA: Ariza #{app_id} uchun qo'shimcha hujjat kerak. "
                 f"Batafsil: {self.WEB_URL}/applications"
             ),
             telegram_text=(
@@ -282,7 +282,7 @@ class NotificationService:
             user,
             'app_approved',
             sms_text=(
-                f"UFF: Tabriklaymiz! Litsenziyangiz tasdiqlandi. "
+                f"UFA: Tabriklaymiz! Litsenziyangiz tasdiqlandi. "
                 f"Tur: {lic_name}"
                 + (f", raqam: {lic_number}" if lic_number else "")
                 + f". {self.WEB_URL}/licenses"
@@ -321,7 +321,7 @@ class NotificationService:
             user,
             'app_rejected',
             sms_text=(
-                f"UFF: Ariza #{app_id} rad etildi. "
+                f"UFA: Ariza #{app_id} rad etildi. "
                 f"Sabab: {reason[:80]}. Qayta ariza: {self.WEB_URL}/apply"
             ),
             telegram_text=(
@@ -363,7 +363,7 @@ class NotificationService:
             user,
             f'expiry_{days}' if days in (30, 14, 7) else 'expiry',
             sms_text=(
-                f"UFF: {emoji} Litsenziya muddati tugayapti! "
+                f"UFA: {emoji} Litsenziya muddati tugayapti! "
                 f"{lic_name} ({lic_num}), {expires} ({days} kun). "
                 f"Yangilash: {self.WEB_URL}/apply"
             ),
@@ -396,7 +396,7 @@ class NotificationService:
             user,
             'lic_expired',
             sms_text=(
-                f"UFF: Litsenziyangiz muddati tugadi! "
+                f"UFA: Litsenziyangiz muddati tugadi! "
                 f"{lic_name} ({lic_num}). Yangilash uchun ariza bering."
             ),
             telegram_text=(
@@ -427,7 +427,7 @@ class NotificationService:
             user,
             'lic_suspended',
             sms_text=(
-                f"UFF: Litsenziyangiz to'xtatildi. "
+                f"UFA: Litsenziyangiz to'xtatildi. "
                 f"{license_obj.license_number}. Sabab: {reason[:80]}"
             ),
             telegram_text=(
@@ -529,7 +529,7 @@ class NotificationService:
             user,
             'lic_revoked',
             sms_text=(
-                f"UFF: Litsenziyangiz bekor qilindi. "
+                f"UFA: Litsenziyangiz bekor qilindi. "
                 f"{license_obj.license_number}. Sabab: {reason[:80]}"
             ),
             telegram_text=(
@@ -537,7 +537,7 @@ class NotificationService:
                 f"📄 Litsenziya: *{lic_name}*\n"
                 f"🆔 Raqam: `{license_obj.license_number}`\n"
                 + (f"📝 Sabab: _{reason}_\n\n" if reason else "\n")
-                + "Murojaat uchun federatsiya bilan bog'laning."
+                + "Murojaat uchun assotsiatsiya bilan bog'laning."
             ),
             web_title="🚫 Litsenziya bekor qilindi",
             web_message=f"{license_obj.license_number} bekor qilindi.",

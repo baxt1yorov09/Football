@@ -12,7 +12,7 @@ from celery.schedules import crontab
 # Django settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 
-app = Celery('uff')
+app = Celery('ufa')
 
 # Settings dan CELERY_ prefiksli sozlamalarni o'qish
 app.config_from_object('django.conf:settings', namespace='CELERY')

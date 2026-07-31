@@ -34,7 +34,7 @@ class LicensePDFGenerator:
         # Create QR code image
         qr_img = qr.make_image(fill_color="#0D3B6E", back_color="white")
         
-        # Add UFF logo in center
+        # Add UFA logo in center
         logo_size = 40
         qr_img = qr_img.resize((300, 300))
         
@@ -42,14 +42,14 @@ class LicensePDFGenerator:
         combined = Image.new('RGB', (300, 300), 'white')
         combined.paste(qr_img, (0, 0))
         
-        # Draw UFF text in center
+        # Draw UFA text in center
         draw = ImageDraw.Draw(combined)
         try:
             font = ImageFont.truetype("arial.ttf", 20)
         except:
             font = ImageFont.load_default()
         
-        text = "UFF"
+        text = "UFA"
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
@@ -65,7 +65,7 @@ class LicensePDFGenerator:
     
     def generate_verification_url(self) -> str:
         """Generate verification URL for QR code"""
-        base_url = getattr(settings, 'FRONTEND_URL', 'https://uff.uz')
+        base_url = getattr(settings, 'FRONTEND_URL', 'https://ufa.uz')
         return f"{base_url}/verify/{self.license.verification_code}"
     
     def generate_pdf(self) -> ContentFile:
@@ -222,7 +222,7 @@ class LicensePDFGenerator:
             'issued_date': self.license.issued_at.strftime('%d.%m.%Y'),
             'expiry_date': self.license.expires_at.strftime('%d.%m.%Y'),
             'today': datetime.now().strftime('%d.%m.%Y'),
-            'certificate_number': f"UFF-{self.license.license_number}",
+            'certificate_number': f"UFA-{self.license.license_number}",
         }
         
         # Render certificate template

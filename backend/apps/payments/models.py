@@ -1,5 +1,5 @@
 """
-Payment Models for UFF License System
+Payment Models for UFA License System
 """
 import uuid
 from django.db import models

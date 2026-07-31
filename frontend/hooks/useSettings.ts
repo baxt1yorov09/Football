@@ -12,9 +12,9 @@ export function useSettings() {
   }, []);
 
   const loadFromStorage = () => {
-    const storedLang = localStorage.getItem('uff_language') as 'uz' | 'ru' | null;
-    const storedTheme = localStorage.getItem('uff_theme') as 'light' | 'dark' | null;
-    const storedNotif = localStorage.getItem('uff_notifications');
+    const storedLang = localStorage.getItem('ufa_language') as 'uz' | 'ru' | null;
+    const storedTheme = localStorage.getItem('ufa_theme') as 'light' | 'dark' | null;
+    const storedNotif = localStorage.getItem('ufa_notifications');
 
     if (storedLang) setLanguageState(storedLang);
     if (storedTheme) {
@@ -26,7 +26,7 @@ export function useSettings() {
 
   const setLanguage = async (lang: 'uz' | 'ru') => {
     setLanguageState(lang);
-    localStorage.setItem('uff_language', lang);
+    localStorage.setItem('ufa_language', lang);
     document.documentElement.lang = lang;
     try {
       await apiClient.patch('/users/me/', { language: lang });
@@ -37,7 +37,7 @@ export function useSettings() {
 
   const setTheme = (theme: 'light' | 'dark') => {
     setThemeState(theme);
-    localStorage.setItem('uff_theme', theme);
+    localStorage.setItem('ufa_theme', theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -48,7 +48,7 @@ export function useSettings() {
 
   const setNotifications = async (enabled: boolean) => {
     setNotificationsState(enabled);
-    localStorage.setItem('uff_notifications', String(enabled));
+    localStorage.setItem('ufa_notifications', String(enabled));
     await apiClient.patch('/users/me/', { notifications_enabled: enabled });
   };
 
@@ -64,9 +64,9 @@ export function useSettings() {
       setThemeState(thm);
       setNotificationsState(notif);
 
-      localStorage.setItem('uff_language', lang);
-      localStorage.setItem('uff_theme', thm);
-      localStorage.setItem('uff_notifications', String(notif));
+      localStorage.setItem('ufa_language', lang);
+      localStorage.setItem('ufa_theme', thm);
+      localStorage.setItem('ufa_notifications', String(notif));
 
       document.documentElement.lang = lang;
       if (thm === 'dark') {

@@ -18,7 +18,7 @@ class Command(BaseCommand):
                             choices=['sms', 'app', 'expiry', 'expired',
                                      'beat-expiring', 'beat-expired'])
         parser.add_argument('--phone', default='+998901234567')
-        parser.add_argument('--message', default='UFF test xabar')
+        parser.add_argument('--message', default='UFA test xabar')
         parser.add_argument('--application-id', default=None)
         parser.add_argument('--license-id', default=None)
         parser.add_argument('--event', default='received',

@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
-    help = 'Run UFF Telegram Bot in polling mode (local dev)'
+    help = 'Run UFA Telegram Bot in polling mode (local dev)'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -37,7 +37,7 @@ class Command(BaseCommand):
             return
 
         drop = options.get('drop_pending', False)
-        self.stdout.write(self.style.SUCCESS('🤖 UFF Telegram Bot starting (polling mode)...'))
+        self.stdout.write(self.style.SUCCESS('🤖 UFA Telegram Bot starting (polling mode)...'))
         self.stdout.write(f'   Token: {token[:10]}...')
         self.stdout.write(self.style.SUCCESS('✅ Bot is running. Press Ctrl+C to stop.'))
 

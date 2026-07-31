@@ -516,7 +516,7 @@ def issue_license(request, application_id):
             issued_at__year=year
         ).count() + 1
         
-        license_number = f"UFF-{year}-{license_type.code}-{license_count:06d}"
+        license_number = f"UFA-{year}-{license_type.code}-{license_count:06d}"
         
         # Create license — viloyatni arizadan (yoki user'dan) meros qilib olamiz
         license_region = application.region or getattr(application.user, 'region', None)

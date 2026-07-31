@@ -1,5 +1,5 @@
 """
-PDF Service for UFF License System
+PDF Service for UFA License System
 """
 import os
 import logging

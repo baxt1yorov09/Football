@@ -31,7 +31,7 @@ const faqs = [
   },
   {
     question: "Telegram botdan qanday foydalanish mumkin?",
-    answer: "UFF_License_bot ga start bosing, telefon raqamingizni ulashing va arizangiz holatini real vaqtda kuzating. Shuningdek, litsenziya muddati tugashidan oldin bildirishnomalar olasiz."
+    answer: "UFA_License_bot ga start bosing, telefon raqamingizni ulashing va arizangiz holatini real vaqtda kuzating. Shuningdek, litsenziya muddati tugashidan oldin bildirishnomalar olasiz."
   },
 ];
 

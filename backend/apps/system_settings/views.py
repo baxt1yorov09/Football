@@ -75,10 +75,10 @@ class ContactMessageView(APIView):
 
         # ── 3. Email tayyorlash ───────────────────────────────────
         recipient = getattr(django_settings, 'CONTACT_RECIPIENT_EMAIL', 'murabbiylartalimi@gmail.com')
-        from_email = getattr(django_settings, 'DEFAULT_FROM_EMAIL', None) or 'no-reply@uff.local'
+        from_email = getattr(django_settings, 'DEFAULT_FROM_EMAIL', None) or 'no-reply@ufa.local'
 
         body = (
-            f"Yangi murojaat — UFF Litsenziya Tizimi\n"
+            f"Yangi murojaat — UFA Litsenziya Tizimi\n"
             f"{'=' * 50}\n\n"
             f"Ism:     {name}\n"
             f"Email:   {email}\n"
@@ -92,7 +92,7 @@ class ContactMessageView(APIView):
 
         try:
             mail = EmailMessage(
-                subject=f"[UFF Contact] {subject}",
+                subject=f"[UFA Contact] {subject}",
                 body=body,
                 from_email=from_email,
                 to=[recipient],

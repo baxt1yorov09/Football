@@ -8,7 +8,7 @@ from apps.notifications.urls import telegram_urlpatterns
 
 def api_info(request):
     return JsonResponse({
-        'message': 'UFF License System API',
+        'message': 'UFA License System API',
         'version': '1.0.0',
         'endpoints': {
             'auth': '/api/auth/',

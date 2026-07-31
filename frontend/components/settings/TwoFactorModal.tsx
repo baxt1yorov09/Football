@@ -45,7 +45,7 @@ export function TwoFactorModal({ isOpen, isEnabled, onClose, onSuccess }: Props)
 
   const downloadRecoveryCodes = () => {
     const text = [
-      "UFF Murabbiy Tizimi — 2FA zaxira kodlari",
+      "UFA Murabbiy Tizimi — 2FA zaxira kodlari",
       "Bu kodlar maxfiy! Telefoningiz yo'qolsa kirish uchun ishlatiladi.",
       "Har bir kod faqat BIR MARTA ishlatiladi.",
       "",
@@ -55,7 +55,7 @@ export function TwoFactorModal({ isOpen, isEnabled, onClose, onSuccess }: Props)
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `uff-2fa-recovery-codes-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `ufa-2fa-recovery-codes-${new Date().toISOString().slice(0, 10)}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

@@ -11,7 +11,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-const STORAGE_KEY = 'uff-theme';
+const STORAGE_KEY = 'ufa-theme';
 
 function applyTheme(resolved: 'light' | 'dark') {
   if (typeof document === 'undefined') return;

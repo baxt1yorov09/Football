@@ -281,7 +281,7 @@ class TwoFactorSetupView(APIView):
         totp = pyotp.TOTP(user.totp_secret)
         uri = totp.provisioning_uri(
             name=user.phone,
-            issuer_name='UFF Murabbiy Tizimi',
+            issuer_name='UFA Murabbiy Tizimi',
         )
 
         qr = qrcode.make(uri)
@@ -477,7 +477,7 @@ class ExportUserDataView(APIView):
                     zf.writestr('licenses.error.txt', f'Export xatosi: {exc}')
 
             readme = (
-                "UFF Ma'lumotlar Eksporti\n"
+                "UFA Ma'lumotlar Eksporti\n"
                 "========================\n"
                 f"Eksport sanasi: {datetime.now().strftime('%d.%m.%Y %H:%M')}\n"
                 f"Foydalanuvchi: {user.full_name or user.phone}\n"
@@ -486,13 +486,13 @@ class ExportUserDataView(APIView):
                 " - profile.json: Shaxsiy ma'lumotlar\n"
                 " - applications.json: Arizalar tarixi\n"
                 " - licenses.json: Litsenziyalar\n\n"
-                "O'zbekiston Futbol Federatsiyasi © 2026\n"
+                "O'zbekiston Futbol Assotsiatsiyasi © 2026\n"
             )
             zf.writestr('README.txt', readme)
 
         buffer.seek(0)
         response = HttpResponse(buffer.read(), content_type='application/zip')
-        filename = f'uff_data_{user.phone}_{datetime.now().strftime("%Y%m%d")}.zip'
+        filename = f'ufa_data_{user.phone}_{datetime.now().strftime("%Y%m%d")}.zip'
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 

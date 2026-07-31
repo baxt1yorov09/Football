@@ -223,7 +223,7 @@ function LicensesPanel() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `uff_litsenziyalar_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `ufa_litsenziyalar_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();

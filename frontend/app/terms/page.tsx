@@ -14,9 +14,9 @@ export default function TermsPage() {
       icon: FileText,
       content: [
         'Ushbu litsenziya berish tizimi ("Tizim") O\'zbekiston Murabbiylar ta\'limi ("Markaz") tomonidan boshqariladi.',
-        'Tizimdan foydalanish orqali Federatsiyaning rasmiy roziligiga ega bo\'lishini talab qiladi.',
+        'Tizimdan foydalanish orqali Assotsiatsiyaning rasmiy roziligiga ega bo\'lishini talab qiladi.',
         'Litsenziya olish uchun ariza berishda to\'g\'ri va to\'liq ma\'lumotlarni taqdim etish majburiyati foydalanuvchi zimmasiga yuklanadi.',
-        'Federatsiya ma\'lumotlarni tekshirish va tasdiqlash huquqini o\'zida saqlab qoladi.'
+        'Assotsiatsiya ma\'lumotlarni tekshirish va tasdiqlash huquqini o\'zida saqlab qoladi.'
       ]
     },
     {
@@ -58,7 +58,7 @@ export default function TermsPage() {
         'Foydalanuvchi o\'z ma\'lumotlarining to\'g\'riligiga va dolzarbligiga mas\'ul bo\'ladi.',
         'Noto\'g\'ri ma\'lumot berish litsenziyadan mahrum qilishiga olib kelishi mumkin.',
         'Litsenziya shartlarini buzish holatida litsenziya bekor qilinishi mumkin.',
-        'Federatsiya foydalanuvchi ma\'lumotlarini himoya qilish majburiyatini oladi.'
+        'Assotsiatsiya foydalanuvchi ma\'lumotlarini himoya qilish majburiyatini oladi.'
       ]
     },
     {

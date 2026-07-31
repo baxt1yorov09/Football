@@ -476,11 +476,11 @@ class AdminForgotPasswordView(APIView):
         )
         reset_link = f"{frontend_url.rstrip('/')}/admin/reset-password/{uid}/{token}"
 
-        subject = "UFF Admin — Parolni tiklash"
+        subject = "UFA Admin — Parolni tiklash"
         display_name = user.full_name or user.email
         text_body = (
             f"Assalomu alaykum, {display_name}!\n\n"
-            f"Sizning UFF admin hisobingiz uchun parolni tiklash so'rovi qabul qilindi.\n"
+            f"Sizning UFA admin hisobingiz uchun parolni tiklash so'rovi qabul qilindi.\n"
             f"Quyidagi havolaga bosib yangi parol o'rnatishingiz mumkin (24 soat amal qiladi):\n\n"
             f"{reset_link}\n\n"
             f"Agar siz bu so'rovni yubormagan bo'lsangiz, ushbu xatni e'tiborsiz qoldiring.\n\n"
@@ -509,7 +509,7 @@ class AdminForgotPasswordView(APIView):
               Assalomu alaykum, <strong>{display_name}</strong>!
             </p>
             <p style="margin:0 0 16px;line-height:1.6;">
-              Sizning UFF admin hisobingiz uchun parolni tiklash so'rovi qabul qilindi.
+              Sizning UFA admin hisobingiz uchun parolni tiklash so'rovi qabul qilindi.
               Quyidagi tugmani bosib yangi parol o'rnatishingiz mumkin
               (havola <strong>24 soat</strong> amal qiladi):
             </p>
@@ -549,7 +549,7 @@ class AdminForgotPasswordView(APIView):
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body=text_body,
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@uff.local'),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@ufa.local'),
                 to=[user.email],
             )
             msg.attach_alternative(html_body, "text/html")

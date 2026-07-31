@@ -60,7 +60,7 @@ class EskizSMSService(SMSService):
     def __init__(self):
         self.email = getattr(settings, 'ESKIZ_EMAIL', os.getenv('ESKIZ_EMAIL', ''))
         self.password = getattr(settings, 'ESKIZ_PASSWORD', os.getenv('ESKIZ_PASSWORD', ''))
-        self.from_name = getattr(settings, 'ESKIZ_FROM', os.getenv('ESKIZ_FROM', 'UFF'))
+        self.from_name = getattr(settings, 'ESKIZ_FROM', os.getenv('ESKIZ_FROM', 'UFA'))
         # Pre-issued long-lived JWT (from Eskiz cabinet → API/Settings).
         # If set, login step is skipped.
         self.static_token = getattr(settings, 'ESKIZ_TOKEN', os.getenv('ESKIZ_TOKEN', ''))
@@ -121,11 +121,11 @@ class EskizSMSService(SMSService):
     
     def send_otp(self, phone: str, code: str) -> Dict:
         """Send OTP via Eskiz"""
-        message = f"UFF Litsenziya tizimi. Tasdiqlash kodi: {code}"
+        message = f"UFA Litsenziya tizimi. Tasdiqlash kodi: {code}"
         return self.send_sms(phone, message)
     
     def _format_phone(self, phone: str) -> str:
-        """Format phone number for Eskiz"""
+        """Format phone number for Eskiz (without +)"""
         # Remove + and any non-digit characters
         phone = phone.replace('+', '').replace(' ', '').replace('-', '')
         # Ensure it starts with 998
@@ -144,7 +144,7 @@ class PlaymobileSMSService(SMSService):
     def __init__(self):
         self.username = getattr(settings, 'PLAYMOBILE_USERNAME', os.getenv('PLAYMOBILE_USERNAME', ''))
         self.password = getattr(settings, 'PLAYMOBILE_PASSWORD', os.getenv('PLAYMOBILE_PASSWORD', ''))
-        self.originator = getattr(settings, 'PLAYMOBILE_ORIGINATOR', os.getenv('PLAYMOBILE_ORIGINATOR', 'UFF'))
+        self.originator = getattr(settings, 'PLAYMOBILE_ORIGINATOR', os.getenv('PLAYMOBILE_ORIGINATOR', 'UFA'))
     
     def send_sms(self, phone: str, message: str) -> Dict:
         """Send SMS via Playmobile"""
@@ -181,7 +181,7 @@ class PlaymobileSMSService(SMSService):
     
     def send_otp(self, phone: str, code: str) -> Dict:
         """Send OTP via Playmobile"""
-        message = f"UFF Litsenziya tizimi. Tasdiqlash kodi: {code}"
+        message = f"UFA Litsenziya tizimi. Tasdiqlash kodi: {code}"
         return self.send_sms(phone, message)
     
     def _format_phone(self, phone: str) -> str:

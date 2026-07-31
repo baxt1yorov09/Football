@@ -17,8 +17,8 @@ def reverse_migrate(apps, schema_editor):
     obj = SystemSettings.objects.filter(pk=1).first()
     if obj is None:
         return
-    obj.system_name = 'UFF Football System'
-    obj.description = "O'zbekiston Futbol Federatsiyasi - Murabbiylar litsenziyalash tizimi"
+    obj.system_name = 'UFA'
+    obj.description = "O'zbekiston Futbol Assotsiatsiyasi - Murabbiylar litsenziyalash tizimi"
     obj.save()
 
 

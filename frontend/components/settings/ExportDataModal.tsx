@@ -48,7 +48,7 @@ export function ExportDataModal({ isOpen, onClose }: Props) {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `uff_data_${new Date().toISOString().split('T')[0]}.zip`;
+      link.download = `ufa_data_${new Date().toISOString().split('T')[0]}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

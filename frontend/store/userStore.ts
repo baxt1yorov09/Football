@@ -33,6 +33,6 @@ export const useUserStore = create<UserState>()(
         user: state.user ? { ...state.user, ...fields } : null,
       })),
     }),
-    { name: 'uff-user' }
+    { name: 'ufa-user' }
   )
 );

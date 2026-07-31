@@ -243,7 +243,7 @@ export function ProfessionalStep({ data, onNext, onBack }: ProfessionalStepProps
                     </label>
                     <Input
                       type="text"
-                      placeholder="UFF-2024-D-000123"
+                      placeholder="C-26/0028"
                       value={formData.previousLicenseNumber}
                       onChange={(e) => handleChange('previousLicenseNumber', e.target.value)}
                       className="h-12"

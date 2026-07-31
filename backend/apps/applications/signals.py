@@ -167,7 +167,7 @@ Rad etish sababi:
 {application.rejection_reason or "Sabab ko'rsatilmagan"}
 
 Agar savollaringiz bo'lsa, qo'llab-quvvatlash xizmatiga murojaat qiling:
-Email: support@uff.uz
+Email: support@ufa.uz
 Telefon: +998 71 123 45 67
 """
     elif application.status == 'additional_docs':
@@ -181,7 +181,7 @@ http://localhost:3000/applications
     message += """
 
 Hurmat bilan,
-O'zbekiston Futbol Federatsiyasi
+O'zbekiston Futbol Assotsiatsiyasi
 """
     
     # Send email
@@ -229,7 +229,7 @@ Ariza ma'lumotlari:
 - Sana: {timeline.created_at.strftime('%d.%m.%Y %H:%M')}
 
 Hurmat bilan,
-O'zbekiston Futbol Federatsiyasi
+O'zbekiston Futbol Assotsiatsiyasi
 """
     
     try:

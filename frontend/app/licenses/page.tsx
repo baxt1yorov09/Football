@@ -12,6 +12,7 @@ import { Header } from '@/components/layout/Header';
 import { SmartSidebar } from '@/components/layout/SmartSidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n/I18nProvider';
+import { AddLicenseModal } from '@/components/licenses/AddLicenseModal';
 import Link from 'next/link';
 
 // ============ Types ============
@@ -95,6 +96,7 @@ export default function LicensesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [detailLic, setDetailLic] = useState<MyLicense | null>(null);
+  const [showAddLicense, setShowAddLicense] = useState(false);
 
   const fetchData = useCallback(async (initial = false) => {
     try {
@@ -201,13 +203,13 @@ export default function LicensesPage() {
               >
                 <RefreshCw className={`w-4 h-4 text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
-              <Link
-                href="/apply"
+              <button
+                onClick={() => setShowAddLicense(true)}
                 className="flex items-center gap-2 px-4 py-2.5 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-blue-500/25"
               >
                 <Plus className="w-4 h-4" />
-                {t('licenses.new_application')}
-              </Link>
+                {t('profile.license.add_button')}
+              </button>
             </div>
           </motion.div>
 
@@ -371,6 +373,16 @@ export default function LicensesPage() {
         onDownload={handleDownloadPdf}
         t={t}
         locale={locale}
+      />
+
+      {/* Yangi litsenziya qo'shish modali */}
+      <AddLicenseModal
+        open={showAddLicense}
+        onClose={() => setShowAddLicense(false)}
+        onCreated={() => {
+          setShowAddLicense(false);
+          fetchData(false);
+        }}
       />
     </div>
   );

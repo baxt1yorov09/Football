@@ -22,7 +22,7 @@ RECOVERY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  # chalkashlikni kamaytir
 
 # 2FA challenge tokeni umri (sekund)
 TWO_FACTOR_TOKEN_TTL = 300  # 5 daqiqa
-TWO_FACTOR_SIGNER_SALT = 'uff.users.two_factor.login'
+TWO_FACTOR_SIGNER_SALT = 'ufa.users.two_factor.login'
 
 
 # ──────────────────────────────────────────────────────────────────────────

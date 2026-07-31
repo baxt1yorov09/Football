@@ -72,7 +72,7 @@ export function Footer() {
                 </svg>
               </a>
               <a 
-                href="https://youtube.com/@uffuz" 
+                href="https://youtube.com/@ufauz" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#F39C12] transition-colors"

@@ -1,5 +1,5 @@
 """
-UFF Telegram Bot — Murabbiy Litsenziya Tizimi
+UFA Telegram Bot — Murabbiy Litsenziya Tizimi
 Tilllar: O'zbek va Rus
 Auth: OTP orqali (telefon → 6 xonali kod → User'ga bog'lash)
 
@@ -62,7 +62,7 @@ except ImportError:
 T = {
     'uz': {
         'welcome_new': (
-            "⚽️ *O'zbekiston Futbol Federatsiyasi*\n"
+            "⚽️ *O'zbekiston Futbol Assotsiatsiyasi*\n"
             "_Murabbiy Litsenziya Tizimiga xush kelibsiz!_\n\n"
             "Davom etish uchun tilni tanlang:"
         ),
@@ -213,7 +213,7 @@ T = {
     },
     'ru': {
         'welcome_new': (
-            "⚽️ *Федерация футбола Узбекистана*\n"
+            "⚽️ *Ассоциация футбола Узбекистана*\n"
             "_Добро пожаловать в систему лицензий тренеров!_\n\n"
             "Выберите язык:"
         ),
@@ -874,7 +874,7 @@ async def handle_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = tu.language
     await update.message.reply_text(
         tr(lang, 'help',
-           support=getattr(settings, 'SUPPORT_USERNAME', '@UFFSupport'),
+           support=getattr(settings, 'SUPPORT_USERNAME', '@UFASupport'),
            web=settings.WEB_APP_URL),
         parse_mode=ParseMode.MARKDOWN,
         disable_web_page_preview=True,
@@ -1025,7 +1025,7 @@ def _ensure_event_loop():
         asyncio.set_event_loop(_loop)
         _loop.run_forever()
 
-    _loop_thread = threading.Thread(target=runner, daemon=True, name='UFFBot')
+    _loop_thread = threading.Thread(target=runner, daemon=True, name='UFABot')
     _loop_thread.start()
     return _loop
 
@@ -1050,7 +1050,7 @@ def get_application():
             logger.error(f"Bot init failed: {e}")
             return None
         _app_instance = app
-        logger.info("UFF Telegram Bot initialized")
+        logger.info("UFA Telegram Bot initialized")
         return _app_instance
 
 
