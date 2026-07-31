@@ -34,7 +34,7 @@ export function Watermark() {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/fmtm.uz.png"
+        src="/fmtm-logo.svg"
         alt=""
         className="w-[40vw] max-w-[520px] opacity-[0.05] select-none"
       />

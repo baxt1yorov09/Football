@@ -39,6 +39,7 @@ export default function SettingsPage() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [userPhone, setUserPhone] = useState('');
   const [saved, setSaved] = useState(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
 
   // Modal states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -103,11 +104,16 @@ export default function SettingsPage() {
   };
 
   const handleNotificationsChange = async (enabled: boolean) => {
+    const previous = notifications;
     setNotifications(enabled);
+    setNotificationError(null);
     persistLocal({ notifications_enabled: enabled });
     try {
       await apiClient.patch('/users/me/', { notifications_enabled: enabled });
-    } catch (e) {
+    } catch (e: any) {
+      setNotifications(previous);
+      const msg = e?.response?.data?.detail || t('common.error') || 'Saqlashda xatolik';
+      setNotificationError(msg);
       console.error('Notifications save failed:', e);
     }
   };
@@ -248,6 +254,9 @@ export default function SettingsPage() {
                                 <p className="text-sm text-gray-500">
                                   {item.value ? t('settings.theme_on').split(' ')[0] : t('settings.theme_off')}
                                 </p>
+                              )}
+                              {item.label === t('settings.enable_notifications') && notificationError && (
+                                <p className="text-sm text-red-500 mt-1">{notificationError}</p>
                               )}
                             </div>
                             <div>
