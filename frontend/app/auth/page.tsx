@@ -11,11 +11,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
 
 function AuthPageInner() {
-  const [step, setStep] = useState<'phone' | 'email' | 'otp' | '2fa'>('phone');
+  const [step, setStep] = useState<'phone' | 'email' | 'otp' | '2fa' | 'restore'>('phone');
   const [phone, setPhone] = useState('');
   const [emailMasked, setEmailMasked] = useState<string>('');
   const [twoFactorToken, setTwoFactorToken] = useState('');
-  const { login, verify2FA, isAuthenticated, user } = useAuth();
+  const [restoreToken, setRestoreToken] = useState('');
+  const [daysLeft, setDaysLeft] = useState(0);
+  const { login, verify2FA, restoreAccount, isAuthenticated, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
@@ -53,6 +55,14 @@ function AuthPageInner() {
 
     if (!result?.success) return;
 
+    // O'chirilgan hisob — tiklash imkoniyati
+    if (result.accountDeleted) {
+      setRestoreToken(result.restoreToken);
+      setDaysLeft(result.daysLeft);
+      setStep('restore');
+      return;
+    }
+
     // 2FA bosqichi kerak — TOTP/recovery kod so'raymiz
     if (result.requires2FA) {
       setTwoFactorToken(result.twoFactorToken);
@@ -63,6 +73,13 @@ function AuthPageInner() {
     if (result.isNewUser || result.user?.is_onboarded === false) {
       router.push('/onboarding');
     } else {
+      router.push(redirectUrl || '/dashboard');
+    }
+  };
+
+  const handleRestore = async () => {
+    const result = await restoreAccount(restoreToken);
+    if (result.success) {
       router.push(redirectUrl || '/dashboard');
     }
   };
@@ -116,18 +133,23 @@ function AuthPageInner() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Progress indicator */}
-          <div className="flex">
-            {(['phone', 'email', 'otp', '2fa'] as const).map((s, i) => (
-              <div
-                key={s}
-                className={`flex-1 h-1 transition-colors duration-300 ${
-                  ['phone', 'email', 'otp', '2fa'].indexOf(step) >= i
-                    ? 'bg-[#F39C12]'
-                    : 'bg-gray-200'
-                }`}
-              />
-            ))}
-          </div>
+          {step !== 'restore' && (
+            <div className="flex">
+              {(['phone', 'email', 'otp', '2fa'] as const).map((s, i) => (
+                <div
+                  key={s}
+                  className={`flex-1 h-1 transition-colors duration-300 ${
+                    ['phone', 'email', 'otp', '2fa'].indexOf(step as any) >= i
+                      ? 'bg-[#F39C12]'
+                      : 'bg-gray-200'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+          {step === 'restore' && (
+            <div className="h-1 bg-amber-400" />
+          )}
 
           <div className="p-8">
             {step === 'phone' && (
@@ -160,6 +182,45 @@ function AuthPageInner() {
                 onSubmit={handle2FASubmit}
                 onBack={() => setStep('otp')}
               />
+            )}
+
+            {step === 'restore' && (
+              <div>
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-3xl">⚠️</span>
+                  </div>
+                  <h2 className="text-xl font-bold text-[#0D3B6E] mb-2">
+                    Hisobingiz o&apos;chirilgan
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    Hisobingiz o&apos;chirilgan, lekin hali tiklanishi mumkin.
+                  </p>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-amber-800 text-center">
+                    <span className="font-bold text-2xl text-amber-600">{daysLeft}</span>
+                    <br />
+                    kun ichida tiklash mumkin
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setStep('phone')}
+                    className="flex-1 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                  >
+                    Bekor qilish
+                  </button>
+                  <button
+                    onClick={handleRestore}
+                    className="flex-1 py-3 bg-[#F39C12] hover:bg-[#E67E22] text-white rounded-lg font-medium"
+                  >
+                    Tiklash
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>

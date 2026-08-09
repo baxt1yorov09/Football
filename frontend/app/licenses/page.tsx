@@ -34,6 +34,8 @@ interface MyLicense {
   pdf_url: string;
   qr_code_url: string;
   verification_url: string;
+  image_url?: string;
+  can_delete?: boolean;
 }
 
 interface APIResponse {
@@ -97,6 +99,8 @@ export default function LicensesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [detailLic, setDetailLic] = useState<MyLicense | null>(null);
   const [showAddLicense, setShowAddLicense] = useState(false);
+  const [deleteLic, setDeleteLic] = useState<MyLicense | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async (initial = false) => {
     try {
@@ -136,9 +140,13 @@ export default function LicensesPage() {
   }, [data, search, statusFilter]);
 
   const handleDownloadPdf = async (lic: MyLicense) => {
-    // Agar pdf_url bo'lsa, to'g'ridan-to'g'ri ochamiz, aks holda backend generatsiya
+    // Ustuvorlik: pdf_url → image_url (yuklangan fayl) → backend generatsiya
     if (lic.pdf_url) {
       window.open(lic.pdf_url, '_blank');
+      return;
+    }
+    if (lic.image_url) {
+      window.open(lic.image_url, '_blank');
       return;
     }
     try {
@@ -146,7 +154,14 @@ export default function LicensesPage() {
       const r = await fetch(`/api/licenses/${lic.id}/pdf/`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!r.ok) throw new Error('PDF hozircha mavjud emas');
+      if (!r.ok) {
+        let msg = 'PDF hozircha mavjud emas';
+        try {
+          const data = await r.json();
+          if (data?.error) msg = data.error;
+        } catch {}
+        throw new Error(msg);
+      }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -158,6 +173,29 @@ export default function LicensesPage() {
       URL.revokeObjectURL(url);
     } catch (e: any) {
       alert(e.message || 'PDF olishda xatolik');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteLic) return;
+    setDeleting(true);
+    try {
+      const token = getToken();
+      const r = await fetch(`/api/licenses/self/${deleteLic.id}/`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.detail || err.error || `HTTP ${r.status}`);
+      }
+      setDeleteLic(null);
+      setDetailLic(null);
+      await fetchData(false);
+    } catch (e: any) {
+      alert(e.message || "Litsenziyani o'chirishda xatolik");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -371,6 +409,7 @@ export default function LicensesPage() {
         lic={detailLic}
         onClose={() => setDetailLic(null)}
         onDownload={handleDownloadPdf}
+        onDelete={(l) => setDeleteLic(l)}
         t={t}
         locale={locale}
       />
@@ -384,6 +423,62 @@ export default function LicensesPage() {
           fetchData(false);
         }}
       />
+
+      {/* O'chirishni tasdiqlash */}
+      <AnimatePresence>
+        {deleteLic && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !deleting && setDeleteLic(null)}
+            className="fixed inset-0 z-[90] bg-black/60 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+            >
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 shrink-0 bg-red-100 rounded-xl flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">
+                    Litsenziyani o&apos;chirish
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    <span className="font-mono font-medium">{deleteLic.license_number}</span> — bu amalni qaytarib bo&apos;lmaydi.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  disabled={deleting}
+                  onClick={() => setDeleteLic(null)}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  disabled={deleting}
+                  onClick={handleConfirmDelete}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deleting ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <X className="w-4 h-4" />
+                  )}
+                  {t('common.delete')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -543,10 +638,11 @@ function EmptyState({ hasFilter, total, onReset, t }: {
 }
 
 // ============ DETAIL MODAL ============
-function LicenseDetailModal({ lic, onClose, onDownload, t, locale }: {
+function LicenseDetailModal({ lic, onClose, onDownload, onDelete, t, locale }: {
   lic: MyLicense | null;
   onClose: () => void;
   onDownload: (lic: MyLicense) => void;
+  onDelete?: (lic: MyLicense) => void;
   t: (k: string, vars?: any) => string;
   locale: string;
 }) {
@@ -578,14 +674,23 @@ function LicenseDetailModal({ lic, onClose, onDownload, t, locale }: {
               >
                 <X className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-2xl font-bold">
+              <div className="flex items-center gap-4 pr-10">
+                <div
+                  className={`w-16 h-16 shrink-0 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center font-bold text-center px-1 leading-tight break-all ${
+                    (lic.license_type_code?.length ?? 0) > 4
+                      ? 'text-[11px]'
+                      : (lic.license_type_code?.length ?? 0) > 2
+                        ? 'text-base'
+                        : 'text-2xl'
+                  }`}
+                  title={lic.license_type_code}
+                >
                   {lic.license_type_code}
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-white/80 uppercase tracking-wider">{t('licenses.detail.license_number')}</p>
-                  <p className="font-mono font-bold text-2xl">{lic.license_number}</p>
-                  <p className="text-sm text-white/90 mt-1">{lic.license_type_name}</p>
+                  <p className="font-mono font-bold text-2xl truncate">{lic.license_number}</p>
+                  <p className="text-sm text-white/90 mt-1 truncate">{lic.license_type_name}</p>
                 </div>
               </div>
             </div>
@@ -652,16 +757,25 @@ function LicenseDetailModal({ lic, onClose, onDownload, t, locale }: {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={onClose}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                  className="flex-1 min-w-[120px] py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
                 >
                   {t('licenses.detail.close')}
                 </button>
+                {lic.can_delete && onDelete && (
+                  <button
+                    onClick={() => onDelete(lic)}
+                    className="flex-1 min-w-[120px] py-2.5 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+                  >
+                    <X className="w-4 h-4" />
+                    {t('common.delete')}
+                  </button>
+                )}
                 <button
                   onClick={() => onDownload(lic)}
-                  className="flex-1 py-2.5 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+                  className="flex-1 min-w-[140px] py-2.5 bg-[#1A56A0] hover:bg-[#0D3B6E] text-white rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
                   {t('licenses.detail.download_pdf')}

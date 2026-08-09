@@ -1,4 +1,63 @@
 from django.db import models
+from django.utils import timezone
+
+
+class LoginAttempt(models.Model):
+    """Login urinishlari — brute-force himoyasi uchun"""
+    phone = models.CharField(max_length=20, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    success = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Login urinishi'
+        verbose_name_plural = 'Login urinishlari'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['phone', 'created_at']),
+        ]
+
+    @classmethod
+    def get_recent_failed_count(cls, phone: str, minutes: int = 30) -> int:
+        """Oxirgi N daqiqadagi muvaffaqiyatsiz urinishlar soni."""
+        cutoff = timezone.now() - timezone.timedelta(minutes=minutes)
+        return cls.objects.filter(
+            phone=phone,
+            success=False,
+            created_at__gte=cutoff,
+        ).count()
+
+    @classmethod
+    def record_attempt(cls, phone: str, ip: str = None, success: bool = False):
+        """Yangi urinishni qayd etish."""
+        cls.objects.create(phone=phone, ip_address=ip, success=success)
+        # Muvaffaqiyatli login bo'lsa, eski muvaffaqiyatsiz urinishlarni tozalash
+        if success:
+            cutoff = timezone.now() - timezone.timedelta(hours=24)
+            cls.objects.filter(phone=phone, success=False, created_at__lt=cutoff).delete()
+
+    @classmethod
+    def is_blocked(cls, phone: str) -> tuple[bool, int]:
+        """
+        Telefon raqam bloklangan yoki yo'qligini tekshirish.
+        Returns: (is_blocked, remaining_minutes)
+        """
+        from .models import SystemSettings
+        settings = SystemSettings.load()
+        max_attempts = settings.max_login_attempts or 5
+
+        failed_count = cls.get_recent_failed_count(phone, minutes=30)
+        if failed_count >= max_attempts:
+            # Oxirgi muvaffaqiyatsiz urinish vaqtini topish
+            last_attempt = cls.objects.filter(
+                phone=phone, success=False
+            ).order_by('-created_at').first()
+            if last_attempt:
+                unlock_time = last_attempt.created_at + timezone.timedelta(minutes=30)
+                remaining = (unlock_time - timezone.now()).total_seconds() / 60
+                if remaining > 0:
+                    return True, int(remaining) + 1
+        return False, 0
 
 
 class SystemSettings(models.Model):
@@ -34,6 +93,10 @@ class SystemSettings(models.Model):
 
     # System
     backup_schedule = models.CharField(max_length=20, choices=BACKUP_CHOICES, default='daily')
+    max_backups = models.PositiveIntegerField(
+        default=10,
+        help_text="Saqlanadigan maksimal backup soni (eskilari avtomatik o'chiriladi)"
+    )
     log_retention = models.CharField(max_length=20, choices=LOG_RETENTION_CHOICES, default='90')
     maintenance_mode = models.BooleanField(default=False)
 

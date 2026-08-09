@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useI18n } from '@/lib/i18n/I18nProvider';
+import { useUserStore } from '@/store/userStore';
 
 function roleLabel(role: string | undefined, t: (k: string) => string) {
   if (!role) return t('header.user');
@@ -58,6 +59,9 @@ function getInitials(name?: string): string {
 export function Header() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  // Global store'dagi avatar_url — profil sahifasidan yangi rasm yuklanganda darhol yangilanadi
+  const storeAvatarUrl = useUserStore((s) => s.user?.avatar_url);
+  const avatarUrl = storeAvatarUrl || (user as any)?.avatar_url;
   const {
     unreadCount,
     notifications,
@@ -332,10 +336,10 @@ export function Header() {
                   {(user as any)?.job_title || roleLabel(user?.role, t)}
                 </p>
               </div>
-              <div className="w-9 h-9 bg-gradient-to-br from-[#1A56A0] to-[#0D3B6E] rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                {(user as any)?.avatar_url ? (
+              <div className="w-9 h-9 bg-gradient-to-br from-[#1A56A0] to-[#0D3B6E] rounded-full flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
+                {avatarUrl ? (
                   <img
-                    src={(user as any).avatar_url}
+                    src={avatarUrl}
                     alt=""
                     className="w-full h-full rounded-full object-cover"
                   />

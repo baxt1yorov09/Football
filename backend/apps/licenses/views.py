@@ -1,3 +1,5 @@
+import os
+
 from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -291,6 +293,7 @@ class LicenseListView(APIView):
                 'qr_code_url': lic.qr_code_url or '',
                 'image_url': (request.build_absolute_uri(lic.image.url) if lic.image else ''),
                 'verification_url': f"/verify/{lic.id}",
+                'can_delete': lic.application_id is None,
             })
 
         return Response({
@@ -399,6 +402,95 @@ def license_verification(request, license_id):
             'current_club': getattr(license_obj, 'current_club', '') or '',
         },
     })
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_self_license(request, license_id):
+    """Foydalanuvchi o'zi qo'shgan litsenziyani o'chirish.
+
+    Faqat `application` bilan bog'lanmagan (self-created) litsenziyalarni
+    egasi o'chira oladi. Admin tomonidan berilgan litsenziyalarni bu yerdan
+    o'chirib bo'lmaydi.
+    """
+    license_obj = get_object_or_404(License, id=license_id)
+
+    if license_obj.user_id != request.user.id:
+        return Response(
+            {'detail': 'Ruxsat berilmagan'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    if license_obj.application_id is not None:
+        return Response(
+            {'detail': "Bu litsenziya ariza asosida berilgan va o'chirib bo'lmaydi"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Yuklangan faylni ham o'chirish
+    try:
+        if license_obj.image:
+            license_obj.image.delete(save=False)
+    except Exception:
+        pass
+
+    license_obj.delete()
+    return Response({'success': True}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_license_file(request, license_id):
+    """Litsenziya faylini yuklab olish.
+
+    Ustuvorlik:
+    1. Foydalanuvchi yuklagan `image` fayli (PDF/JPG/PNG) — self-created litsenziyalar uchun.
+    2. Aks holda, `weasyprint` mavjud bo'lsa — dinamik PDF generatsiya.
+    3. Aks holda 503.
+    """
+    from django.http import FileResponse, HttpResponse
+    import mimetypes
+
+    license_obj = get_object_or_404(License, id=license_id)
+
+    # Ruxsat: egasi yoki admin
+    is_admin = getattr(request.user, 'role', '') in ('super_admin', 'region_admin', 'staff')
+    if not (is_admin or license_obj.user_id == request.user.id):
+        return Response({'error': 'Ruxsat berilmagan'}, status=status.HTTP_403_FORBIDDEN)
+
+    # 1) Yuklangan fayl bor bo'lsa — shuni qaytaramiz
+    if license_obj.image:
+        try:
+            f = license_obj.image.open('rb')
+            filename = f"{license_obj.license_number}{os.path.splitext(license_obj.image.name)[1] or ''}"
+            ctype, _ = mimetypes.guess_type(license_obj.image.name)
+            resp = FileResponse(f, content_type=ctype or 'application/octet-stream')
+            resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return resp
+        except Exception as e:  # noqa: BLE001
+            return Response(
+                {'error': f'Faylni ochishda xatolik: {e}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    # 2) Dinamik PDF generatsiya (agar servis mavjud bo'lsa)
+    if SERVICES_AVAILABLE:
+        try:
+            certificate_style = request.GET.get('certificate', 'false').lower() == 'true'
+            pdf_file = generate_license_pdf(license_id, certificate_style)
+            resp = HttpResponse(pdf_file.read(), content_type='application/pdf')
+            resp['Content-Disposition'] = f'attachment; filename="{pdf_file.name}"'
+            return resp
+        except Exception as e:  # noqa: BLE001
+            return Response(
+                {'error': f'PDF generatsiyada xatolik: {e}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    return Response(
+        {'error': "PDF fayl mavjud emas va generatsiya servisi o'rnatilmagan"},
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
 
 
 @api_view(['GET'])

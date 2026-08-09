@@ -188,13 +188,7 @@ class ApplicationListCreateView(APIView):
     )
     def post(self, request):
         """Create new application"""
-        print(f"DEBUG: ===== APPLICATION CREATION START =====")
-        print(f"DEBUG: User: {request.user}")
-        print(f"DEBUG: Request method: {request.method}")
-        print(f"DEBUG: Request content type: {request.content_type}")
-        print(f"DEBUG: Request POST data: {dict(request.POST)}")
-        print(f"DEBUG: Request FILES: {dict(request.FILES)}")
-        print(f"DEBUG: ========================================")
+        logger.info(f"Application creation started by user {request.user.id}")
         
         serializer = ApplicationCreateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -223,8 +217,6 @@ class ApplicationListCreateView(APIView):
         # Extract full_name and phone for this application only
         full_name = validated_data.pop('full_name', None)
         phone = validated_data.pop('phone', None)
-        print(f"DEBUG: full_name received: {full_name}")
-        print(f"DEBUG: phone received: {phone}")
         
         # License_type endi code bilan keladi, validation serializer da bo'ladi
         # region = O'qimoqchi bo'lgan hudud (admin yo'naltirish uchun)
@@ -241,21 +233,12 @@ class ApplicationListCreateView(APIView):
             **validated_data
         )
         
-        print(f"DEBUG: Saved application with full_name: {application.full_name}, phone: {application.phone}")
-        
-        print(f"DEBUG: Saved application with full_name: {application.full_name}")
+        logger.info(f"Application {application.id} created for user {request.user.id}")
 
         # Handle document uploads
         from apps.documents.models import Document
         import uuid
         import os
-        
-        print(f"DEBUG: ===== DOCUMENT UPLOAD DEBUG =====")
-        print(f"DEBUG: request.FILES = {request.FILES}")
-        print(f"DEBUG: request.FILES keys = {list(request.FILES.keys())}")
-        print(f"DEBUG: request.POST keys = {list(request.POST.keys())}")
-        print(f"DEBUG: request.content_type = {request.content_type}")
-        print(f"DEBUG: ======================================")
         
         document_fields = {
             'passport': 'Pasport',
@@ -265,7 +248,6 @@ class ApplicationListCreateView(APIView):
         
         for field_name, display_name in document_fields.items():
             if field_name in request.FILES:
-                print(f"DEBUG: Found file for {field_name}")
                 uploaded_file = request.FILES[field_name]
                 
                 # Generate unique filename
@@ -278,17 +260,12 @@ class ApplicationListCreateView(APIView):
                 
                 # Save file to disk
                 file_path = os.path.join(documents_dir, unique_filename)
-                print(f"DEBUG: Saving file to: {file_path}")
-                print(f"DEBUG: Current working directory: {os.getcwd()}")
                 with open(file_path, 'wb+') as destination:
                     for chunk in uploaded_file.chunks():
                         destination.write(chunk)
                 
                 # Store the actual file URL
                 file_url = f"/media/documents/{unique_filename}"
-                print(f"DEBUG: File URL: {file_url}")
-                print(f"DEBUG: File exists after save: {os.path.exists(file_path)}")
-                
                 Document.objects.create(
                     application=application,
                     doc_type=field_name,
@@ -298,7 +275,7 @@ class ApplicationListCreateView(APIView):
                     mime_type=uploaded_file.content_type
                 )
                 
-                print(f"DEBUG: Saved document {field_name} - {uploaded_file.name}")
+                logger.info(f"Document '{field_name}' uploaded for application {application.id}")
 
         # Create timeline entry
         ApplicationTimeline.objects.create(

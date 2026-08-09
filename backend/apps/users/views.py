@@ -15,6 +15,24 @@ from rest_framework.parsers import MultiPartParser
 User = get_user_model()
 
 
+def _avatar_url(user, request):
+    """Avatar URL bilan cache-buster (?v=<timestamp>) qo'shish.
+
+    Django avatarni doim bir xil yo'lga saqlaydi (`avatars/<user_id>.<ext>`),
+    shuning uchun brauzer eski keshdagi rasmni ko'rsatishi mumkin. Bu funksiya
+    `updated_at` yoki yuklangan fayl vaqtini query parametr sifatida qo'shadi.
+    """
+    if not user.avatar:
+        return user.avatar_url or None
+    try:
+        url = request.build_absolute_uri(user.avatar.url) if request else user.avatar.url
+    except Exception:
+        return user.avatar_url or None
+    ts = int((user.updated_at or timezone.now()).timestamp())
+    sep = '&' if '?' in url else '?'
+    return f"{url}{sep}v={ts}"
+
+
 def _user_to_dict(user, request):
     return {
         'id': str(user.id),
@@ -29,7 +47,7 @@ def _user_to_dict(user, request):
         'region_id': user.region.id if user.region else None,
         'role': user.role,
         'is_active': user.is_active,
-        'avatar_url': request.build_absolute_uri(user.avatar.url) if user.avatar else user.avatar_url,
+        'avatar_url': _avatar_url(user, request),
         'workplace': user.workplace,
         'job_title': user.job_title,
         'coaching_years': user.coaching_years,
@@ -518,7 +536,22 @@ class UserAvatarView(APIView):
         request.user.avatar = avatar
         request.user.save()
 
-        return Response({'avatar_url': request.build_absolute_uri(request.user.avatar.url)})
+        # Yangi rasmni saqlagach, DB'dan qayta yuklab olamiz — updated_at yangilangan bo'ladi
+        request.user.refresh_from_db()
+        return Response({'avatar_url': _avatar_url(request.user, request)})
+
+    def delete(self, request):
+        """Foydalanuvchi avatarini o'chirish."""
+        user = request.user
+        if user.avatar:
+            try:
+                user.avatar.delete(save=False)
+            except Exception:
+                pass
+        user.avatar = None
+        user.avatar_url = None
+        user.save(update_fields=['avatar', 'avatar_url'])
+        return Response({'avatar_url': None, 'success': True})
 
 
 class ChangePhoneView(APIView):
@@ -644,6 +677,6 @@ class CompleteOnboardingView(APIView):
                 'coaching_years': user.coaching_years,
                 'is_onboarded': True,
                 'role': user.role,
-                'avatar_url': request.build_absolute_uri(user.avatar.url) if user.avatar else None,
+                'avatar_url': _avatar_url(user, request),
             }
         })

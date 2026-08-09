@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient, API_ENDPOINTS } from '@/lib/api/client';
+import { useUserStore } from '@/store/userStore';
 
 interface User {
   id: string;
@@ -74,6 +75,17 @@ export function useAuth() {
         phone,
         code,
       });
+
+      // O'chirilgan hisob — tiklash imkoniyati
+      if (response.data?.account_deleted) {
+        return {
+          success: true,
+          accountDeleted: true,
+          restoreToken: response.data.restore_token as string,
+          daysLeft: response.data.days_left as number,
+          message: response.data.message as string,
+        };
+      }
 
       // 2FA gate: foydalanuvchi 2FA yoqgan bo'lsa, JWT yo'q — 2FA bosqichi kerak
       if (response.data?.requires_2fa) {
@@ -159,6 +171,10 @@ export function useAuth() {
         isLoading: false,
         isAuthenticated: false,
       });
+      // Global user store'ni tozalash (avatar_url va boshqa cached maydonlar)
+      try {
+        useUserStore.getState().clearUser();
+      } catch {}
       // Redirect to auth page
       window.location.href = '/auth';
     }
@@ -180,12 +196,30 @@ export function useAuth() {
     }
   }, []);
 
+  // O'chirilgan hisobni tiklash
+  const restoreAccount = useCallback(async (restoreToken: string) => {
+    try {
+      const response = await apiClient.post('/auth/restore-account', {
+        restore_token: restoreToken,
+      });
+      const { access, refresh, user } = response.data;
+      persistSession(access, refresh, user);
+      return { success: true, user, message: response.data.message };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.error || "Hisobni tiklashda xatolik",
+      };
+    }
+  }, []);
+
   return {
     ...state,
     login,
     verify2FA,
     logout,
     updateProfile,
+    restoreAccount,
   };
 }
 

@@ -25,6 +25,7 @@ interface SystemSettings {
   max_login_attempts: number;
   session_timeout_minutes: number;
   backup_schedule: string;
+  max_backups: number;
   log_retention: string;
   maintenance_mode: boolean;
   updated_at?: string;
@@ -165,6 +166,13 @@ export default function SettingsPanel() {
   const [logsRunning, setLogsRunning] = useState(false);
   const [showBackupList, setShowBackupList] = useState(false);
 
+  // Broadcast (ogohlantirish yuborish)
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastTitle, setBroadcastTitle] = useState("Texnik xizmat ko'rsatish");
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastChannels, setBroadcastChannels] = useState({ in_app: true, email: true, telegram: true });
+  const [broadcastSending, setBroadcastSending] = useState(false);
+
   // i18n & theme hooks
   const { locale, setLocale, t } = useI18n();
   const { theme, setTheme } = useTheme();
@@ -288,6 +296,35 @@ export default function SettingsPanel() {
       showToast(tp('toasts.clean_error', { msg: err.message }), 'error');
     } finally {
       setLogsRunning(false);
+    }
+  };
+
+  const sendBroadcast = async () => {
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) {
+      showToast('Sarlavha va matn to\'ldirilishi shart', 'error');
+      return;
+    }
+    const channels = Object.entries(broadcastChannels)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    if (channels.length === 0) {
+      showToast('Kamida bitta kanal tanlash kerak', 'error');
+      return;
+    }
+    try {
+      setBroadcastSending(true);
+      const result = await api<any>('/api/settings/broadcast', 'POST', {
+        title: broadcastTitle.trim(),
+        message: broadcastMessage.trim(),
+        channels,
+      });
+      showToast(result.detail || 'Ogohlantirish yuborildi', 'success');
+      setShowBroadcast(false);
+      setBroadcastMessage('');
+    } catch (err: any) {
+      showToast(`Xato: ${err.message}`, 'error');
+    } finally {
+      setBroadcastSending(false);
     }
   };
 
@@ -757,6 +794,18 @@ export default function SettingsPanel() {
                         </select>
                       </div>
                       <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Maks. saqlanadigan backuplar</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={settings.max_backups ?? 10}
+                          onChange={(e) => setSettings({ ...settings, max_backups: parseInt(e.target.value) || 10 })}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                        />
+                        <p className="text-xs text-gray-500">Eskilari avtomatik o&apos;chiriladi</p>
+                      </div>
+                      <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700">{tp('system.log_retention')}</label>
                         <select
                           value={settings.log_retention}
@@ -859,11 +908,19 @@ export default function SettingsPanel() {
                     <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
                       <div className="flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                        <div>
+                        <div className="flex-1">
                           <p className="font-medium text-yellow-900">{tp('system.warning_title')}</p>
                           <p className="text-sm text-yellow-800 mt-1">
                             {tp('system.warning_text')}
                           </p>
+                          <button
+                            type="button"
+                            onClick={() => setShowBroadcast(true)}
+                            className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-600 text-white text-sm rounded-lg hover:bg-yellow-700"
+                          >
+                            <Bell className="w-4 h-4" />
+                            Foydalanuvchilarga ogohlantirish yuborish
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1071,6 +1128,109 @@ export default function SettingsPanel() {
         onClose={() => setShowBackupList(false)}
         onChange={refreshStatus}
       />
+
+      {/* Broadcast modal */}
+      <AnimatePresence>
+        {showBroadcast && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => !broadcastSending && setShowBroadcast(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-6 border-b border-gray-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-yellow-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Ogohlantirish yuborish</h3>
+                  <p className="text-sm text-gray-500">Barcha faol foydalanuvchilarga</p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Sarlavha</label>
+                  <input
+                    type="text"
+                    maxLength={200}
+                    value={broadcastTitle}
+                    onChange={(e) => setBroadcastTitle(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0]"
+                    placeholder="Masalan: Texnik xizmat ko'rsatish"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Xabar matni</label>
+                  <textarea
+                    rows={5}
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1A56A0] resize-none"
+                    placeholder="Hurmatli foydalanuvchi, ertaga 02:00 dan 04:00 gacha tizim texnik xizmat ko'rsatiladi..."
+                  />
+                  <p className="text-xs text-gray-500">{broadcastMessage.length} belgi</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Yuborish kanallari</label>
+                  <div className="space-y-2">
+                    {[
+                      { key: 'in_app' as const, label: 'Ilova ichida (bell)', desc: 'Barcha foydalanuvchilarga' },
+                      { key: 'email' as const, label: 'Email', desc: 'Email manzili bor foydalanuvchilarga' },
+                      { key: 'telegram' as const, label: 'Telegram', desc: 'Telegram ulangan foydalanuvchilarga' },
+                    ].map(({ key, label, desc }) => (
+                      <label key={key} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={broadcastChannels[key]}
+                          onChange={(e) => setBroadcastChannels({ ...broadcastChannels, [key]: e.target.checked })}
+                          className="w-4 h-4"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{label}</p>
+                          <p className="text-xs text-gray-500">{desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcast(false)}
+                  disabled={broadcastSending}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="button"
+                  onClick={sendBroadcast}
+                  disabled={broadcastSending}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50"
+                >
+                  {broadcastSending
+                    ? <RefreshCw className="w-4 h-4 animate-spin" />
+                    : <Bell className="w-4 h-4" />}
+                  Yuborish
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

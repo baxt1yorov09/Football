@@ -162,8 +162,8 @@ class AdminOfflineApplicationCreateSerializer(serializers.Serializer):
 
 class ApplicationAdminSerializer(serializers.ModelSerializer):
     """Application serializer for admin users"""
-    user_name = serializers.CharField(source='user.full_name', read_only=True)
-    user_phone = serializers.CharField(source='user.phone', read_only=True)
+    user_name = serializers.SerializerMethodField()
+    user_phone = serializers.SerializerMethodField()
     user_email = serializers.CharField(source='user.email', read_only=True)
     license_type_name = serializers.CharField(source='license_type.name_uz', read_only=True)
     license_type_code = serializers.CharField(source='license_type.code', read_only=True)
@@ -189,7 +189,24 @@ class ApplicationAdminSerializer(serializers.ModelSerializer):
             'admin_note', 'rejection_reason', 'submitted_at', 'reviewed_at',
             'reviewed_by', 'reviewed_by_name', 'documents_count', 'documents', 'timeline'
         ]
-    
+
+    def get_user_name(self, obj):
+        """Arizadagi full_name'ni avval ko'rsatadi, keyin user profilidan oladi"""
+        if obj.full_name:
+            return obj.full_name
+        user = obj.user
+        if user.full_name:
+            return user.full_name
+        if user.first_name or user.last_name:
+            return f"{user.first_name or ''} {user.last_name or ''}".strip()
+        return 'Ism kiritilmagan'
+
+    def get_user_phone(self, obj):
+        """Arizadagi phone'ni avval ko'rsatadi, keyin user profilidan oladi"""
+        if obj.phone:
+            return obj.phone
+        return obj.user.phone
+
     def get_documents_count(self, obj):
         return obj.document_set.count() if hasattr(obj, 'document_set') else 0
     

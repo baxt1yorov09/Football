@@ -67,11 +67,13 @@ def _get_user_pref(user, category: str):
                 'in_app': bool(pref.in_app_enabled),
                 'email': bool(pref.email_enabled),
                 'telegram': bool(pref.telegram_enabled),
+                # SMS alohida bayroq emas — email bilan bir xil ishlaydi
+                'sms': bool(pref.email_enabled),
             }
     except Exception as e:
         logger.warning(f"NotificationPreference o'qishda xato: {e}")
     # Default — hammasi yoqilgan (preference yaratilmagan bo'lsa)
-    return {'in_app': True, 'email': True, 'telegram': True}
+    return {'in_app': True, 'email': True, 'telegram': True, 'sms': True}
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -115,6 +117,48 @@ def _create_web_notification(user, notif_type: str, title: str, message: str) ->
     )
 
 
+def _send_email(user, subject: str, message: str, html_message: Optional[str] = None) -> dict:
+    """Foydalanuvchi emailiga xabar yuborish."""
+    email = getattr(user, 'email', None)
+    if not email:
+        return {'success': False, 'error': 'no_email'}
+    try:
+        from django.core.mail import send_mail
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+            recipient_list=[email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        return {'success': True}
+    except Exception as e:
+        logger.exception(f"Email yuborish xatosi: {e}")
+        return {'success': False, 'error': str(e)}
+
+
+def _build_email_html(title: str, message: str) -> str:
+    """Chiroyli HTML email shabloni."""
+    web_url = (getattr(settings, 'WEB_APP_URL', 'http://localhost:3000') or '').rstrip('/')
+    return (
+        f'<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;'
+        f'border:1px solid #E5E7EB;border-radius:12px;background:#FFFFFF">'
+        f'<div style="text-align:center;margin-bottom:20px">'
+        f'<h1 style="color:#0D3B6E;margin:0;font-size:20px">O\'zbekiston Murabbiylar ta\'limi</h1>'
+        f'</div>'
+        f'<h2 style="color:#0D3B6E;margin:0 0 12px;font-size:18px">{title}</h2>'
+        f'<div style="color:#374151;line-height:1.6;white-space:pre-wrap">{message}</div>'
+        f'<div style="margin-top:24px;padding-top:16px;border-top:1px solid #E5E7EB">'
+        f'<a href="{web_url}" style="display:inline-block;padding:10px 20px;background:#1A56A0;'
+        f'color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600">Tizimga kirish</a>'
+        f'</div>'
+        f'<p style="color:#9CA3AF;font-size:12px;margin-top:20px;margin-bottom:0">'
+        f'Bu avtomatik yuborilgan xabar. Iltimos, javob bermang.</p>'
+        f'</div>'
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────
 # CORE SERVICE
 # ─────────────────────────────────────────────────────────────────────
@@ -134,11 +178,13 @@ class NotificationService:
         telegram_keyboard: Optional[dict] = None,
         web_title: Optional[str] = None,
         web_message: Optional[str] = None,
+        email_subject: Optional[str] = None,
+        email_text: Optional[str] = None,
     ):
         """Barcha kanallarga yuborib, har birini DB ga log qiladi.
 
         Foydalanuvchining NotificationPreference sozlamalariga rioya qiladi:
-        - email_enabled → SMS / Email kanali
+        - email_enabled → Email + SMS kanali
         - telegram_enabled → Telegram kanali
         - in_app_enabled → Web bell (DB notification)
         """
@@ -148,18 +194,30 @@ class NotificationService:
         # User'ning ushbu kategoriya uchun preferens'ini olish
         category = _EVENT_TO_PREF_CATEGORY.get(notif_type)
         prefs = _get_user_pref(user, category) if category else {
-            'in_app': True, 'email': True, 'telegram': True,
+            'in_app': True, 'email': True, 'telegram': True, 'sms': True,
         }
 
-        # 1. SMS (email_enabled bayrog'i SMS/email kanaliga mos)
-        if sms_text and getattr(user, 'phone', None) and prefs.get('email', True):
+        # 1. SMS (email_enabled bayrog'iga bog'liq)
+        if sms_text and getattr(user, 'phone', None) and prefs.get('sms', True):
             res = _send_sms(user.phone, sms_text)
             if not res.get('success'):
                 logger.warning(f"SMS muvaffaqiyatsiz [{notif_type}]: {res.get('error')}")
-        elif sms_text and not prefs.get('email', True):
+        elif sms_text and not prefs.get('sms', True):
             logger.debug(f"SMS skipped (pref off) [{notif_type}] user={user.id}")
 
-        # 2. Telegram
+        # 2. Email (email_enabled bayrog'iga bog'liq)
+        # Agar email_subject/text berilmagan bo'lsa, web_title/message'dan foydalanamiz
+        eff_subject = email_subject or web_title
+        eff_body = email_text or web_message
+        if eff_subject and eff_body and getattr(user, 'email', None) and prefs.get('email', True):
+            html_body = _build_email_html(eff_subject, eff_body)
+            res = _send_email(user, eff_subject, eff_body, html_body)
+            if not res.get('success'):
+                logger.warning(f"Email muvaffaqiyatsiz [{notif_type}]: {res.get('error')}")
+        elif eff_subject and not prefs.get('email', True):
+            logger.debug(f"Email skipped (pref off) [{notif_type}] user={user.id}")
+
+        # 3. Telegram
         if telegram_text and prefs.get('telegram', True):
             res = _send_telegram(user, telegram_text, telegram_keyboard)
             if not res.get('success'):
@@ -167,7 +225,7 @@ class NotificationService:
         elif telegram_text and not prefs.get('telegram', True):
             logger.debug(f"Telegram skipped (pref off) [{notif_type}] user={user.id}")
 
-        # 3. Web Bell
+        # 4. Web Bell
         if web_title and web_message and prefs.get('in_app', True):
             try:
                 _create_web_notification(user, notif_type, web_title, web_message)

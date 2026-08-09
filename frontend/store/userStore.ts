@@ -30,7 +30,11 @@ export const useUserStore = create<UserState>()(
       setUser: (user) => set({ user }),
       clearUser: () => set({ user: null }),
       updateUser: (fields) => set((state) => ({
-        user: state.user ? { ...state.user, ...fields } : null,
+        // Agar user hali yaratilmagan bo'lsa ham qisman ma'lumotni saqlash
+        // (masalan, profil sahifasida rasm yuklanganida avatar_url ni saqlash).
+        user: state.user
+          ? { ...state.user, ...fields }
+          : ({ ...fields } as User),
       })),
     }),
     { name: 'ufa-user' }

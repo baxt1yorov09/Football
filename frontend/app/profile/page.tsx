@@ -13,6 +13,7 @@ import { PhoneChangeModal } from '@/components/profile/PhoneChangeModal';
 import { AvatarCropModal } from '@/components/profile/AvatarCropModal';
 import { AddLicenseModal } from '@/components/licenses/AddLicenseModal';
 import { useI18n } from '@/lib/i18n/I18nProvider';
+import { useUserStore } from '@/store/userStore';
 
 interface UserProfile {
   id: string;
@@ -40,6 +41,7 @@ interface License {
 
 export default function ProfilePage() {
   const { t, locale } = useI18n();
+  const updateUser = useUserStore((s) => s.updateUser);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [licenses, setLicenses] = useState<License[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -134,11 +136,28 @@ export default function ProfilePage() {
         headers: { 'Content-Type': undefined },
       });
       setProfile(prev => prev ? { ...prev, avatar_url: res.data.avatar_url } : prev);
+      // Header va boshqa joylardagi user avatar'ini yangilash uchun global store
+      updateUser({ avatar_url: res.data.avatar_url });
     } catch {
       console.error('Rasm yuklanmadi');
     } finally {
       setAvatarUploading(false);
       setShowAvatarModal(false);
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!profile?.avatar_url) return;
+    if (!window.confirm("Profil rasmini olib tashlashni tasdiqlaysizmi?")) return;
+    setAvatarUploading(true);
+    try {
+      await apiClient.delete('/users/me/avatar/');
+      setProfile(prev => prev ? { ...prev, avatar_url: null } : prev);
+      updateUser({ avatar_url: null });
+    } catch {
+      console.error("Rasmni olib tashlashda xatolik");
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -219,9 +238,22 @@ export default function ProfilePage() {
                       size="sm"
                       className="absolute bottom-2 right-0 rounded-full w-8 h-8 p-0"
                       onClick={() => setShowAvatarModal(true)}
+                      disabled={avatarUploading}
+                      title={profile.avatar_url ? "Rasmni almashtirish" : "Rasm qo'shish"}
                     >
                       {avatarUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                     </Button>
+                    {profile.avatar_url && !avatarUploading && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute bottom-2 left-0 rounded-full w-8 h-8 p-0 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        onClick={handleAvatarRemove}
+                        title="Rasmni olib tashlash"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                   <CardTitle className="text-xl">{profile.full_name}</CardTitle>
                   <Badge className={profile.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>

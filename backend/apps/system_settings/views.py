@@ -215,33 +215,28 @@ class RunBackupNowView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        from .tasks import create_backup_file, cleanup_old_backups
+        result = create_backup_file()
+        if not result.get('success'):
+            return Response(
+                {'detail': f"Backup xatolik: {result.get('error')}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # Eski backuplarni tozalash
         try:
-            backup_dir = Path(django_settings.BASE_DIR) / 'backups'
-            backup_dir.mkdir(exist_ok=True)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            sysconf = SystemSettings.load()
+            deleted = cleanup_old_backups(sysconf.max_backups or 10)
+        except Exception:
+            deleted = 0
 
-            db_config = django_settings.DATABASES['default']
-            db_engine = db_config.get('ENGINE', '')
-
-            if 'sqlite' in db_engine:
-                src = Path(db_config['NAME'])
-                if not src.exists():
-                    return Response({'detail': 'Ma\'lumotlar bazasi fayli topilmadi'}, status=500)
-                dest = backup_dir / f'backup_{timestamp}.sqlite3'
-                shutil.copy2(src, dest)
-                size_mb = round(dest.stat().st_size / (1024 * 1024), 2)
-                return Response({
-                    'detail': 'Backup muvaffaqiyatli yaratildi',
-                    'file': str(dest.name),
-                    'size_mb': size_mb,
-                    'created_at': timezone.now().isoformat(),
-                })
-            else:
-                return Response({
-                    'detail': 'Bu ma\'lumotlar bazasi turi uchun avtomatik backup qo\'llab-quvvatlanmaydi. Manual backup qiling.',
-                }, status=400)
-        except Exception as e:
-            return Response({'detail': f'Backup xatolik: {str(e)}'}, status=500)
+        return Response({
+            'detail': 'Backup muvaffaqiyatli yaratildi',
+            'file': result['file'],
+            'size_mb': result['size_mb'],
+            'old_deleted': deleted,
+            'created_at': timezone.now().isoformat(),
+        })
 
 
 class CleanLogsView(APIView):
@@ -404,3 +399,119 @@ class SystemStatusView(APIView):
             })
         except Exception as e:
             return Response({'detail': f'Xatolik: {str(e)}'}, status=500)
+
+
+class BroadcastNotificationView(APIView):
+    """Barcha faol foydalanuvchilarga ogohlantirish yuborish (faqat admin).
+
+    Body:
+      - title: str (required, max 200)
+      - message: str (required)
+      - channels: list[str] (optional) — ['in_app', 'email', 'telegram'], default hammasi
+
+    Notification kanallari:
+      - in_app: DB'ga saqlanadi, bell ikonkasida chiqadi
+      - email: Foydalanuvchi emailiga yuboriladi (agar email bor bo'lsa)
+      - telegram: TelegramUser linked bo'lgan foydalanuvchilarga yuboriladi
+    """
+    permission_classes = [IsAuthenticated]
+
+    ALLOWED_CHANNELS = ('in_app', 'email', 'telegram')
+
+    def post(self, request):
+        if not _is_admin(request.user):
+            return Response(
+                {'detail': 'Faqat administratorlar uchun'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        title = (request.data.get('title') or '').strip()
+        message = (request.data.get('message') or '').strip()
+        channels = request.data.get('channels') or list(self.ALLOWED_CHANNELS)
+
+        if not title or not message:
+            return Response(
+                {'detail': "Sarlavha va matn to'ldirilishi shart"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(title) > 200:
+            return Response(
+                {'detail': "Sarlavha 200 belgidan oshmasligi kerak"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not isinstance(channels, list):
+            return Response(
+                {'detail': "channels massiv bo'lishi kerak"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        channels = [c for c in channels if c in self.ALLOWED_CHANNELS]
+        if not channels:
+            return Response(
+                {'detail': "Kamida bitta kanal tanlash kerak"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Ro'yxatlangan barcha faol foydalanuvchilar (o'zidan tashqari)
+        from apps.users.models import User
+        from apps.notifications.models import Notification, TelegramUser
+
+        users_qs = User.objects.filter(is_active=True, notifications_enabled=True).exclude(id=request.user.id)
+        total_users = users_qs.count()
+
+        stats = {'in_app': 0, 'email': 0, 'telegram': 0, 'errors': 0}
+
+        # 1. In-app bulk yaratish (tez)
+        if 'in_app' in channels:
+            try:
+                Notification.objects.bulk_create([
+                    Notification(user=u, type='admin_alert', title=title, message=message)
+                    for u in users_qs.only('id')
+                ])
+                stats['in_app'] = total_users
+            except Exception:
+                stats['errors'] += 1
+
+        # 2. Email — DEFAULT_FROM_EMAIL sozlangan bo'lsa
+        if 'email' in channels:
+            from django.core.mail import send_mass_mail
+            from apps.notifications.service import _build_email_html
+            try:
+                emails = list(users_qs.exclude(email='').exclude(email__isnull=True).values_list('email', flat=True))
+                if emails:
+                    html_body = _build_email_html(title, message)
+                    from django.core.mail import EmailMultiAlternatives
+                    from django.conf import settings as dj_settings
+                    from_email = getattr(dj_settings, 'DEFAULT_FROM_EMAIL', None)
+                    sent = 0
+                    for email in emails:
+                        try:
+                            msg = EmailMultiAlternatives(title, message, from_email, [email])
+                            msg.attach_alternative(html_body, 'text/html')
+                            msg.send(fail_silently=True)
+                            sent += 1
+                        except Exception:
+                            stats['errors'] += 1
+                    stats['email'] = sent
+            except Exception:
+                stats['errors'] += 1
+
+        # 3. Telegram
+        if 'telegram' in channels:
+            from apps.notifications.service import _send_telegram
+            tg_users = users_qs.filter(telegram_user__is_active=True, telegram_user__notifications_enabled=True)
+            sent = 0
+            for u in tg_users.only('id'):
+                try:
+                    res = _send_telegram(u, f"⚠️ *{title}*\n\n{message}")
+                    if res.get('success'):
+                        sent += 1
+                except Exception:
+                    stats['errors'] += 1
+            stats['telegram'] = sent
+
+        return Response({
+            'detail': f"{total_users} ta foydalanuvchiga xabar yuborildi",
+            'total_users': total_users,
+            'stats': stats,
+            'channels': channels,
+        })

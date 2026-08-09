@@ -1,5 +1,9 @@
 from django.urls import path
-from .views import LicenseListView, LicenseTypeListView, license_verification, PublicLicenseListView, SelfLicenseCreateView
+from .views import (
+    LicenseListView, LicenseTypeListView, license_verification,
+    PublicLicenseListView, SelfLicenseCreateView, download_license_file,
+    delete_self_license,
+)
 from .admin_views import (
     AdminLicenseStatsView,
     AdminLicenseListView,
@@ -29,6 +33,14 @@ urlpatterns = [
     # Public verification (QR kod orqali)
     path('verify/<uuid:license_id>/', license_verification, name='license-verify'),
     path('verify/<uuid:license_id>',  license_verification),
+
+    # Litsenziya PDF/rasmini yuklab olish (foydalanuvchi o'ziga tegishli yoki admin)
+    path('<uuid:license_id>/pdf/', download_license_file, name='license-download'),
+    path('<uuid:license_id>/pdf',  download_license_file),
+
+    # Foydalanuvchi o'zi qo'shgan litsenziyani o'chirish
+    path('self/<uuid:license_id>/', delete_self_license, name='license-self-delete'),
+    path('self/<uuid:license_id>',  delete_self_license),
 
     # ── Admin endpoints ────────────────────────
     # Trailing-slash bilan va u'siz ikkala variant (Next.js rewrite uchun)

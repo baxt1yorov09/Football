@@ -22,6 +22,30 @@ from utils.email_service import send_email_otp
 from django.conf import settings
 
 
+def _issue_tokens_for_user(user):
+    """
+    JWT tokenlarni yaratadi va SystemSettings.session_timeout_minutes ga
+    muvofiq access token muddatini dinamik sozlaydi.
+    """
+    from datetime import timedelta as td
+    refresh = RefreshToken.for_user(user)
+
+    try:
+        from apps.system_settings.models import SystemSettings
+        s = SystemSettings.load()
+        minutes = int(s.session_timeout_minutes or 30)
+        if minutes < 5:
+            minutes = 5
+        if minutes > 1440:
+            minutes = 1440
+        # Access token exp claim'ini qayta hisoblash
+        access = refresh.access_token
+        access.set_exp(lifetime=td(minutes=minutes))
+        return str(access), str(refresh)
+    except Exception:
+        return str(refresh.access_token), str(refresh)
+
+
 def _mask_email(email: str) -> str:
     """Foydalanuvchiga ko'rsatish uchun email manzilni yashirish (a****@gmail.com)."""
     if not email or '@' not in email:
@@ -144,6 +168,8 @@ class VerifyOTPView(APIView):
         }
     )
     def post(self, request):
+        from apps.system_settings.models import LoginAttempt
+
         serializer = OTPSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -154,6 +180,20 @@ class VerifyOTPView(APIView):
         phone = serializer.validated_data['phone']
         code = serializer.validated_data['code']
 
+        # IP manzilni olish
+        ip = (
+            request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+            or request.META.get('REMOTE_ADDR')
+        )
+
+        # ── Brute-force himoyasi: bloklangan yoki yo'qligini tekshirish ──
+        is_blocked, remaining_minutes = LoginAttempt.is_blocked(phone)
+        if is_blocked:
+            return Response(
+                {'error': f"Juda ko'p noto'g'ri urinish. {remaining_minutes} daqiqadan keyin qayta urinib ko'ring."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
         # Verify OTP
         try:
             otp = OTPCode.objects.filter(
@@ -163,6 +203,8 @@ class VerifyOTPView(APIView):
                 expires_at__gt=timezone.now()
             ).latest('created_at')
         except OTPCode.DoesNotExist:
+            # Muvaffaqiyatsiz urinishni qayd etish
+            LoginAttempt.record_attempt(phone, ip=ip, success=False)
             return Response(
                 {'error': "Noto'g'ri yoki muddati o'tgan kod"},
                 status=status.HTTP_400_BAD_REQUEST
@@ -194,6 +236,26 @@ class VerifyOTPView(APIView):
             user.email = otp.email
             user.save(update_fields=['email'])
 
+        # ── O'chirilgan hisob tekshiruvi ──────────────────────────
+        # Agar hisob soft-delete qilingan bo'lsa, 30 kun ichida tiklash imkoniyati
+        if user.deleted_at:
+            from datetime import timedelta as td
+            days_since_deleted = (timezone.now() - user.deleted_at).days
+            if days_since_deleted > 30:
+                # 30 kundan oshgan — tiklash mumkin emas
+                return Response(
+                    {'error': "Hisobingiz butunlay o'chirilgan va tiklab bo'lmaydi."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            # Tiklash imkoniyati bor — frontend'ga signal yuboramiz
+            return Response({
+                'account_deleted': True,
+                'deleted_at': user.deleted_at.isoformat(),
+                'days_left': 30 - days_since_deleted,
+                'restore_token': str(user.id),  # oddiy identifikator
+                'message': f"Hisobingiz o'chirilgan. {30 - days_since_deleted} kun ichida tiklash mumkin.",
+            }, status=status.HTTP_200_OK)
+
         # ── 2FA gate ─────────────────────────────────────────────
         # Agar foydalanuvchi 2FA yoqgan bo'lsa, JWT tokenlar BERILMAYDI.
         # Buning o'rniga vaqtinchalik `two_factor_token` qaytariladi va
@@ -206,8 +268,11 @@ class VerifyOTPView(APIView):
                 'expires_in': TWO_FACTOR_TOKEN_TTL,
             }, status=status.HTTP_200_OK)
 
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
+        # Muvaffaqiyatli login — urinishni qayd etish
+        LoginAttempt.record_attempt(phone, ip=ip, success=True)
+
+        # Generate JWT tokens (dinamik session timeout bilan)
+        access, refresh = _issue_tokens_for_user(user)
 
         # last_login ni yangilash (Django auto-update faqat login() chaqirilganda ishlaydi,
         # biz esa to'g'ridan-to'g'ri JWT bermoqdamiz — qo'lda yangilaymiz)
@@ -218,8 +283,8 @@ class VerifyOTPView(APIView):
         user_serializer = UserProfileSerializer(user)
 
         return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
+            'access': access,
+            'refresh': refresh,
             'user': user_serializer.data,
             'is_new_user': is_new_user
         }, status=status.HTTP_200_OK)
@@ -265,15 +330,15 @@ class TwoFactorLoginView(APIView):
                     )
                 used_recovery = True
 
-        refresh = RefreshToken.for_user(user)
+        access, refresh = _issue_tokens_for_user(user)
         # last_login ni yangilash — 2FA muvaffaqiyatli o'tdi
         user.last_login = timezone.now()
         user.save(update_fields=['last_login'])
 
         user_serializer = UserProfileSerializer(user)
         return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
+            'access': access,
+            'refresh': refresh,
             'user': user_serializer.data,
             'is_new_user': not user.is_onboarded,
             'used_recovery_code': bool(locals().get('used_recovery')),
@@ -343,6 +408,8 @@ class AdminLoginView(APIView):
         }
     )
     def post(self, request):
+        from apps.system_settings.models import LoginAttempt
+
         email = request.data.get('email', '').strip().lower()
         password = request.data.get('password', '')
 
@@ -350,6 +417,21 @@ class AdminLoginView(APIView):
             return Response(
                 {'detail': 'Email va parol kiritish shart'},
                 status=400
+            )
+
+        # IP manzilni olish
+        ip = (
+            request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+            or request.META.get('REMOTE_ADDR')
+        )
+
+        # ── Brute-force himoyasi ──
+        # Admin login uchun email asosida tekshiramiz
+        is_blocked, remaining_minutes = LoginAttempt.is_blocked(email)
+        if is_blocked:
+            return Response(
+                {'detail': f"Juda ko'p noto'g'ri urinish. {remaining_minutes} daqiqadan keyin qayta urinib ko'ring."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
         # Email orqali userni topamiz.
@@ -381,21 +463,26 @@ class AdminLoginView(APIView):
                 break
 
         if not user_obj:
+            # Muvaffaqiyatsiz urinishni qayd etish
+            LoginAttempt.record_attempt(email, ip=ip, success=False)
             return Response(
                 {'detail': 'Email yoki parol noto\'g\'ri'},
                 status=401
             )
 
-        # JWT token yaratish
-        refresh = RefreshToken.for_user(user_obj)
+        # Muvaffaqiyatli login
+        LoginAttempt.record_attempt(email, ip=ip, success=True)
+
+        # JWT token yaratish (dinamik session timeout bilan)
+        access, refresh = _issue_tokens_for_user(user_obj)
 
         # last_login ni yangilash (admin paneldagi "Oxirgi kirish" ustuni uchun)
         user_obj.last_login = timezone.now()
         user_obj.save(update_fields=['last_login'])
 
         return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
+            'access': access,
+            'refresh': refresh,
             'user': {
                 'id': str(user_obj.id),
                 'full_name': user_obj.full_name,
@@ -629,3 +716,56 @@ class AdminResetPasswordView(APIView):
             pass
 
         return Response({'detail': "Parol muvaffaqiyatli yangilandi"})
+
+
+class RestoreAccountView(APIView):
+    """O'chirilgan hisobni tiklash (30 kun ichida)."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        restore_token = (request.data.get('restore_token') or '').strip()
+        if not restore_token:
+            return Response(
+                {'error': 'restore_token kiritilishi shart'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(id=restore_token)
+        except (User.DoesNotExist, ValueError):
+            return Response(
+                {'error': "Foydalanuvchi topilmadi"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not user.deleted_at:
+            return Response(
+                {'error': "Bu hisob o'chirilmagan"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        days_since_deleted = (timezone.now() - user.deleted_at).days
+        if days_since_deleted > 30:
+            return Response(
+                {'error': "Hisobingiz butunlay o'chirilgan va tiklab bo'lmaydi."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Hisobni tiklash
+        user.is_active = True
+        user.deleted_at = None
+        user.save(update_fields=['is_active', 'deleted_at'])
+
+        # JWT tokenlar berish (dinamik session timeout bilan)
+        access, refresh = _issue_tokens_for_user(user)
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
+        user_serializer = UserProfileSerializer(user, context={'request': request})
+
+        return Response({
+            'access': access,
+            'refresh': refresh,
+            'user': user_serializer.data,
+            'message': "Hisobingiz muvaffaqiyatli tiklandi!",
+        }, status=status.HTTP_200_OK)

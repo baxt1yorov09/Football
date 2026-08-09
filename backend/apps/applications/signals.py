@@ -194,7 +194,7 @@ O'zbekiston Futbol Assotsiatsiyasi
             fail_silently=True,
         )
     except Exception as e:
-        print(f"Email sending failed: {e}")
+        logging.getLogger(__name__).warning(f"Email sending failed: {e}")
 
 
 def send_timeline_notification(timeline):
@@ -241,4 +241,4 @@ O'zbekiston Futbol Assotsiatsiyasi
             fail_silently=True,
         )
     except Exception as e:
-        print(f"Timeline email sending failed: {e}")
+        logging.getLogger(__name__).warning(f"Timeline email sending failed: {e}")

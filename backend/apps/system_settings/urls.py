@@ -4,6 +4,7 @@ from .views import (
     RunBackupNowView, CleanLogsView, SystemStatusView,
     BackupListView, BackupDownloadView, BackupDeleteView,
     MaintenanceStatusView, ContactMessageView,
+    BroadcastNotificationView,
 )
 
 urlpatterns = [
@@ -15,6 +16,8 @@ urlpatterns = [
     path('backup-now/', RunBackupNowView.as_view()),
     path('clean-logs', CleanLogsView.as_view(), name='clean-logs'),
     path('clean-logs/', CleanLogsView.as_view()),
+    path('broadcast', BroadcastNotificationView.as_view(), name='broadcast-notification'),
+    path('broadcast/', BroadcastNotificationView.as_view()),
     path('status', SystemStatusView.as_view(), name='system-status'),
     path('status/', SystemStatusView.as_view()),
     # Backup management

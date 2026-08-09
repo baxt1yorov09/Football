@@ -103,11 +103,16 @@ export function OTPInput({ phone, emailMasked, onSubmit, onResend, onBack }: OTP
       <h2 className="text-xl font-bold text-[#0D3B6E] mb-2">
         Tasdiqlash kodini kiriting
       </h2>
-      <p className="text-gray-600 text-sm mb-6">
+      <p className={`text-gray-600 text-sm ${emailMasked ? 'mb-2' : 'mb-6'}`}>
         {emailMasked
           ? <>Kod <span className="font-semibold">{emailMasked}</span> manziliga yuborildi</>
           : <>{formatPhone(phone)} raqamiga kod yuborildi</>}
       </p>
+      {emailMasked && (
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
+          💡 Kod yetib bormadimi? <span className="font-medium">Spam</span> yoki <span className="font-medium">Junk</span> papkasini tekshiring.
+        </p>
+      )}
 
       {/* OTP Boxes */}
       <div className="flex justify-center gap-3 mb-6">

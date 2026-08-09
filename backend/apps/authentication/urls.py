@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     SendOTPView, VerifyOTPView, UserProfileView, LogoutView,
     RegionsListView, AdminLoginView, TwoFactorLoginView,
-    AdminForgotPasswordView, AdminResetPasswordView,
+    AdminForgotPasswordView, AdminResetPasswordView, RestoreAccountView,
 )
 
 urlpatterns = [
@@ -37,4 +37,8 @@ urlpatterns = [
     path('admin/forgot-password/', AdminForgotPasswordView.as_view()),
     path('admin/reset-password', AdminResetPasswordView.as_view(), name='admin-reset-password'),
     path('admin/reset-password/', AdminResetPasswordView.as_view()),
+
+    # O'chirilgan hisobni tiklash
+    path('restore-account', RestoreAccountView.as_view(), name='restore-account'),
+    path('restore-account/', RestoreAccountView.as_view()),
 ]

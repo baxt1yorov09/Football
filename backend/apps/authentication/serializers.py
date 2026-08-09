@@ -40,14 +40,30 @@ class OTPSerializer(serializers.Serializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile"""
+    avatar_url = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
-            'id', 'phone', 'full_name', 'birth_date', 'gender', 
+            'id', 'phone', 'full_name', 'birth_date', 'gender',
             'region', 'avatar_url', 'workplace', 'role', 'is_active',
             'is_onboarded', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'phone', 'role', 'is_active', 'is_onboarded', 'created_at', 'updated_at']
+
+    def get_avatar_url(self, obj):
+        # Yuklangan avatar bo'lsa, absolute URL va cache-buster bilan qaytaramiz
+        request = self.context.get('request')
+        if obj.avatar:
+            try:
+                url = request.build_absolute_uri(obj.avatar.url) if request else obj.avatar.url
+            except Exception:
+                return obj.avatar_url or None
+            ts = int((obj.updated_at.timestamp() if obj.updated_at else 0))
+            sep = '&' if '?' in url else '?'
+            return f"{url}{sep}v={ts}"
+        # Legacy URL fallback
+        return obj.avatar_url or None
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
