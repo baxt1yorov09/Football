@@ -40,6 +40,9 @@ services:
       - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-noreply@ufa.uz}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - WEB_APP_URL=${WEB_APP_URL:-http://localhost:3000}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     volumes:
       - backend_media:/app/media
       - backend_static:/app/staticfiles
@@ -70,6 +73,9 @@ services:
       - DATABASE_URL=postgresql://uff_user:${DB_PASSWORD:-uff_password}@db:5432/uff_license
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     volumes:
       - backend_media:/app/media
     restart: unless-stopped
@@ -85,6 +91,9 @@ services:
       - DATABASE_URL=postgresql://uff_user:${DB_PASSWORD:-uff_password}@db:5432/uff_license
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     restart: unless-stopped
 
   nginx:
