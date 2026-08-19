@@ -1,0 +1,67 @@
+[
+{
+  "model": "users.region",
+  "pk": 1,
+  "fields": {"name_uz": "Toshkent shahri", "name_ru": null, "code": "TZ", "is_tashkent": true}
+},
+{
+  "model": "users.region",
+  "pk": 2,
+  "fields": {"name_uz": "Toshkent viloyati", "name_ru": null, "code": "TV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 3,
+  "fields": {"name_uz": "Samarqand viloyati", "name_ru": null, "code": "SV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 4,
+  "fields": {"name_uz": "Farg'ona viloyati", "name_ru": null, "code": "FV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 5,
+  "fields": {"name_uz": "Andijon viloyati", "name_ru": null, "code": "AV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 6,
+  "fields": {"name_uz": "Namangan viloyati", "name_ru": null, "code": "NV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 7,
+  "fields": {"name_uz": "Buxoro viloyati", "name_ru": null, "code": "BV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 8,
+  "fields": {"name_uz": "Xorazm viloyati", "name_ru": null, "code": "XV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 9,
+  "fields": {"name_uz": "Qashqadaryo viloyati", "name_ru": null, "code": "QV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 10,
+  "fields": {"name_uz": "Surxondaryo viloyati", "name_ru": null, "code": "SR", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 11,
+  "fields": {"name_uz": "Jizzax viloyati", "name_ru": null, "code": "JV", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 12,
+  "fields": {"name_uz": "Sirdaryo viloyati", "name_ru": null, "code": "SD", "is_tashkent": false}
+},
+{
+  "model": "users.region",
+  "pk": 13,
+  "fields": {"name_uz": "Qoraqalpog'iston Respublikasi", "name_ru": null, "code": "QR", "is_tashkent": false}
+}
+]
