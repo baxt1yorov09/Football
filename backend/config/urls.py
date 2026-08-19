@@ -18,13 +18,13 @@ def api_info(request):
             'documents': '/api/documents/',
             'notifications': '/api/notifications/',
             'reports': '/api/reports/',
-            'admin': '/admin/'
+            'admin': '/django-admin/'
         }
     })
 
 urlpatterns = [
     path('', api_info, name='api-info'),
-    path('admin/', admin.site.urls),
+    path('django-admin/', admin.site.urls),
     path('api/auth/', include('apps.authentication.urls')),
     path('api/admin/login', AdminLoginView.as_view(), name='admin-login-direct'),
     path('api/users/', include('apps.users.urls')),
