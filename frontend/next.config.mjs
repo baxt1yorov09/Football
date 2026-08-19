@@ -1,34 +1,21 @@
 /** @type {import('next').NextConfig} */
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
 const nextConfig = {
   // ESLint uslub xatolari production build'ni bloklamasligi uchun.
-  // Kod TypeScript jihatdan to'liq tekshirilgan (tsc --noEmit toza).
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Force HTTP in development
+  output: 'standalone',
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://127.0.0.1:8000/api/:path*',
+        destination: `${API_URL}/api/:path*`,
       },
       {
         source: '/media/:path*',
-        destination: 'http://127.0.0.1:8000/media/:path*',
-      },
-    ];
-  },
-  // Disable HTTPS redirect
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Strict-Transport-Security',
-            value: '', // Disable HSTS in dev
-          },
-        ],
+        destination: `${API_URL}/media/:path*`,
       },
     ];
   },

@@ -146,6 +146,15 @@ class SystemSettingsView(APIView):
                 {'detail': 'Faqat administratorlar tizim sozlamalarini o\'zgartira oladi'},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
+        # Maintenance mode — faqat super_admin boshqara oladi
+        if 'maintenance_mode' in request.data:
+            if getattr(request.user, 'role', None) != 'super_admin':
+                return Response(
+                    {'detail': "Texnik xizmat rejimini faqat Super Admin yoqishi yoki o'chirishi mumkin"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         settings_obj = SystemSettings.load()
         serializer = SystemSettingsSerializer(settings_obj, data=request.data, partial=True)
         if serializer.is_valid():

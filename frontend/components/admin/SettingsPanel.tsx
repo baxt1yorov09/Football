@@ -45,6 +45,7 @@ interface UserProfile {
   language?: string;
   theme?: string;
   two_factor_enabled?: boolean;
+  role?: string;
 }
 
 interface SystemStatus {
@@ -205,6 +206,7 @@ export default function SettingsPanel() {
           language: profile?.language || 'uz',
           theme: profile?.theme || 'light',
           two_factor_enabled: !!profile?.two_factor_enabled,
+          role: profile?.role,
         });
         setSystemStatus(statusData);
       } catch (err: any) {
@@ -821,14 +823,27 @@ export default function SettingsPanel() {
                     </div>
 
                     <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-xl">
-                      <div>
-                        <p className="font-medium text-orange-900">{tp('system.maintenance_title')}</p>
+                      <div className="flex-1 pr-4">
+                        <p className="font-medium text-orange-900">
+                          {tp('system.maintenance_title')}
+                          {settings.maintenance_mode && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                              Yoqilgan
+                            </span>
+                          )}
+                        </p>
                         <p className="text-sm text-orange-800 mt-1">
                           {tp('system.maintenance_desc')}
                         </p>
+                        {userProfile.role !== 'super_admin' && (
+                          <p className="text-xs text-orange-700 mt-2 italic">
+                            ⚠️ Bu sozlamani faqat Super Admin o'zgartira oladi
+                          </p>
+                        )}
                       </div>
                       <Toggle
                         enabled={settings.maintenance_mode}
+                        disabled={userProfile.role !== 'super_admin'}
                         onChange={(v) => setSettings({ ...settings, maintenance_mode: v })}
                       />
                     </div>

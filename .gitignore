@@ -29,9 +29,13 @@ uploads/
 
 # Static files
 static/
+staticfiles/
 build/
 dist/
 .next/
+
+# Backups
+backups/
 
 # Logs
 *.log
@@ -47,8 +51,8 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Docker
-.dockerignore
+# Docker volumes
+docker-data/
 
 # Coverage
 .coverage

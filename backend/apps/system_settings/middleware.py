@@ -17,7 +17,9 @@ def get_maintenance_mode() -> bool:
     """Cache'dan maintenance_mode holatini oladi. Cache'da yo'q bo'lsa DB'dan olib cache'laydi."""
     cached = cache.get(MAINTENANCE_CACHE_KEY)
     if cached is not None:
-        return bool(cached)
+        # DIQQAT: bool('0') Python'da True bo'ladi (bo'sh bo'lmagan string truthy).
+        # Shuning uchun aniq string bilan solishtirish kerak.
+        return cached == '1' or cached is True
     try:
         from .models import SystemSettings
         settings_obj = SystemSettings.load()
@@ -57,6 +59,7 @@ class MaintenanceModeMiddleware:
         '/static/',
         '/media/',
         '/api/auth/',  # Barcha auth endpointlar (login, OTP, refresh, 2FA) — maintenance'da ham ishlaydi
+        '/api/users/onboarding',  # Ro'yxatdan o'tishning davomi — bloklamaslik
         '/api/reports/public/',  # Landing sahifasi uchun public ma'lumotlar
     )
 

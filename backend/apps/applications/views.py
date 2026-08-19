@@ -471,7 +471,9 @@ class AdminApplicationListView(APIView):
         search = request.query_params.get('search')
         if search:
             applications = applications.filter(
+                Q(full_name__icontains=search) |
                 Q(user__full_name__icontains=search) |
+                Q(phone__icontains=search) |
                 Q(user__phone__icontains=search) |
                 Q(id__icontains=search)
             )

@@ -4,10 +4,13 @@ Supports: Eskiz.uz, Playmobile, and Mock service for development
 """
 import os
 import random
+import logging
 import requests
 from abc import ABC, abstractmethod
 from typing import Dict, Optional
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class SMSService(ABC):
@@ -79,7 +82,7 @@ class EskizSMSService(SMSService):
                 data = response.json()
                 return data.get('data', {}).get('token')
         except Exception as e:
-            print(f"Eskiz auth error: {e}")
+            logger.warning(f"Eskiz auth error: {e}")
         return None
     
     def send_sms(self, phone: str, message: str) -> Dict:

@@ -1,5 +1,6 @@
 import os
 import io
+import logging
 import qrcode
 from datetime import datetime
 from django.conf import settings
@@ -10,6 +11,8 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 
 from .models import License, LicenseType
+
+logger = logging.getLogger(__name__)
 
 
 class LicensePDFGenerator:
@@ -397,7 +400,7 @@ def bulk_generate_licenses(license_ids: list[int]) -> list[ContentFile]:
             pdfs.append(pdf)
         except Exception as e:
             # Log error and continue
-            print(f"Error generating PDF for license {license_id}: {e}")
+            logger.warning(f"Error generating PDF for license {license_id}: {e}")
             continue
     
     return pdfs
