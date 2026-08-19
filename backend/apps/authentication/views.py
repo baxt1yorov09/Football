@@ -146,12 +146,14 @@ class SendOTPView(APIView):
             'email_masked': _mask_email(target_email),
         }
 
-        # Development'da console backend bo'lsa yoki yuborilmasa — kodni qaytaramiz
+        # Faqat DEBUG rejimida (development) kodni javobda qaytaramiz.
+        # Production'da bu XAVFSIZLIK MUAMMOSI bo'lardi — email yuborilmasa
+        # ham kod hech qachon API javobida ko'rsatilmasligi kerak.
         email_backend = getattr(settings, 'EMAIL_BACKEND', '')
-        if 'console' in email_backend or not email_ok:
+        if settings.DEBUG and 'console' in email_backend:
             response_data['code'] = code
-            if not email_ok:
-                response_data['email_error'] = "Email yuborilmadi"
+        if not email_ok:
+            response_data['email_error'] = "Email yuborilmadi. Birozdan keyin qayta urinib ko'ring."
 
         return Response(response_data, status=status.HTTP_200_OK)
 
