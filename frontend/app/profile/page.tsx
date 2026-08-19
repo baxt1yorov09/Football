@@ -486,6 +486,7 @@ export default function ProfilePage() {
       <PhoneChangeModal
         isOpen={showPhoneModal}
         currentPhone={profile.phone}
+        currentEmail={profile.email}
         onClose={() => setShowPhoneModal(false)}
         onSuccess={(newPhone) => {
           setProfile(p => p ? { ...p, phone: newPhone } : p);

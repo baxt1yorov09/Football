@@ -565,7 +565,7 @@ class ChangePhoneView(APIView):
         if not new_phone or not otp_code:
             return Response({'detail': 'Telefon va OTP kiritish shart'}, status=400)
 
-        from apps.authentication.models import OTPCode
+        from apps.users.models import OTPCode
 
         try:
             otp = OTPCode.objects.get(

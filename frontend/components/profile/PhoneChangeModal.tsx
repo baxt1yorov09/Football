@@ -2,26 +2,27 @@
 
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, X, CheckCircle } from 'lucide-react';
+import { Phone, X, CheckCircle, Mail } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 
 interface Props {
   isOpen: boolean;
   currentPhone: string;
+  currentEmail?: string;
   onClose: () => void;
   onSuccess: (newPhone: string) => void;
 }
 
 const VALID_PREFIXES = ['90','91','93','94','95','97','98','99','88','71','77','78'];
 
-export function PhoneChangeModal({ isOpen, currentPhone, onClose, onSuccess }: Props) {
+export function PhoneChangeModal({ isOpen, currentPhone, currentEmail, onClose, onSuccess }: Props) {
   const [step, setStep] = useState<'input' | 'otp' | 'success'>('input');
   const [newPhone, setNewPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
+  const [emailMasked, setEmailMasked] = useState('');
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const timerRef = useRef<NodeJS.Timeout>();
 
@@ -49,16 +50,29 @@ export function PhoneChangeModal({ isOpen, currentPhone, onClose, onSuccess }: P
       setError('Yangi raqam joriy raqamdan farq qilishi kerak');
       return;
     }
+    if (!currentEmail) {
+      setError('Tasdiqlash kodini yuborish uchun profilingizda email manzil bo\'lishi kerak');
+      return;
+    }
 
     setLoading(true);
     setError('');
     try {
-      const res = await apiClient.post('/auth/send-otp', { phone: '+998' + digits, purpose: 'change_phone' });
-      if (res.data.demo_code) setGeneratedCode(res.data.demo_code);
+      // Tasdiqlash kodi SMS orqali emas, joriy hisobga bog'langan
+      // emailga yuboriladi (SMS xizmati hozircha ishonchli ishlamaydi).
+      const res = await apiClient.post('/auth/send-otp', {
+        phone: '+998' + digits,
+        email: currentEmail,
+      });
+      if (res.data.email_error) {
+        setError(res.data.email_error);
+        return;
+      }
+      setEmailMasked(res.data.email_masked || '');
       setStep('otp');
       startTimer();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'SMS yuborishda xatolik');
+      setError(err.response?.data?.error || err.response?.data?.detail || 'Kod yuborishda xatolik');
     } finally {
       setLoading(false);
     }
@@ -102,7 +116,7 @@ export function PhoneChangeModal({ isOpen, currentPhone, onClose, onSuccess }: P
     setNewPhone('');
     setOtp(['', '', '', '', '', '']);
     setError('');
-    setGeneratedCode('');
+    setEmailMasked('');
     clearInterval(timerRef.current);
     onClose();
   };
@@ -142,11 +156,15 @@ export function PhoneChangeModal({ isOpen, currentPhone, onClose, onSuccess }: P
                       className="flex-1 px-3 py-2.5 text-sm outline-none bg-white"
                       placeholder="90 123 45 67" autoFocus />
                   </div>
+                  <p className="text-xs text-gray-400 flex items-center gap-1">
+                    <Mail className="w-3.5 h-3.5" />
+                    Tasdiqlash kodi emailingizga yuboriladi{currentEmail ? ` (${currentEmail})` : ''}
+                  </p>
                   {error && <p className="text-xs text-red-500">{error}</p>}
                   <button onClick={sendOtp} disabled={loading}
                     className="w-full py-2.5 bg-[#1A56A0] text-white rounded-lg text-sm font-medium
                                hover:bg-[#0D3B6E] disabled:opacity-50">
-                    {loading ? 'Yuborilmoqda...' : 'SMS yuborish →'}
+                    {loading ? 'Yuborilmoqda...' : 'Kod yuborish →'}
                   </button>
                 </div>
               )}
@@ -154,14 +172,8 @@ export function PhoneChangeModal({ isOpen, currentPhone, onClose, onSuccess }: P
               {step === 'otp' && (
                 <div className="space-y-4">
                   <p className="text-sm text-gray-600 text-center">
-                    +998 {newPhone} raqamiga kod yuborildi
+                    Tasdiqlash kodi {emailMasked || 'emailingizga'} yuborildi
                   </p>
-                  {generatedCode && (
-                    <div className="bg-blue-50 rounded-lg p-2 text-center">
-                      <span className="text-xs text-blue-600">Demo kod: </span>
-                      <strong className="text-blue-800 tracking-widest">{generatedCode}</strong>
-                    </div>
-                  )}
                   <div className="flex gap-2 justify-center">
                     {otp.map((digit, i) => (
                       <input key={i} ref={el => { inputs.current[i] = el; }}
