@@ -3,8 +3,9 @@ from django.utils import timezone
 
 
 class LoginAttempt(models.Model):
-    """Login urinishlari — brute-force himoyasi uchun"""
-    phone = models.CharField(max_length=20, db_index=True)
+    """Login urinishlari — brute-force himoyasi uchun.
+    Bu maydon telefon raqami yoki email (admin login) sifatida ishlatiladi."""
+    phone = models.CharField(max_length=254, db_index=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     success = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
