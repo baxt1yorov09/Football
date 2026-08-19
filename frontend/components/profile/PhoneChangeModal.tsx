@@ -78,8 +78,8 @@ export function PhoneChangeModal({ isOpen, currentPhone, currentEmail, onClose, 
     }
   };
 
-  const verifyOtp = async () => {
-    const code = otp.join('');
+  const verifyOtp = async (overrideOtp?: string[]) => {
+    const code = (overrideOtp ?? otp).join('');
     if (code.length < 6) { setError('6 ta raqam kiriting'); return; }
 
     setLoading(true);
@@ -108,7 +108,7 @@ export function PhoneChangeModal({ isOpen, currentPhone, currentEmail, onClose, 
     newOtp[i] = v;
     setOtp(newOtp);
     if (v && i < 5) inputs.current[i + 1]?.focus();
-    if (newOtp.every(c => c)) verifyOtp();
+    if (newOtp.every(c => c)) verifyOtp(newOtp);
   };
 
   const handleClose = () => {
