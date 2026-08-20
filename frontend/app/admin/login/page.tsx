@@ -19,15 +19,23 @@ import {
 import Link from 'next/link';
 
 // Cookie va localStorage'ga token saqlash
-function saveAdminTokens(access: string, refresh: string, user: any) {
-  // Cookie ga yozamiz (middleware uchun)
-  document.cookie = `adminAccessToken=${access}; path=/; max-age=900; SameSite=Strict`;
-  document.cookie = `adminRefreshToken=${refresh}; path=/; max-age=2592000; SameSite=Strict`;
+function saveAdminTokens(access: string, refresh: string, user: any, rememberMe: boolean) {
+  if (rememberMe) {
+    // Uzoq muddat eslab qolish (30 kun)
+    document.cookie = `adminAccessToken=${access}; path=/; max-age=900; SameSite=Strict`;
+    document.cookie = `adminRefreshToken=${refresh}; path=/; max-age=2592000; SameSite=Strict`;
 
-  // localStorage ga ham (hook uchun)
-  localStorage.setItem('adminAccessToken', access);
-  localStorage.setItem('adminRefreshToken', refresh);
-  localStorage.setItem('adminUser', JSON.stringify(user));
+    // localStorage ga ham (hook uchun)
+    localStorage.setItem('adminAccessToken', access);
+    localStorage.setItem('adminRefreshToken', refresh);
+    localStorage.setItem('adminUser', JSON.stringify(user));
+  } else {
+    // Faqat brauzer seansi davomida saqlash (brauzer yopilganda o'chadi)
+    document.cookie = `adminAccessToken=${access}; path=/; SameSite=Strict`;
+    document.cookie = `adminRefreshToken=${refresh}; path=/; SameSite=Strict`;
+
+    // localStorage'ga yozmaymiz — yangi seansda qayta kirish talab etiladi
+  }
 }
 
 export default function AdminLoginPage() {
@@ -65,13 +73,18 @@ export default function AdminLoginPage() {
       }
 
       // Real backend tokenlarni saqlash
-      saveAdminTokens(data.access, data.refresh, data.user);
+      saveAdminTokens(data.access, data.refresh, data.user, formData.rememberMe);
 
       // useAuth ham admin user bilan ishlashi uchun regular tokenni ham yangilash
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
-      document.cookie = `accessToken=${data.access}; path=/; max-age=900`;
-      document.cookie = `refreshToken=${data.refresh}; path=/; max-age=2592000`;
+      if (formData.rememberMe) {
+        localStorage.setItem('accessToken', data.access);
+        localStorage.setItem('refreshToken', data.refresh);
+        document.cookie = `accessToken=${data.access}; path=/; max-age=900`;
+        document.cookie = `refreshToken=${data.refresh}; path=/; max-age=2592000`;
+      } else {
+        document.cookie = `accessToken=${data.access}; path=/;`;
+        document.cookie = `refreshToken=${data.refresh}; path=/;`;
+      }
 
       setSuccess(true);
       setTimeout(() => {
