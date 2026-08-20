@@ -47,9 +47,9 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: { url: "/ufa-watermark.old.svg", type: "image/svg+xml", sizes: "any" },
-    shortcut: { url: "/ufa-watermark.old.svg", type: "image/svg+xml", sizes: "any" },
-    apple: { url: "/ufa-watermark.old.svg", type: "image/svg+xml", sizes: "any" },
+    icon: { url: "/fmtm-logo.svg", type: "image/svg+xml", sizes: "any" },
+    shortcut: { url: "/fmtm-logo.svg", type: "image/svg+xml", sizes: "any" },
+    apple: { url: "/fmtm-logo.svg", type: "image/svg+xml", sizes: "any" },
   },
 };
 
