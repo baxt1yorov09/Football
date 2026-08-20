@@ -47,9 +47,9 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: "/fmtm.uz.png?v=2",
-    shortcut: "/fmtm.uz.png?v=2",
-    apple: "/fmtm.uz.png?v=2",
+    icon: { url: "/ufa-watermark.old.svg", type: "image/svg+xml", sizes: "any" },
+    shortcut: { url: "/ufa-watermark.old.svg", type: "image/svg+xml", sizes: "any" },
+    apple: { url: "/ufa-watermark.old.svg", type: "image/svg+xml", sizes: "any" },
   },
 };
 
