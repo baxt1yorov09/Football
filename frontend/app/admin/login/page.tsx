@@ -20,22 +20,21 @@ import Link from 'next/link';
 
 // Cookie va localStorage'ga token saqlash
 function saveAdminTokens(access: string, refresh: string, user: any, rememberMe: boolean) {
-  if (rememberMe) {
-    // Uzoq muddat eslab qolish (30 kun)
-    document.cookie = `adminAccessToken=${access}; path=/; max-age=900; SameSite=Strict`;
-    document.cookie = `adminRefreshToken=${refresh}; path=/; max-age=2592000; SameSite=Strict`;
+  // Cookie muddati "Meni eslab qolish" bilan belgilanadi
+  const accessCookie = rememberMe
+    ? `adminAccessToken=${access}; path=/; max-age=900; SameSite=Strict`
+    : `adminAccessToken=${access}; path=/; SameSite=Strict`;
+  const refreshCookie = rememberMe
+    ? `adminRefreshToken=${refresh}; path=/; max-age=2592000; SameSite=Strict`
+    : `adminRefreshToken=${refresh}; path=/; SameSite=Strict`;
 
-    // localStorage ga ham (hook uchun)
-    localStorage.setItem('adminAccessToken', access);
-    localStorage.setItem('adminRefreshToken', refresh);
-    localStorage.setItem('adminUser', JSON.stringify(user));
-  } else {
-    // Faqat brauzer seansi davomida saqlash (brauzer yopilganda o'chadi)
-    document.cookie = `adminAccessToken=${access}; path=/; SameSite=Strict`;
-    document.cookie = `adminRefreshToken=${refresh}; path=/; SameSite=Strict`;
+  document.cookie = accessCookie;
+  document.cookie = refreshCookie;
 
-    // localStorage'ga yozmaymiz — yangi seansda qayta kirish talab etiladi
-  }
+  // Admin panel komponentlari tokenni localStorage'dan o'qiydi — har doim saqlash kerak
+  localStorage.setItem('adminAccessToken', access);
+  localStorage.setItem('adminRefreshToken', refresh);
+  localStorage.setItem('adminUser', JSON.stringify(user));
 }
 
 export default function AdminLoginPage() {
