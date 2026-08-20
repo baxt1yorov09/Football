@@ -39,6 +39,14 @@ export const metadata: Metadata = {
       "Futbol murabbiylari uchun rasmiy litsenziya olish tizimi.",
     url: "https://fmtmufa.uz",
     siteName: "UFA Litsenziya Tizimi",
+    images: [
+      {
+        url: "/fmtm.uz.png",
+        width: 1200,
+        height: 630,
+        alt: "UFA Litsenziya Tizimi logotipi",
+      },
+    ],
     locale: "uz_UZ",
     type: "website",
   },
