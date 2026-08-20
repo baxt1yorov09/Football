@@ -7,22 +7,20 @@ services:
       POSTGRES_DB: uff_license
       POSTGRES_USER: uff_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:-uff_password}
-    ports:
-      - "5432:5432"
+    # Portlar tashqariga ochilmaydi — faqat ichki Docker tarmog'i orqali
+    # (backend, celery) ulanadi. Xavfsizlik uchun muhim.
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # Portlar tashqariga ochilmaydi — faqat ichki Docker tarmog'i orqali ulanadi.
     restart: unless-stopped
 
   backend:
     build: ./backend
-    ports:
-      - "8000:8000"
+    # Port tashqariga ochilmaydi — nginx ichki tarmoq orqali ulanadi (backend:8000).
     depends_on:
       - db
       - redis
@@ -54,8 +52,7 @@ services:
 
   frontend:
     build: ./frontend
-    ports:
-      - "3000:3000"
+    # Port tashqariga ochilmaydi — nginx ichki tarmoq orqali ulanadi (frontend:3000).
     depends_on:
       - backend
     environment:
