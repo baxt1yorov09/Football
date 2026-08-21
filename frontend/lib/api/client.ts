@@ -13,10 +13,27 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor - add auth token
+// Helper — qaysi sessiya faol: admin yoki oddiy foydalanuvchi
+function isAdminSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !!localStorage.getItem('adminAccessToken');
+}
+
+function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  // Admin sessiyasida adminAccessToken ustuvor
+  return localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
+}
+
+function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('adminRefreshToken') || localStorage.getItem('refreshToken');
+}
+
+// Request interceptor - add auth token (admin yoki oddiy)
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,18 +51,19 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // Handle 401 or 403 with TOKEN_INVALID
-    const isTokenInvalid = error.response?.status === 403 && 
+    const isTokenInvalid = error.response?.status === 403 &&
                           (error.response?.data as any)?.code === 'TOKEN_INVALID';
-    
+
     // Don't refresh for pending application errors (business logic, not auth)
-    const isPendingError = error.response?.status === 403 && 
+    const isPendingError = error.response?.status === 403 &&
                           (error.response?.data as any)?.code === 'PENDING_APPLICATION';
 
     if ((error.response?.status === 401 || isTokenInvalid) && !originalRequest._retry && !isPendingError) {
       originalRequest._retry = true;
-      
+
+      const wasAdmin = isAdminSession();
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = getRefreshToken();
         if (!refreshToken) {
           throw new Error('No refresh token');
         }
@@ -56,16 +74,37 @@ apiClient.interceptors.response.use(
         });
 
         const { access } = response.data;
-        localStorage.setItem('accessToken', access);
+        // Refresh natijasini avval qaysi tokendan foydalanilgan bo'lsa, o'shanga yozamiz
+        if (wasAdmin) {
+          localStorage.setItem('adminAccessToken', access);
+          try {
+            const longMaxAge = 60 * 60 * 24 * 30;
+            document.cookie = `adminAccessToken=${access}; path=/; max-age=${longMaxAge}; SameSite=Strict`;
+          } catch {}
+        } else {
+          localStorage.setItem('accessToken', access);
+        }
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Token refresh failed, logout user
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/auth';
+        // Token refresh failed → tegishli login sahifasiga yo'naltir
+        if (wasAdmin) {
+          // Admin sessiyasini tozalash
+          localStorage.removeItem('adminAccessToken');
+          localStorage.removeItem('adminRefreshToken');
+          localStorage.removeItem('adminUser');
+          if (typeof document !== 'undefined') {
+            document.cookie = 'adminAccessToken=; path=/; max-age=0';
+            document.cookie = 'adminRefreshToken=; path=/; max-age=0';
+          }
+          window.location.href = '/admin/login';
+        } else {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          window.location.href = '/auth';
+        }
         return Promise.reject(refreshError);
       }
     }

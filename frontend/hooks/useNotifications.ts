@@ -44,7 +44,10 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
   const checkAuth = () => {
     if (typeof window === 'undefined') return false;
-    return Boolean(localStorage.getItem('accessToken'));
+    // Admin sessiyasida bildirishnomalar ham ko'rinishi kerak.
+    return Boolean(
+      localStorage.getItem('accessToken') || localStorage.getItem('adminAccessToken')
+    );
   };
 
   const fetchUnreadCount = useCallback(async () => {
