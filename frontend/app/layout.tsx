@@ -55,9 +55,15 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: { url: "/fmtm-logo.svg", type: "image/svg+xml", sizes: "any" },
-    shortcut: { url: "/fmtm-logo.svg", type: "image/svg+xml", sizes: "any" },
-    apple: { url: "/fmtm-logo.svg", type: "image/svg+xml", sizes: "any" },
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-48.png", type: "image/png", sizes: "48x48" },
+      { url: "/favicon-64.png", type: "image/png", sizes: "64x64" },
+    ],
+    shortcut: { url: "/favicon.ico" },
+    apple: { url: "/favicon-180.png", sizes: "180x180" },
   },
 };
 
