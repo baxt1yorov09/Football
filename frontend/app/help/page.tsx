@@ -52,10 +52,10 @@ const helpContent: Array<HelpItem & { category: string }> = [
       description: 'Tizimdan ro\'yxatdan o\'tish va litsenziya olish bo\'yicha qo\'llanma',
       content: [
         '1. Ro\'yxatdan o\'tingiz',
-        '2. Kerakli hujatlarni tayyorlang',
+        '2. Kerakli hujjatlarni tayyorlang',
         '3. Onlayn ariza topshiring',
-        '4. To\'lovni amalga oshiring',
-        '5. Litsenziyangizni qabul qiling'
+        '4. Kursga yoziling',
+        '5. Kursni yakunlab, litsenziyangizni oling'
       ]
     },
     {
