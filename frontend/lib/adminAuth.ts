@@ -1,8 +1,10 @@
 // Cookie ga yozish — middleware o'qiy oladi
 export function saveAdminTokens(access: string, refresh: string, user: any) {
-  // Cookie ga yozamiz (middleware uchun)
-  document.cookie = `adminAccessToken=${access}; path=/; max-age=900; SameSite=Strict`;
-  document.cookie = `adminRefreshToken=${refresh}; path=/; max-age=2592000; SameSite=Strict`;
+  // Cookie ga yozamiz (middleware uchun). Access cookie'ni ham 30 kun qilamiz,
+  // aks holda middleware 15 daqiqadan keyin foydalanuvchini majburan chiqarib yuboradi.
+  const longMaxAge = 60 * 60 * 24 * 30;
+  document.cookie = `adminAccessToken=${access}; path=/; max-age=${longMaxAge}; SameSite=Strict`;
+  document.cookie = `adminRefreshToken=${refresh}; path=/; max-age=${longMaxAge}; SameSite=Strict`;
 
   // localStorage ga ham (hook uchun)
   localStorage.setItem('adminAccessToken', access);

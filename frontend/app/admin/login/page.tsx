@@ -20,12 +20,20 @@ import Link from 'next/link';
 
 // Cookie va localStorage'ga token saqlash
 function saveAdminTokens(access: string, refresh: string, user: any, rememberMe: boolean) {
-  // Cookie muddati "Meni eslab qolish" bilan belgilanadi
+  // MUHIM: middleware.ts server tomonda faqat cookie'ni ko'radi.
+  // Agar access cookie qisqa muddatli bo'lsa (masalan 15 daq),
+  // sessiya davomida bir necha daqiqadan keyin middleware
+  // foydalanuvchini majburan /admin/login ga yo'naltiradi. Shu sabab
+  // access cookie'ni ham refresh bilan bir xil (30 kun) yashaydigan qilamiz.
+  // Haqiqiy JWT amal muddati serverda hal qilinadi, adminApi() esa
+  // 401 paytida avtomatik yangi access olib beradi.
+  const longMaxAge = 60 * 60 * 24 * 30; // 30 kun
+
   const accessCookie = rememberMe
-    ? `adminAccessToken=${access}; path=/; max-age=900; SameSite=Strict`
+    ? `adminAccessToken=${access}; path=/; max-age=${longMaxAge}; SameSite=Strict`
     : `adminAccessToken=${access}; path=/; SameSite=Strict`;
   const refreshCookie = rememberMe
-    ? `adminRefreshToken=${refresh}; path=/; max-age=2592000; SameSite=Strict`
+    ? `adminRefreshToken=${refresh}; path=/; max-age=${longMaxAge}; SameSite=Strict`
     : `adminRefreshToken=${refresh}; path=/; SameSite=Strict`;
 
   document.cookie = accessCookie;

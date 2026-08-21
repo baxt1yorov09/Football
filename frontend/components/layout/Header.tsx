@@ -148,6 +148,19 @@ export function Header() {
   const hasAdminToken =
     typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
 
+  // Admin sessiyasi bo'lsa — admin ma'lumotini localStorage.adminUser'dan
+  // o'qib, useAuth() dagi bo'sh user ma'lumotini bosib o'tamiz.
+  let adminUser: any = null;
+  if (hasAdminToken && !user && typeof window !== 'undefined') {
+    try {
+      adminUser = JSON.parse(localStorage.getItem('adminUser') || 'null');
+    } catch {
+      adminUser = null;
+    }
+  }
+  const displayUser: any = user || adminUser;
+  const displayAvatarUrl = avatarUrl || adminUser?.avatar_url;
+
   // Header faqat tizimga kirgan foydalanuvchilar uchun ko'rinadi.
   // /help, /contact, /privacy, /terms kabi ochiq sahifalarda yashiriladi.
   if (isLoading || (!isAuthenticated && !hasAdminToken)) {
@@ -337,21 +350,21 @@ export function Header() {
             >
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900 leading-tight max-w-[160px] truncate">
-                  {user?.full_name || t('header.user')}
+                  {displayUser?.full_name || t('header.user')}
                 </p>
                 <p className="text-xs text-gray-500 leading-tight">
-                  {(user as any)?.job_title || roleLabel(user?.role, t)}
+                  {displayUser?.job_title || roleLabel(displayUser?.role, t)}
                 </p>
               </div>
               <div className="w-9 h-9 bg-gradient-to-br from-[#1A56A0] to-[#0D3B6E] rounded-full flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
-                {avatarUrl ? (
+                {displayAvatarUrl ? (
                   <img
-                    src={avatarUrl}
+                    src={displayAvatarUrl}
                     alt=""
                     className="w-full h-full rounded-full object-cover"
                   />
-                ) : user?.full_name ? (
-                  getInitials(user.full_name)
+                ) : displayUser?.full_name ? (
+                  getInitials(displayUser.full_name)
                 ) : (
                   <User className="w-4 h-4" />
                 )}
@@ -375,10 +388,10 @@ export function Header() {
                   {/* User info */}
                   <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-br from-[#F8FAFC] to-white">
                     <p className="text-sm font-semibold text-gray-900 truncate">
-                      {user?.full_name || t('header.user')}
+                      {displayUser?.full_name || t('header.user')}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5 truncate">
-                      {user?.phone || roleLabel(user?.role, t)}
+                      {displayUser?.email || displayUser?.phone || roleLabel(displayUser?.role, t)}
                     </p>
                   </div>
 

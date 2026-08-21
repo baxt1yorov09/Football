@@ -41,9 +41,11 @@ async function refreshAccessToken(): Promise<string | null> {
       } else {
         localStorage.setItem('accessToken', newAccess);
       }
-      // Cookie ham
+      // Cookie ham — long-lived so middleware doesn't eject on cookie expiry.
+      // Server-side JWT expiration is enforced via next 401 → refresh cycle.
       try {
-        document.cookie = `${isAdminToken() ? 'adminAccessToken' : 'accessToken'}=${newAccess}; path=/; max-age=900`;
+        const longMaxAge = 60 * 60 * 24 * 30; // 30 kun
+        document.cookie = `${isAdminToken() ? 'adminAccessToken' : 'accessToken'}=${newAccess}; path=/; max-age=${longMaxAge}; SameSite=Strict`;
       } catch {}
       return newAccess;
     } catch {
