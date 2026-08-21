@@ -141,9 +141,16 @@ export function Header() {
 
   const recentNotifications = notifications.slice(0, 6);
 
+  // Admin faqat /admin/login orqali kirsa, useAuth() buni bilmaydi
+  // (u faqat oddiy foydalanuvchi accessToken'ini tekshiradi).
+  // Shu sabab admin panelida header yashirinib qolmasligi uchun
+  // adminAccessToken mavjudligini ham hisobga olamiz.
+  const hasAdminToken =
+    typeof window !== 'undefined' && !!localStorage.getItem('adminAccessToken');
+
   // Header faqat tizimga kirgan foydalanuvchilar uchun ko'rinadi.
   // /help, /contact, /privacy, /terms kabi ochiq sahifalarda yashiriladi.
-  if (isLoading || !isAuthenticated) {
+  if (isLoading || (!isAuthenticated && !hasAdminToken)) {
     return null;
   }
 
